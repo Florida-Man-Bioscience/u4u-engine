@@ -249,6 +249,33 @@ Sort by `score` descending. Ties are broken by original list order (stable sort)
 
 ---
 
+## FastAPI integration contract (Hampton)
+
+The engine is a synchronous function. Run it in a thread pool so it doesn't block the event loop.
+
+```python
+from fastapi import FastAPI, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from engine import run_pipeline
+
+app = FastAPI()
+
+@app.post("/analyze")
+async def analyze(file: UploadFile, panels: list[str] = ["acmg81_rsids.txt"]):
+    file_bytes = await file.read()
+    results = await run_in_threadpool(
+        run_pipeline, file_bytes, file.filename, panels
+    )
+    # Merge condition library rows here before returning
+    return {"variants": results, "count": len(results)}
+```
+
+The condition library merge happens in the API layer, not the engine. The engine returns `condition_key`; the API layer does `SELECT * FROM condition_library WHERE condition_key = ?` for each result and appends the curated fields (`condition_display_name`, `plain_description`, `action_guidance`, `acmg_url`) before sending the response to the frontend.
+
+The annotation cache also lives at this layer. Before calling `run_pipeline`, check Postgres for cached results by `(chrom, pos, ref, alt)`. If all variants are cached, skip the pipeline entirely and return from cache.
+
+---
+
 ## Behaviors the engine must NOT exhibit
 
 These are the bugs that existed in prior versions. Do not reintroduce them.

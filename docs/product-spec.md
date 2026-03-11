@@ -204,15 +204,45 @@ Then show `consequence_plain`, `rarity_plain`, and `frequency_derived_label` if 
 
 ---
 
+## Result categories (how findings are grouped for users)
+
+The tier system (Critical/High/Medium/Low/Carrier) is the engine's internal scoring output. The user-facing grouping presents findings in five categories. These are not mutually exclusive — a finding can appear in "Hereditary Conditions" and be tier Critical at the same time.
+
+| Category | What it covers | V1? |
+|----------|---------------|-----|
+| **Hereditary Conditions** | Pathogenic and likely pathogenic variants in disease genes; ACMG SF genes always included | ✅ Yes |
+| **Uncertain Findings (VUS)** | Variants of uncertain significance with available population and functional data | ✅ Yes |
+| **Carrier Status** | Heterozygous variants in recessive genes | ✅ Yes |
+| **Medication Response** | Pharmacogenomics (CYP2C19, CYP2D6, VKORC1, etc.) | ❌ V2 |
+| **Wellness Insights** | Non-actionable trait associations | ❌ V2 |
+
+The filter chips in the results header let users toggle by tier. The category grouping is secondary — it appears as section headers within the results list.
+
+---
+
+## V2 planned features (do not build in V1, but design the results screen to accommodate)
+
+The results screen layout must be able to handle these without a full redesign:
+
+**Research tracking feed (subscription):** A section at the top of the results page (or as a tab) showing "New research on your variants." Each entry is a plain-English summary of a new PubMed paper that mentions one of the user's stored variants. Clicking through shows the paper title, abstract link, and the engine's plain-English summary of why it's relevant. This is the subscription upsell — free users see a preview of one entry and a "Subscribe to stay current" prompt.
+
+**User accounts:** Required for research tracking. When accounts exist, results are stored in Postgres and associated with the user. The upload screen gains a "Sign in to save your results" option. V1 has no accounts — results exist only for the session.
+
+**Saved results:** Once accounts exist, results persist between sessions. The home screen becomes a dashboard showing previous uploads with dates. Users can re-run their file against an updated database.
+
+---
+
 ## What is explicitly NOT in V1
 
-- User accounts or saved results
+- User accounts or saved results (session-only in V1)
 - Email delivery of results
 - Sharing results with a provider
 - Comparing results across family members
 - PRS (polygenic risk scores)
 - Mobile app
 - API access for external developers
+- Pharmacogenomics results (infrastructure exists in the engine; content not ready)
+- Research tracking / subscription features
 
 ---
 

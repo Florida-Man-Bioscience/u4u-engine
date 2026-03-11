@@ -16,6 +16,24 @@ There are two layers of interpretation:
 
 ---
 
+## Consumer-facing finding categories
+
+The engine uses an internal 5-tier score (Critical / High / Medium / Low / Carrier). The user interface maps these to five consumer-facing categories. The distinction matters: the tier is the confidence/severity signal; the category is how a non-scientist understands what kind of finding this is.
+
+| Consumer Category | Engine tier(s) | Description shown to user |
+|------------------|----------------|--------------------------|
+| **Hereditary Conditions** | Critical, High | Known or likely disease-causing variants. "This variant in BRCA1 is associated with significantly elevated cancer risk." |
+| **Uncertain Findings** | Medium (VUS) | Variants where the science is genuinely not settled. "Scientists don't yet have consensus on this variant. Here's what the data shows." |
+| **Carrier Status** | Carrier (any tier) | Recessive variants where one copy typically doesn't cause disease. "You carry a variant associated with cystic fibrosis. This is typically not a health concern for you but may be relevant for family planning." |
+| **Medication Response** | (V2) | Pharmacogenomics — how your body processes specific drugs. Not in V1. |
+| **Wellness Insights** | (V2) | Non-actionable trait associations. Not in V1. |
+
+The results page groups findings by consumer category, with tier indicators (emoji + score) within each group.
+
+**Evidence confidence:** Within each finding card, confidence is communicated through the ClinVar classification label (Pathogenic / Likely Pathogenic / VUS / Benign) and the tier color, not through a star rating or numerical score. Do not show the raw score to the user.
+
+---
+
 ## What the engine produces (the input to interpretation)
 
 Each variant the engine returns contains:

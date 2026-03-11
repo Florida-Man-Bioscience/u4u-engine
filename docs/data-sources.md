@@ -159,11 +159,46 @@ These files are generated from ClinVar bulk downloads and committed to the repo.
 
 ---
 
-## Condition library (Sasank's spreadsheet → database)
+## 5. PubMed / NCBI Entrez (V2 — research tracking feature)
 
-A separate curated data source maintained by Sasank. Not an external API — a CSV/spreadsheet that gets loaded into the database at deploy time.
+**What it provides:** New published literature mentioning specific gene/variant combinations. Used by the research tracking subscription feature to alert users when new papers are relevant to their stored variants.
 
-Keyed by `condition_key` (OMIM ID or ClinVar disease ID). The engine returns `condition_key` in each result; the backend uses it to look up the corresponding row in the condition library and merge the curated content into the API response.
+**How we use it (planned, not yet built):** Nightly scheduled job queries the NCBI Entrez API with gene symbols from a user's stored variant profile. New papers since last run are fetched. An LLM summarizes the paper's relevance to the specific variant in plain English. The summary is stored in Postgres and surfaced in the user's account.
+
+**Endpoint:** `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi` (paper IDs by gene) and `efetch.fcgi` (abstracts)
+
+**Auth:** Same `NCBI_API_KEY` as ClinVar. Shared rate limit.
+
+**What we extract:** Paper title, abstract, publication date, PMID. LLM input only — raw text is not stored long-term.
+
+**Reference:** https://www.ncbi.nlm.nih.gov/books/NBK25501/
+
+---
+
+## Postgres (internal — annotation cache and data store)
+
+Postgres is not an external API but it is a data source. The architecture decision is that Postgres is the source of truth for everything.
+
+**What lives in Postgres:**
+
+| Table | Contents |
+|-------|----------|
+| `annotation_cache` | Annotation results keyed by variant coordinates. Prevents re-hitting external APIs for the same variant twice. TTL: 30 days. |
+| `condition_library` | Sasank's condition library, loaded from CSV at deploy time. Keyed by `condition_key`. |
+| `user_variants` | (V2) Stored variant profiles per user. Required for research tracking. |
+| `research_updates` | (V2) LLM summaries of new PubMed papers, linked to user_variant records. |
+
+**Why the annotation cache matters:** Without it, processing the same 23andMe file twice hits ClinVar, gnomAD, and VEP for every variant both times. The cache means the second run is instant and costs nothing.
+
+Hampton owns the Postgres schema and migrations.
+
+---
+
+## Condition library (Sasank's spreadsheet → Postgres)
+
+A separate curated data source maintained by Sasank. Not an external API — a CSV/spreadsheet that gets loaded into Postgres at deploy time via a management command.
+
+Keyed by `condition_key` (OMIM ID or ClinVar disease ID). The engine returns `condition_key` in each result; the FastAPI layer uses it to look up the corresponding row in Postgres and merge the curated content into the API response before returning to the frontend.
 
 Schema is defined in `docs/interpretation-spec.md`.
 
@@ -175,10 +210,13 @@ Schema is defined in `docs/interpretation-spec.md`.
 |------|---------|------|
 | Individual variant coordinates (chrom, pos, ref, alt) | Ensembl VEP | During annotation |
 | rsIDs | Ensembl Variation API, NCBI ClinVar, MyVariant.info | During annotation |
-| Raw genome file | Nobody | Never. File is parsed locally and discarded. |
-| User identity | Nobody | We don't have it in V1 |
+| Raw genome file | Nobody | Never. File is parsed in memory and discarded. |
+| User identity | Nobody | V1 has no accounts — no identity to transmit |
+| Gene symbols from stored profile | NCBI Entrez | V2 only, nightly, after user has opted into research tracking |
 
 The raw genome file is never transmitted to any external service. Only the specific variant data needed for each API call is sent.
+
+**V2 note:** Once user accounts exist and research tracking is enabled, the system will make nightly outbound calls to PubMed with gene symbols from stored profiles. This is the expected behavior of the subscription feature and will be disclosed in the privacy policy.
 
 ---
 

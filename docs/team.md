@@ -40,21 +40,40 @@ When you build something, you build it against the spec documents in this folder
 
 ---
 
+## Architecture (decided, not up for debate)
+
+- **Runtime:** SaaS web app on Hampton's Kubernetes cluster
+- **API layer:** FastAPI wrapping the engine — `from engine import run_pipeline`, one endpoint, async workers
+- **Database:** Postgres is the source of truth. Variant annotation results, user profiles (when accounts exist), condition library, research tracking records — all in Postgres
+- **Auth:** Authelia (Hampton deploys and owns this)
+- **CI/CD:** Push to `main` → Docker build → auto-deploy. No manual deploys
+- **Annotation cache:** Postgres stores annotation results so repeated lookups don't re-hit the external APIs
+- **Research tracking (subscription):** Nightly job polls PubMed for new papers matching stored variant profiles; LLM summarizes; results written to Postgres; user notified
+- **LLM use:** Research summarization only. Not variant classification, not summary generation, not anything in the engine pipeline
+
 ## Critical path
 
 This is the sequence nothing can skip. Everything else runs in parallel.
 
 ```
-Sasank writes condition library (ACMG81 genes)
+Hampton: FastAPI + Docker + K8s cluster running
     ↓
-Rocky designs results card (needs condition content to design against)
+Engine callable via HTTP (even with mock results)
     ↓
-Tom implements results page (needs Rocky's design)
+Tom: Upload → Processing → Results screens wired to real API
     ↓
-Soft launch to first users
+Sasank: Condition library populated (ACMG81 genes minimum)
+    ↓
+Rocky: Results card designed against real content
+    ↓
+Cane: Security audit passes
+    ↓
+Jeran: First users lined up
+    ↓
+Soft launch
 ```
 
-Hampton's infra work, Jeran's outreach, and Cane's security audit all run in parallel and do not block this chain.
+Hampton's infra and Sasank's content run in parallel. Tom cannot finish the results page until Sasank has at least a few real condition library entries to design against — use BRCA1 and TP53 as unblocking examples first.
 
 ---
 
@@ -87,17 +106,32 @@ Hampton's infra work, Jeran's outreach, and Cane's security audit all run in par
 
 ---
 
+## Immediate next deliverable per person
+
+These are the things that are blocking other people right now. Each person should complete their item before anything else.
+
+| Person | Deliverable | Blocks |
+|--------|-------------|--------|
+| **Hampton** | Docker container running the engine behind FastAPI, accessible at a URL | Everything. No URL = no product. |
+| **Sasank** | Condition library rows for BRCA1, TP53, LDLR, RYR1 (4 rows minimum to unblock design) | Rocky's design, Tom's results page |
+| **Tom** | Upload screen wired to real API endpoint (even if results are mock data) | Visible progress for demo |
+| **Rocky** | Results card mockup — one Critical card and one Carrier card, using Sasank's real text | Tom's implementation |
+| **Jeran** | Get a Google Workspace account with a real branded email | Everything Jeran does publicly |
+| **Cane** | Privacy policy draft and consent gate language reviewed | Launch |
+| **Curtis** | Condition library `condition_key` format confirmed with Sasank (OMIM ID or what?) | Sasank can't build the spreadsheet without this |
+
 ## Open decisions (needs resolution)
 
 | Decision | Status | Owner |
 |----------|--------|-------|
+| Domain / URL | ❌ Unresolved — Hampton needs this to deploy | Hampton + Curtis |
 | Beyond ACMG SF scope for V1 — what genes? | ❌ Unresolved | Sasank |
 | VUS exact display language | ❌ Draft in interpretation-spec | Sasank |
 | Carrier language for specific genes (CFTR, HBB, etc.) | ❌ Unresolved | Sasank |
-| Nucleate demo exact date | ❌ Unresolved | Curtis |
+| Consumer brand name | ❌ Not now — legal entity is "40 Minute Bioscience" | Jeran |
 | Subscription pricing | ❌ Not now | Curtis |
-| Public brand name | ❌ Not now | Jeran |
 | Pharmacogenomics in V1? | ❌ Not in scope — confirm | Curtis + Sasank |
+| LLC incorporation | ❌ Must happen before first paying customer | Curtis |
 
 ---
 
