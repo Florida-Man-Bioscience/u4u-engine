@@ -11,8 +11,8 @@ U4U takes a raw genome file, annotates each variant against clinical and populat
 ```mermaid
 flowchart TD
     subgraph INPUT["Input"]
-        A1["23andMe .txt"]
-        A2["VCF / .vcf.gz"]
+        A1["VCF / .vcf.gz (MVP)"]
+        A2["23andMe .txt (later)"]
         A3["CSV / rsID list"]
     end
 
@@ -61,8 +61,9 @@ flowchart TD
 |-----------|-----------|--------|
 | Annotation pipeline | Python 3.11+ | **Working** |
 | API layer | FastAPI | Not built |
-| Database | Postgres | Not built |
-| Frontend | React | Not built |
+| Database | Postgres | Not built (future) |
+| Frontend | React web app | Not built |
+| Desktop (future) | Electron | Not started |
 | Container | Docker | Not built |
 | Hosting | Hampton's K8s cluster | Not deployed |
 | CI | GitHub Actions | Running |
@@ -92,6 +93,30 @@ results = run_pipeline(
 )
 # returns list[dict], score descending
 ```
+
+---
+
+## Compute model
+
+**MVP:** all computation runs on Hampton's K8s cluster. No local execution.
+
+**Hybrid (future):** annotation engine and LLM summarization stay server-side. An optional Electron desktop app may run preprocessing locally (format validation, variant filtering) and call the server API for annotation — this keeps the raw genome file local if users want that.
+
+The engine is the core library. Every other component is a wrapper around it.
+
+---
+
+## Output
+
+The user receives:
+- Interactive dashboard with scored, tiered variant cards
+- Plain-English insight for each variant (consequence, rarity, ClinVar context, action hint)
+- Downloadable report (optional)
+- Email subscription for research updates when new papers publish on their variants (V2)
+
+Genomes are **not stored in MVP**. Processed in memory, discarded after results are returned. Postgres genome storage is a future feature.
+
+---
 
 Full pipeline spec: `docs/pipeline.md`
 External APIs: `docs/integrations.md`

@@ -2,9 +2,15 @@
 
 ---
 
+## MVP scope
+
+VCF upload → annotation engine → interactive dashboard. No genome storage. Email capture for future research updates. Target: 4 weeks.
+
+---
+
 ## What works
 
-- Parses 23andMe `.txt`, VCF, `.vcf.gz`, CSV, rsID lists
+- Parses VCF / `.vcf.gz` (MVP primary), 23andMe `.txt`, CSV, rsID lists
 - 10-step pipeline: validate → parse → quality filter → whitelist → rsID resolution → deduplicate → annotate → score → summarize → sort
 - Annotates against ClinVar, gnomAD, Ensembl VEP (retry + fallback)
 - Returns plain-English headline, consequence, rarity, action hint per variant
@@ -92,6 +98,10 @@ docs/           documentation
 **VUS card:** "uncertain significance" header, `consequence_plain`, `rarity_plain`, `frequency_derived_label`
 
 **Disclaimer (persistent):** "This is not medical advice. Discuss significant findings with a healthcare provider."
+
+**Downloadable report:** button to export findings as PDF or structured summary.
+
+**Email capture (on results page):** "Get notified when new research publishes on your variants" — captures email for V2 research feed. No genome stored, no account required in V1.
 
 ### Error states
 

@@ -2,6 +2,20 @@
 
 ---
 
+## MVP target: 4 weeks from go
+
+MVP is done when a user can upload a VCF file at a public URL and see an interactive dashboard of interpreted variants. No genome stored. Email capture for research updates.
+
+**MVP priority order:**
+1. API wrapper — FastAPI `POST /analyze` wrapping `run_pipeline()`
+2. Genome upload — file drop, VCF validation, size limit
+3. Annotation cache — Postgres table to avoid repeat API calls on same variants
+4. UI dashboard — scored variant cards, filter chips, expanded card state
+5. Report generation — downloadable summary of findings
+6. Deploy — Docker + K8s, domain pointed, CI/CD on main push
+
+---
+
 ## Next steps (do these now)
 
 1. **Hampton** — share a timeline estimate for Phase 1 (FastAPI + Docker + K8s); every other person's Phase 2 work is sequenced against this date
