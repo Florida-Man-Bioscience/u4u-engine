@@ -2,171 +2,120 @@
 
 ---
 
-## What exists and works today
+## What works
 
-**Annotation pipeline (`engine/`)**
-- Parses 23andMe `.txt`, VCF, `.vcf.gz`, CSV, and rsID list files
-- 10-step pipeline: validate, parse, quality filter, whitelist filter, rsID resolution, deduplicate, annotate, score, summarize, sort
-- Annotates against ClinVar, gnomAD, Ensembl VEP (with retry and fallback)
-- Scores and tiers each variant (Critical / High / Medium / Low / Carrier)
+- Parses 23andMe `.txt`, VCF, `.vcf.gz`, CSV, rsID lists
+- 10-step pipeline: validate → parse → quality filter → whitelist → rsID resolution → deduplicate → annotate → score → summarize → sort
+- Annotates against ClinVar, gnomAD, Ensembl VEP (retry + fallback)
 - Returns plain-English headline, consequence, rarity, action hint per variant
-
-**Tests (`tests/`)**
-- Parser tests, quality filter tests, deduplication tests, scoring tests
-- CI runs on push and PR via GitHub Actions (Python 3.11 and 3.12)
-
-**Documentation (`docs/`)**
-- Architecture, pipeline spec, interpretation spec, integrations, this file
+- CI on push via GitHub Actions (Python 3.11 and 3.12)
 
 ---
 
-## Repo structure
+## Repo
 
 ```
-engine/         core pipeline package
+engine/         core pipeline
   annotators/   ClinVar, gnomAD, VEP, MyVariant modules
   pipeline.py   run_pipeline() entry point
-  scoring.py    scoring and tier logic
+  scoring.py    scoring + tier logic
   summary.py    plain-English text generation
 tests/          pipeline tests
-data/           rsID filter files (acmg81_rsids.txt, etc.)
-docs/           system documentation
-.github/        CI workflow, issue templates, PR template
+data/           rsID filter files
+docs/           documentation
+.github/        CI, issue templates, PR template
 ```
 
 ---
 
-## What does not exist yet
+## What doesn't exist
 
-### Web API
-- FastAPI wrapper around `run_pipeline()`
-- `POST /analyze` endpoint accepting file upload
-- Background worker (run engine in thread pool)
-- Owner: Hampton
-
-### Database
-- Postgres schema and migrations
-- Annotation cache (keyed by variant coordinates, TTL 30 days)
-- Condition library table (loaded from Sasank's CSV at deploy time)
-- Owner: Hampton
-
-### Condition library content
-- Schema exists in `docs/interpretation.md`
-- 81 ACMG SF v3.2 genes need a complete row each before launch
-- 4 rows needed immediately to unblock design: BRCA1, TP53, LDLR, RYR1
-- Owner: Sasank
-
-### Frontend
-- Upload screen (file drop, consent checkbox, panel selector)
-- Processing screen (progress bar wired to `progress_callback`)
-- Results screen (cards, filter chips, expanded card states)
-- Owner: Tom (implementation), Rocky (design)
-
-### Infrastructure
-- Docker container for engine + API
-- K8s deployment on Hampton's cluster
-- Domain registered and pointed at cluster
-- CI/CD: push to main triggers Docker build and auto-deploy
-- Owner: Hampton (deployment), Curtis (domain)
-
-### Security and legal
-- Privacy policy draft
-- Consent gate language review
-- Nmap scan and security audit on the cluster
-- LLC incorporation (40 Minute Bioscience)
-- Owner: Cane (audit, privacy policy), Curtis (LLC)
+| Area | Missing | Owner |
+|------|---------|-------|
+| Web API | FastAPI wrapper, `POST /analyze`, background worker | Hampton |
+| Database | Postgres schema, annotation cache, condition library table | Hampton |
+| Condition library | 81 ACMG SF rows (4 needed immediately) | Sasank |
+| Frontend | Upload, processing, results screens | Tom (build) + Rocky (design) |
+| Infrastructure | Docker, K8s, domain, CI/CD auto-deploy | Hampton + Curtis |
+| Security/legal | Privacy policy, consent gate, security audit, LLC | Cane + Curtis |
 
 ---
 
-## Immediate blockers (in dependency order)
+## Immediate blockers
 
-| Blocker | Who resolves it |
-|---------|----------------|
-| No deployed URL | Hampton builds FastAPI + Docker + K8s. Curtis registers domain. |
-| No condition library content | Sasank writes 4 rows (BRCA1, TP53, LDLR, RYR1) to unblock design. |
-| No branded email | Jeran sets up Google Workspace. |
+| Blocker | Resolves when |
+|---------|--------------|
+| No URL | Hampton deploys FastAPI + Docker to K8s; Curtis registers domain |
+| No condition library | Sasank writes 4 rows (BRCA1, TP53, LDLR, RYR1) |
+| No branded email | Jeran sets up Google Workspace |
 
 ---
 
 ## Team
 
-| Person | Owns |
-|--------|------|
-| Curtis | Engine, docs, product, domain |
-| Hampton | FastAPI, Postgres, Docker, K8s, CI/CD |
-| Sasank | Condition library content, clinical interpretation review |
-| Tom | Frontend (all three screens) |
-| Rocky | Visual design, results card design |
-| Jeran | Marketing, user acquisition, brand |
-| Cane | Security audit, privacy policy, consent gate |
-
-### What each person reads first
-
-| Person | Read this |
-|--------|-----------|
-| Hampton | `docs/architecture.md`, `docs/pipeline.md` (FastAPI section), `docs/integrations.md` |
-| Tom | `docs/architecture.md`, then build against UI specs below |
-| Rocky | UI specs below, `docs/interpretation.md` (tiers and VUS section) |
-| Sasank | `docs/interpretation.md` (condition library schema and all `[SASANK REVIEW]` sections) |
-| Cane | `docs/integrations.md` (what user data leaves the system) |
+| Person | Owns | Read first |
+|--------|------|-----------|
+| Curtis | Engine, docs, product, domain | — |
+| Hampton | FastAPI, Postgres, Docker, K8s | `architecture.md`, `pipeline.md`, `integrations.md` |
+| Sasank | Condition library, clinical review | `interpretation.md` |
+| Tom | Frontend | `architecture.md`, UI spec below |
+| Rocky | Visual design | UI spec below, `interpretation.md` |
+| Jeran | Marketing, users, brand | roadmap Phase 4 |
+| Cane | Security, privacy policy | `integrations.md` (what leaves the system) |
 
 ---
 
-## UI spec (for Tom and Rocky)
+## UI spec
 
 ### Screen 1 — Upload
-- Logo and tagline
-- File drop area (23andMe .txt, .vcf, .vcf.gz, .csv accepted)
-- File size limit: 100 MB
-- Consent checkbox (required before submit)
-- Panel selector (collapsed by default): ACMG SF v3.2 always on, pharmacogenomics and carrier screening optional
-- Analyze button disabled until file selected and checkbox checked
+- File drop (23andMe `.txt`, `.vcf`, `.vcf.gz`, `.csv`; max 100 MB)
+- Consent checkbox required before submit
+- Panel selector (collapsed by default): ACMG SF v3.2 always on; pharmacogenomics + carrier screening optional
+- Analyze button disabled until file + checkbox
 
 ### Screen 2 — Processing
-- Progress bar
-- Status label from `progress_callback(step, pct)`
-- No navigation away without warning
+- Progress bar from `progress_callback(step, pct)`
+- Warn on navigation away
 
 ### Screen 3 — Results
-- Header: count and one-line summary
-- Filter chips: 🔴 Critical, 🟠 High, 🟡 Medium/VUS, 🟢 Low, 🔵 Carrier with counts
-- Default view: Critical and High shown; others toggled off
-- One card per variant, score descending
+- Header: count + one-line summary
+- Filter chips: 🔴 Critical 🟠 High 🟡 VUS 🟢 Low 🔵 Carrier with counts
+- Default: Critical + High shown; others toggled off
+- Cards in score-descending order
 
-**Card collapsed state:** emoji + tier badge, gene name, headline, condition name, ClinVar badge
+**Card collapsed:** emoji + tier badge, gene, headline, condition name, ClinVar badge
 
-**Card expanded state:** headline, consequence_plain, zygosity_plain, rarity_plain, clinvar_plain, action_hint, condition-specific action guidance (from condition library), source links (ClinVar, gnomAD, ACMG)
+**Card expanded:** headline, `consequence_plain`, `zygosity_plain`, `rarity_plain`, `clinvar_plain`, `action_hint`, condition-specific guidance from condition library, source links (ClinVar, gnomAD, ACMG)
 
-**Carrier card:** blue styling, "You appear to be a carrier" headline, carrier_note text, condition name, action_hint
+**Carrier card:** blue styling, "You appear to be a carrier," `carrier_note`, condition name
 
-**VUS card:** explicit "uncertain significance" header, consequence_plain, rarity_plain, frequency_derived_label
+**VUS card:** "uncertain significance" header, `consequence_plain`, `rarity_plain`, `frequency_derived_label`
 
-**Disclaimer footer (persistent):** "This information is not medical advice. Findings are sourced from ClinVar, gnomAD, and Ensembl VEP. Discuss significant findings with a qualified healthcare provider."
+**Disclaimer (persistent):** "This is not medical advice. Discuss significant findings with a healthcare provider."
 
-### Error states the UI must handle
+### Error states
 
 | State | Behavior |
 |-------|----------|
-| File too large | Inline error before submit |
-| Unsupported format | Inline error before submit |
+| File too large / unsupported format | Inline error before submit |
 | Invalid VCF header | Error screen after submit |
-| All variants filtered out | Results screen with explanation, not blank |
-| Zero ACMG findings | Show message, not blank screen |
-| Network error during annotation | Graceful error screen with retry |
-| Partial results | Show succeeded results, note how many failed |
-| Pipeline timeout | Error screen with retry |
+| All variants filtered | Results page with explanation |
+| Zero ACMG findings | Message, not blank |
+| Network error | Error screen with retry |
+| Partial results | Show succeeded, note how many failed |
 
 ---
 
 ## Not in V1
 
-- User accounts or saved results
-- Email delivery of results
-- Pharmacogenomics results (engine infrastructure exists, content not ready)
-- Research tracking / subscription features
-- PRS (polygenic risk scores)
-- Mobile app
-- API access for external developers
-- Sharing results with a provider
+User accounts, saved results, email delivery, pharmacogenomics, research tracking, PRS, mobile, API access for external developers.
 
 Roadmap: `docs/roadmap.md`
+
+---
+
+## Next steps
+
+1. **Sasank** — share the condition library CSV (even 4 rows) in Slack or Drive so Rocky can design against real disease names and Tom can use real `action_guidance` text instead of placeholder copy
+2. **Hampton** — share the K8s cluster's external IP or hostname so Curtis can register the domain and point DNS before the API is deployed; these can happen in parallel
+3. **Tom + Rocky** — design one Critical card and one Carrier card using the UI spec above and `docs/interpretation.md` tiers; agree on collapsed + expanded states before Tom writes any React

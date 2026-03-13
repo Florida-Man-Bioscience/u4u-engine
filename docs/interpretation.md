@@ -1,40 +1,36 @@
 # Interpretation
 
-The engine produces raw annotations. This document defines how those annotations map to findings a user sees.
-
 ---
 
-## Finding tiers
+## Tiers
 
 | Tier | Emoji | Score | Trigger |
 |------|-------|-------|---------|
-| Critical | 🔴 | 1000 | `clinvar = "pathogenic"` (short-circuit) |
-| High | 🟠 | >= 100 | Likely pathogenic, or high-impact consequence without benign signal |
-| Medium / VUS | 🟡 | >= 30 | VUS classification, or moderate consequence without clinical classification |
-| Low | 🟢 | < 30 | Benign, likely benign, or common variant (gnomAD AF >= 5%) |
-| Carrier | 🔵 | any (halved) | Heterozygous variant in a recessive gene |
+| Critical | 🔴 | 1000 | `clinvar = "pathogenic"` |
+| High | 🟠 | ≥ 100 | Likely pathogenic or high-impact consequence without benign signal |
+| Medium / VUS | 🟡 | ≥ 30 | VUS or moderate consequence without clinical classification |
+| Low | 🟢 | < 30 | Benign, likely benign, or gnomAD AF ≥ 5% |
+| Carrier | 🔵 | any (halved) | Heterozygous in a recessive gene |
 
-Low-tier findings are hidden by default in the UI. Users can toggle them on.
+Low-tier findings hidden by default. Users can toggle on.
 
 ---
 
 ## Consumer categories
 
-The UI groups findings into five categories. The tier is the severity signal; the category tells the user what kind of finding it is.
-
-| Category | Covers | V1 |
-|----------|--------|-----|
-| Hereditary Conditions | Pathogenic and likely pathogenic variants. ACMG SF genes always included. | Yes |
-| Uncertain Findings | VUS with available population and functional data. | Yes |
-| Carrier Status | Heterozygous variants in recessive genes. | Yes |
-| Medication Response | Pharmacogenomics (CYP2C19, CYP2D6, VKORC1, etc.) | No (V2) |
-| Wellness Insights | Non-actionable trait associations | No (V2) |
+| Category | V1 |
+|----------|----|
+| Hereditary Conditions — pathogenic + likely pathogenic | Yes |
+| Uncertain Findings — VUS with population + functional data | Yes |
+| Carrier Status — heterozygous in recessive genes | Yes |
+| Medication Response — CYP2C19, CYP2D6, VKORC1, etc. | No (V2) |
+| Wellness Insights — trait associations | No (V2) |
 
 ---
 
-## ACMG floor policy
+## ACMG floor
 
-Every variant in the ACMG SF v3.2 gene list (81 genes) must appear in results. No score threshold can suppress it. A pathogenic ACMG SF variant that does not appear is a product failure.
+Every variant in the ACMG SF v3.2 gene list (81 genes) must appear in results regardless of score. A pathogenic ACMG SF variant missing from output is a product failure.
 
 Reference: https://www.gimjournal.org/article/S1098-3600(22)00887-2/fulltext
 
@@ -42,12 +38,9 @@ Reference: https://www.gimjournal.org/article/S1098-3600(22)00887-2/fulltext
 
 ## VUS policy
 
-VUS findings are surfaced, not hidden. The results card shows:
-- Population frequency
-- Functional consequence
-- Any published classification context
+VUS findings are surfaced, not hidden. Card shows: population frequency, functional consequence, any published classification context.
 
-Language: "This variant is classified as having uncertain significance (VUS). The scientific community has not reached consensus on whether this variant affects health. Below is what the available data shows."
+Default language: "This variant is classified as having uncertain significance (VUS). The scientific community has not reached consensus on whether this variant affects health."
 
 `[SASANK REVIEW: revise this language]`
 
@@ -55,62 +48,45 @@ Language: "This variant is classified as having uncertain significance (VUS). Th
 
 ## Carrier policy
 
-Carrier findings use blue styling and a separate card layout. Default text:
+Default card text: "As a carrier of a recessive variant, you typically will not be affected. This may be relevant for family planning."
 
-"As a carrier of a recessive variant, you typically will not be affected by this condition. This may be relevant for family planning."
-
-`[SASANK REVIEW: list genes where condition-specific carrier language is needed (CFTR, HBB, GJB2, HEXA, etc.)]`
-
----
-
-## Auto-generated text (engine produces these, no curation needed)
-
-**Consequence descriptions** (`engine/summary.py`):
-- `stop_gained` - "creates a premature stop signal in the protein, typically breaking its function"
-- `missense_variant` - "changes a single building block (amino acid) in the protein"
-- `frameshift_variant` - "disrupts the way the gene is read, heavily altering the resulting protein"
-
-**Rarity descriptions** (`engine/summary.py`):
-- AF = 0 - "extremely rare, allele frequency is effectively zero in public databases"
-- AF < 0.0001 - "ultra-rare (seen in less than 1 in 10,000 people)"
-- AF < 0.001 - "very rare (seen in roughly 1 in 1,000 people)"
-- AF >= 0.05 - "common (seen in about X% of people)"
+`[SASANK REVIEW: list genes needing condition-specific carrier language — CFTR, HBB, GJB2, HEXA]`
 
 ---
 
 ## Condition library
 
-Curated content keyed by `condition_key` (OMIM ID preferred, MedGen fallback, ClinVar UID last resort).
+Keyed by `condition_key` (OMIM preferred, MedGen fallback, ClinVar UID last resort). The API layer looks up `condition_key` from each engine result in Postgres and merges the curated fields into the response.
 
-The engine returns `condition_key` in each result. The API layer looks up that key in Postgres and merges the curated fields into the response.
-
-**Status: schema exists, content missing. Sasank builds this.**
+**Status: schema done, content missing. Sasank owns this.**
 
 ### Required columns
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `condition_key` | string | OMIM ID, MedGen ID, or ClinVar disease ID |
-| `condition_display_name` | string | Clean UI name (not the raw ClinVar string) |
-| `gene_symbols` | comma-separated | Associated genes |
-| `inheritance_pattern` | string | Autosomal dominant / recessive / X-linked / Mitochondrial |
-| `plain_description` | string | 2-3 sentences for a non-scientist |
-| `action_guidance` | string | Concrete next step |
-| `acmg_sf` | boolean | On ACMG SF v3.2 list? |
-| `acmg_url` | string | URL to ACMG guideline |
+| Column | Description |
+|--------|-------------|
+| `condition_key` | OMIM ID, MedGen ID, or ClinVar disease ID |
+| `condition_display_name` | Clean UI name |
+| `gene_symbols` | Associated genes, comma-separated |
+| `inheritance_pattern` | Autosomal dominant / recessive / X-linked / Mitochondrial |
+| `plain_description` | 2-3 sentences for a non-scientist |
+| `action_guidance` | One concrete next step |
+| `acmg_sf` | On ACMG SF v3.2 list? (boolean) |
 
 ### Optional columns
 
 | Column | Description |
 |--------|-------------|
 | `prevalence` | Approximate population prevalence |
-| `penetrance_note` | Brief note if penetrance is incomplete |
+| `carrier_note_override` | Override default carrier text (CFTR, HBB, GJB2, HEXA, etc.) |
 | `vus_notes` | Gene-specific VUS language |
-| `carrier_note_override` | Override for genes where default carrier text is insufficient |
 | `last_reviewed` | Date of last Sasank review |
 
-### Scope
+Priority: all 81 ACMG SF genes before launch. Start with BRCA1, TP53, LDLR, RYR1.
 
-Start with all 81 ACMG SF v3.2 genes. Every gene on that list needs a complete row before launch.
+---
 
-Carrier screening genes (CFTR, HBB, GJB2, HEXA) are second priority if time allows. Pharmacogenomics is not in scope for V1.
+## Next steps
+
+1. **Sasank** — create the condition library CSV with the schema above; fill in 4 rows: BRCA1 (OMIM:604370), TP53 (OMIM:191170), LDLR (OMIM:606945), RYR1 (OMIM:180901) — each needs `plain_description`, `action_guidance`, and `inheritance_pattern` at minimum
+2. **Sasank** — finalize VUS display language and write `carrier_note_override` text for CFTR, HBB, GJB2, HEXA; replace all `[SASANK REVIEW]` markers in this doc with the agreed text
+3. **Hampton** — once Sasank's CSV exists, write `scripts/load_condition_library.py` that reads the CSV and upserts rows into the Postgres `condition_library` table keyed by `condition_key`

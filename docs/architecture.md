@@ -1,8 +1,8 @@
 # Architecture
 
-U4U takes a raw genome file, annotates each variant against clinical and population databases, scores and ranks findings, and returns a list of plain-English interpretations.
+U4U takes a raw genome file, annotates each variant against clinical and population databases, scores findings, and returns plain-English interpretations.
 
-The core pipeline (`engine/`) is complete. The web layer does not exist yet.
+**Engine (`engine/`) is complete. The web layer does not exist yet.**
 
 ---
 
@@ -13,8 +13,7 @@ flowchart TD
     subgraph INPUT["Input"]
         A1["23andMe .txt"]
         A2["VCF / .vcf.gz"]
-        A3["CSV"]
-        A4["rsID list"]
+        A3["CSV / rsID list"]
     end
 
     subgraph ENGINE["engine/  (exists)"]
@@ -26,34 +25,32 @@ flowchart TD
         B1 --> B2 --> B3 --> B4 --> B5
     end
 
-    subgraph APIS["External APIs  (called per variant during annotation)"]
-        C1["Ensembl VEP\nfunctional consequence"]
-        C2["NCBI ClinVar\nclinical classification"]
-        C3["gnomAD\npopulation frequency"]
-        C4["MyVariant.info\nfallback aggregator"]
+    subgraph APIS["External APIs"]
+        C1["Ensembl VEP"]
+        C2["NCBI ClinVar"]
+        C3["gnomAD"]
+        C4["MyVariant.info (fallback)"]
     end
 
     subgraph OUTPUT["Output"]
-        D1["list[dict]\nscored + ranked variants"]
+        D1["list[dict] — scored + ranked"]
     end
 
     subgraph MISSING["Not built yet"]
-        E1["FastAPI\n/analyze endpoint"]
-        E2["Postgres\nannotation cache\ncondition library"]
-        E3["Condition library\nSasank — content missing"]
-        E4["Frontend\nupload + results"]
+        E1["FastAPI /analyze"]
+        E2["Postgres cache + condition library"]
+        E3["Frontend upload + results"]
     end
 
     INPUT --> B1
     B4 <-->|"per variant"| C1
     B4 <-->|"per variant"| C2
     B4 <-->|"per variant"| C3
-    B4 <-->|"fallback only"| C4
+    B4 <-->|"fallback"| C4
     B5 --> D1
     D1 -->|"wraps engine"| E1
-    E1 <-->|"cache lookup"| E2
-    E2 <-->|"condition_key lookup"| E3
-    E1 --> E4
+    E1 <--> E2
+    E1 --> E3
 ```
 
 ---
@@ -62,10 +59,9 @@ flowchart TD
 
 | Component | Technology | Status |
 |-----------|-----------|--------|
-| Annotation pipeline | Python 3.11+ | Working |
-| API layer | FastAPI + thread pool | Not built |
+| Annotation pipeline | Python 3.11+ | **Working** |
+| API layer | FastAPI | Not built |
 | Database | Postgres | Not built |
-| Auth | Authelia | Not built (V2) |
 | Frontend | React | Not built |
 | Container | Docker | Not built |
 | Hosting | Hampton's K8s cluster | Not deployed |
@@ -75,14 +71,12 @@ flowchart TD
 
 ## Data flow
 
-1. File uploaded via POST /analyze (not yet built)
-2. FastAPI reads bytes, calls `run_pipeline(file_bytes, filename, filters)`
-3. Engine annotates each variant by calling VEP, ClinVar, gnomAD sequentially
+1. `POST /analyze` receives file bytes
+2. FastAPI calls `run_pipeline(file_bytes, filename, filters)`
+3. Engine annotates each variant via VEP → ClinVar → gnomAD (Postgres cache intercepts if warm)
 4. Engine returns `list[dict]` sorted by score
-5. FastAPI checks `condition_key` in each result against Postgres condition library
-6. Merged result returned to frontend
-
-The annotation cache (Postgres) intercepts step 3: if a variant's coordinates are already cached, the external API call is skipped.
+5. API layer merges `condition_key` results from Postgres condition library
+6. Response returned to frontend
 
 ---
 
@@ -93,8 +87,8 @@ from engine import run_pipeline
 
 results = run_pipeline(
     file_bytes,          # bytes — never written to disk
-    filename,            # used for format detection only
-    filters=["acmg81_rsids.txt"]  # empty = all variants
+    filename,            # format detection only
+    filters=["acmg81_rsids.txt"]
 )
 # returns list[dict], score descending
 ```
@@ -102,4 +96,12 @@ results = run_pipeline(
 Full pipeline spec: `docs/pipeline.md`
 External APIs: `docs/integrations.md`
 Interpretation logic: `docs/interpretation.md`
-Current build status: `docs/project-status.md`
+Build status + UI spec: `docs/project-status.md`
+
+---
+
+## Next steps
+
+1. **Hampton** — create `api/main.py`: `POST /analyze` reads uploaded file bytes, calls `run_pipeline(await file.read(), file.filename, filters=["acmg81_rsids.txt"])`, returns JSON
+2. **Hampton** — write `Dockerfile`: `FROM python:3.11-slim`, copy `engine/`, `RUN pip install -e engine/`, `CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0"]`, deploy to K8s
+3. **Curtis** — register domain; point DNS A record at Hampton's cluster IP so there's a real URL before Phase 2 work starts
