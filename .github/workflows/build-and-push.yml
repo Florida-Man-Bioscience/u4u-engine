@@ -22,7 +22,7 @@ jobs:
         with:
           registry: zot.hwcopeland.net
           username: ${{ secrets.ZOT_USERNAME }}
-          password: ${{ secrets.ZOT_PASSWORD }}
+          password: ${{ secrets.ZOT_API_KEY }}
 
       - name: Extract image metadata
         id: meta
