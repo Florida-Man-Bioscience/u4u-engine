@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "../../lib/auth";
 import { getJobStatus } from "../../lib/api";
 import type { JobStatus } from "../../lib/types";
 
@@ -12,29 +11,23 @@ export default function JobStatusPage() {
   const router = useRouter();
   const params = useParams();
   const jobId = params.id as string;
-  const { token } = useAuth();
 
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      router.push("/auth");
-      return;
-    }
-
     async function poll() {
       try {
-        const data = await getJobStatus(jobId, token!);
+        const data = await getJobStatus(jobId);
         setStatus(data);
 
-        if (data.status === "complete") {
+        if (data.status === "done") {
           clearInterval(intervalRef.current!);
           router.push(`/jobs/${jobId}/results`);
         } else if (data.status === "failed") {
           clearInterval(intervalRef.current!);
-          setError(data.error ?? "The analysis job failed. Please try again.");
+          setError(data.error_message ?? "The analysis job failed. Please try again.");
         }
       } catch (err: unknown) {
         clearInterval(intervalRef.current!);
@@ -48,9 +41,10 @@ export default function JobStatusPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [jobId, token, router]);
+  }, [jobId, router]);
 
-  const progress = status?.progress ?? 0;
+  const progress = status?.progress_pct ?? 0;
+  const currentStep = status?.progress_step ?? "";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
@@ -81,7 +75,11 @@ export default function JobStatusPage() {
             {/* Progress bar */}
             <div>
               <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
-                <span>{status?.status === "queued" ? "Queued…" : "Processing…"}</span>
+                <span>
+                  {status?.status === "pending"
+                    ? "Queued…"
+                    : currentStep || "Processing…"}
+                </span>
                 <span>{progress}%</span>
               </div>
               <div className="h-2.5 rounded-full bg-zinc-100 overflow-hidden">
@@ -94,11 +92,26 @@ export default function JobStatusPage() {
 
             {/* Steps legend */}
             <div className="space-y-2">
-              <Step label="Downloading file" done={progress >= 10} active={progress < 10} />
-              <Step label="Parsing variants" done={progress >= 25} active={progress >= 10 && progress < 25} />
-              <Step label="Resolving rsIDs" done={progress >= 50} active={progress >= 25 && progress < 50} />
-              <Step label="Annotating (VEP / ClinVar / gnomAD)" done={progress >= 85} active={progress >= 50 && progress < 85} />
-              <Step label="Scoring &amp; tiering" done={progress >= 100} active={progress >= 85 && progress < 100} />
+              <Step
+                label="Parsing variants"
+                done={progress >= 25}
+                active={status?.status === "running" && progress < 25}
+              />
+              <Step
+                label="Resolving rsIDs"
+                done={progress >= 50}
+                active={progress >= 25 && progress < 50}
+              />
+              <Step
+                label="Annotating (VEP / ClinVar / gnomAD)"
+                done={progress >= 85}
+                active={progress >= 50 && progress < 85}
+              />
+              <Step
+                label="Scoring &amp; tiering"
+                done={progress >= 100}
+                active={progress >= 85 && progress < 100}
+              />
             </div>
           </div>
 

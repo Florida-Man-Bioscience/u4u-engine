@@ -4,41 +4,30 @@ export interface VariantResult {
   variant_id: string;
   rsid: string | null;
   location: string;
-  genes: string[];
   consequence: string;
-  tier: Tier;
-  score: number;
+  genes: string[];
   clinvar: string | null;
   disease_name: string | null;
   gnomad_af: number | null;
-  headline: string;
+  score: number;
+  tier: Tier;
+  reasons: string[];
   emoji: string;
+  headline: string;
   consequence_plain: string;
   rarity_plain: string;
-  clinvar_plain: string | null;
+  clinvar_plain: string;
   action_hint: string;
-  reasons: string[];
 }
 
 export interface JobStatus {
-  status: "queued" | "running" | "complete" | "failed";
-  progress: number;
-  error?: string | null;
+  job_id: string;
+  status: "pending" | "running" | "done" | "failed";
+  progress_step?: string;
+  progress_pct?: number;
+  filename?: string;
+  created_at?: string;
+  error_message?: string;
+  results?: VariantResult[];
+  variant_count?: number;
 }
-
-export interface FilterOption {
-  key: string;
-  label: string;
-  description: string;
-}
-
-export type FilterKey = string;
-
-export const FILTER_OPTIONS: FilterOption[] = [
-  {
-    key: "acmg81_rsids.txt",
-    label: "ACMG SF v3.2 (81 genes)",
-    description:
-      "Screens for variants in the 81 genes recommended for secondary findings by the American College of Medical Genetics.",
-  },
-];

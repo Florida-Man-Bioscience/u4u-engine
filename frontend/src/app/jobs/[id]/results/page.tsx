@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "../../../lib/auth";
-import { getJobResults, deleteJob } from "../../../lib/api";
+import { getJobStatus } from "../../../lib/api";
 import type { VariantResult, Tier } from "../../../lib/types";
 import { VariantCard } from "../../../components/VariantCard";
 import { SummaryMetrics } from "../../../components/SummaryMetrics";
@@ -14,27 +13,24 @@ export default function ResultsPage() {
   const router = useRouter();
   const params = useParams();
   const jobId = params.id as string;
-  const { token } = useAuth();
 
   const [results, setResults] = useState<VariantResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      router.push("/auth");
-      return;
-    }
-
-    getJobResults(jobId, token)
-      .then((data) => setResults(data.results))
+    getJobStatus(jobId)
+      .then((data) => {
+        if (data.results) {
+          setResults(data.results);
+        } else {
+          setError("Results not available. The job may still be running.");
+        }
+      })
       .catch((err: unknown) =>
-        setError(
-          err instanceof Error ? err.message : "Failed to load results."
-        )
+        setError(err instanceof Error ? err.message : "Failed to load results.")
       );
-  }, [jobId, token, router]);
+  }, [jobId]);
 
   const downloadCsv = useCallback(() => {
     if (!results) return;
@@ -79,20 +75,6 @@ export default function ResultsPage() {
     URL.revokeObjectURL(url);
   }, [results, jobId]);
 
-  async function handleDelete() {
-    if (!token) return;
-    if (!confirm("Delete this job and all results? This cannot be undone."))
-      return;
-    setDeleting(true);
-    try {
-      await deleteJob(jobId, token);
-      router.push("/");
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Delete failed.");
-      setDeleting(false);
-    }
-  }
-
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -134,21 +116,12 @@ export default function ResultsPage() {
           <h1 className="text-2xl font-bold text-zinc-900">Variant Report</h1>
           <p className="text-sm text-zinc-500 font-mono mt-0.5">{jobId}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={downloadCsv}
-            className="rounded-lg border border-zinc-200 bg-white text-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-50 transition-colors"
-          >
-            ⬇ Download CSV
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded-lg border border-red-200 text-red-600 px-4 py-2 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
-          >
-            {deleting ? "Deleting…" : "Delete job"}
-          </button>
-        </div>
+        <button
+          onClick={downloadCsv}
+          className="rounded-lg border border-zinc-200 bg-white text-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-50 transition-colors"
+        >
+          ⬇ Download CSV
+        </button>
       </div>
 
       {/* Summary metrics */}
@@ -166,7 +139,9 @@ export default function ResultsPage() {
                 : "bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
             }`}
           >
-            {t === "all" ? `All (${results.length})` : `${t} (${results.filter((r) => r.tier === t).length})`}
+            {t === "all"
+              ? `All (${results.length})`
+              : `${t} (${results.filter((r) => r.tier === t).length})`}
           </button>
         ))}
       </div>
