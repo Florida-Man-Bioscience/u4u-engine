@@ -1,7 +1,6 @@
 # Frontend Spec
 
-**Owner:** Tom (build) + Rocky (design)
-**Read also:** `docs/project-status.md` (full screen list), `docs/architecture.md` (API contract)
+**Read also:** `docs/project-status.md`, `docs/architecture.md` (API contract)
 
 ---
 
@@ -36,7 +35,7 @@ This keeps the most important things at the top and doesn't overwhelm people wit
 
 ## Backend — what you're building against
 
-API base URL: TBD (Hampton deploys to K8s — will share when live)
+API base URL: TBD (update when deployed)
 
 ```
 POST /analyze
@@ -221,13 +220,11 @@ For MVP: just capture it. No complex backend needed.
 
 ## Insight categories (V2, not MVP)
 
-When Sasank completes the condition library with `category` fields, findings can be grouped into Disease predisposition, Carrier status, Drug response, Traits. Don't build category tabs for MVP. Show everything in one prioritized list. Add tabs in V2.
+When the condition library includes `category` fields, findings can be grouped into Disease predisposition, Carrier status, Drug response, Traits. Don't build category tabs for MVP. Show everything in one prioritized list. Add tabs in V2.
 
 ---
 
-## Component breakdown for Tom
-
-Build in this order:
+## Component build order
 
 ```
 1. /upload
@@ -259,13 +256,13 @@ Build in this order:
    <ErrorScreen />        failed jobs + network errors
 ```
 
-Tom: don't wait on Rocky to start. Build `<PollingLoop />` and `<FindingRow />` data layer against the JSON schema above. Rocky's designs slot in on top.
+Build `<PollingLoop />` and `<FindingRow />` data layer first against the JSON schema above. Designs slot in on top.
 
 ---
 
-## What Rocky designs first (in order)
+## Design order
 
-1. **Single finding row — collapsed + expanded** — this is the core component, get this right first
+1. **Single finding row — collapsed + expanded** — core component
 2. **Needs Attention section** with 2–3 real findings
 3. **Upload screen** — drop zone + consent + privacy statement
 4. **Summary header + tier badges**
@@ -308,7 +305,7 @@ The design goal: a non-scientist reads one row and understands what it means and
 - VCF is the primary format. 23andMe `.txt` also supported.
 - Results pre-sorted by score. Don't sort client-side.
 - Category tabs (disease/carrier/drug/traits) are V2.
-- Condition library text from Sasank not in API yet. Use `action_hint` as placeholder in expanded rows. No frontend change needed when it's added — comes through the API.
+- Condition library text not in API yet. Use `action_hint` as placeholder in expanded rows. No frontend change needed when it's added — comes through the API.
 
 ---
 

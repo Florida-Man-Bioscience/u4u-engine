@@ -4,37 +4,17 @@
 
 ## MVP target: 4 weeks from go
 
-MVP is done when a user can upload a VCF file at a public URL and see an interactive dashboard of interpreted variants. No genome stored. Email capture for research updates.
-
-**MVP priority order:**
-1. API wrapper — FastAPI `POST /analyze` wrapping `run_pipeline()`
-2. Genome upload — file drop, VCF validation, size limit
-3. Annotation cache — Postgres table to avoid repeat API calls on same variants
-4. UI dashboard — scored variant cards, filter chips, expanded card state
-5. Report generation — downloadable summary of findings
-6. Deploy — Docker + K8s, domain pointed, CI/CD on main push
-
----
-
-## Next steps (do these now)
-
-1. **Hampton** — share a timeline estimate for Phase 1 (FastAPI + Docker + K8s); every other person's Phase 2 work is sequenced against this date
-2. **Sasank** — commit to a delivery date for 4 condition library rows (BRCA1, TP53, LDLR, RYR1); Rocky's card design and Tom's results screen both hard-block on this
-3. **Jeran** — identify 10 specific people (name + contact) who have a 23andMe or Ancestry file and are willing to be beta users; recruit now so testers are waiting when Phase 3 ships
+MVP is done when a user can upload a VCF file at a public URL and see an interactive results view of interpreted variants. No genome stored. Email capture for research updates.
 
 ---
 
 ## Phase 1 — Get a URL
 
-**Done when:** `POST /analyze` at a public URL accepts a 23andMe file and returns annotated JSON.
+**Done when:** `POST /analyze` at a public URL accepts a VCF file and returns annotated JSON.
 
-| Task | Owner |
-|------|-------|
-| FastAPI: `POST /analyze`, calls `run_pipeline()`, returns JSON | Hampton |
-| Dockerfile for engine + API | Hampton |
-| K8s deployment | Hampton |
-| Register domain, point DNS at cluster | Curtis |
-| Google Workspace email | Jeran |
+- Deploy `api.py` to K8s: `docker compose up --build`
+- Register domain, point DNS at cluster
+- Google Workspace email setup
 
 ---
 
@@ -42,14 +22,11 @@ MVP is done when a user can upload a VCF file at a public URL and see an interac
 
 **Done when:** upload produces a styled results page with real condition content for 4 genes.
 
-| Task | Owner |
-|------|-------|
-| Postgres: `annotation_cache` + `condition_library` tables | Hampton |
-| Condition library: BRCA1, TP53, LDLR, RYR1 rows | Sasank |
-| Results card design (1 Critical + 1 Carrier using real text) | Rocky |
-| Upload + processing screens | Tom |
-| Results screen scaffolding | Tom |
-| Privacy policy draft | Cane |
+- Wire Postgres: `psql $DATABASE_URL -f db/schema.sql`
+- Condition library: BRCA1, TP53, LDLR, RYR1 rows
+- Results screen design (1 Critical row + 1 Carrier row using real text)
+- Upload + processing screens
+- Results screen build
 
 ---
 
@@ -57,14 +34,11 @@ MVP is done when a user can upload a VCF file at a public URL and see an interac
 
 **Done when:** 10 beta users have uploaded real files and seen real results.
 
-| Task | Owner |
-|------|-------|
-| All 81 ACMG SF condition library rows | Sasank |
-| Full results page (all card states) | Tom |
-| Security audit + Nmap scan | Cane |
-| CI/CD: main push triggers auto-deploy | Hampton |
-| 10 named beta users committed | Jeran |
-| Incorporate 40 Minute Bioscience LLC | Curtis |
+- All 81 ACMG SF condition library rows
+- Full results screen (all row states)
+- Security audit + pre-deploy checklist
+- CI/CD: main push triggers auto-deploy
+- 10 named beta users committed
 
 ---
 
@@ -72,14 +46,12 @@ MVP is done when a user can upload a VCF file at a public URL and see an interac
 
 **Done when:** 100+ uploads, 10 user interviews, subscription CTA at 20%+ click-through.
 
-| Task | Owner |
-|------|-------|
-| Landing page: hero, value props, waitlist | Tom + Rocky |
-| Reddit posts: r/23andme, r/genetics, r/Biohackers | Jeran |
-| Weekly newsletter (plain-English genomics finding + CTA) | Jeran |
-| 10 user interviews completed | Jeran |
-| Waitlist-to-user email flow | Hampton |
-| Subscription CTA on results page | Curtis + Tom |
+- Landing page: hero, value props, waitlist
+- Community outreach (r/23andme, r/genetics, r/Biohackers)
+- Weekly newsletter (plain-English genomics finding + CTA)
+- 10 user interviews completed
+- Waitlist-to-user email flow
+- Subscription CTA on results page
 
 ---
 
@@ -87,13 +59,11 @@ MVP is done when a user can upload a VCF file at a public URL and see an interac
 
 Not started. Requires Phases 1–3 complete.
 
-| Task | Owner |
-|------|-------|
-| User accounts (Authelia) | Hampton |
-| `user_variants` table (stored profiles) | Hampton |
-| Nightly PubMed job + LLM summarization | Curtis |
-| Research feed UI | Tom |
-| Subscription paywall | Tom + Hampton |
+- User accounts
+- `user_variants` table (stored profiles)
+- Nightly PubMed job + LLM summarization
+- Research feed UI
+- Subscription paywall
 
 ---
 
@@ -101,8 +71,8 @@ Not started. Requires Phases 1–3 complete.
 
 | ID | Hypothesis | Method | Success threshold |
 |----|-----------|--------|-------------------|
-| EXP-01 | Users sign up when they understand the value prop | Reddit post + waitlist link | 50 signups in 72h |
-| EXP-02 | Non-experts understand one result card | Show 5 people, ask them to explain it back | 4 of 5 understand |
+| EXP-01 | Users sign up when they understand the value prop | Community post + waitlist link | 50 signups in 72h |
+| EXP-02 | Non-experts understand one result row | Show 5 people, ask them to explain it back | 4 of 5 understand |
 | EXP-03 | Users upload to a free tool when privacy is explained | Track upload completion | 30% completion |
 | EXP-04 | Users pay for updating interpretation | "Get notified" CTA on results page | 20% click-through |
 
@@ -110,12 +80,10 @@ Not started. Requires Phases 1–3 complete.
 
 ## Open decisions
 
-| Decision | Owner |
-|----------|-------|
-| Domain / URL | Curtis + Hampton |
-| Subscription price | Curtis |
-| Consumer brand name | Jeran |
-| VUS display language | Sasank |
-| Gene scope beyond ACMG SF 81 | Sasank + Curtis |
-| LLC incorporation | Curtis |
-| Regulatory position (info platform vs. medical device) | Curtis + legal |
+- Domain / URL
+- Subscription price
+- Consumer brand name
+- VUS display language
+- Gene scope beyond ACMG SF 81
+- LLC incorporation
+- Regulatory position (info platform vs. medical device)

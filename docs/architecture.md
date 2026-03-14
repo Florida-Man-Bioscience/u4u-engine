@@ -43,7 +43,7 @@ flowchart TD
     subgraph DB["Postgres  (next)"]
         D1["jobs — status / progress / timing"]
         D2["results — one row per variant"]
-        D3["condition_library — Sasank's plain-English text"]
+        D3["condition_library — plain-English condition text"]
         D4["annotation_cache — avoid repeat API calls"]
     end
 
@@ -75,7 +75,7 @@ flowchart TD
 | Container | Docker + docker-compose | **Complete** |
 | Frontend | React web app | Not built |
 | Desktop (future) | Electron | Not started |
-| Hosting | Hampton's K8s cluster | Not deployed |
+| Hosting | K8s cluster | Not deployed |
 | CI | GitHub Actions | Running |
 
 ---
@@ -94,7 +94,7 @@ POST /analyze         →  202  { job_id, poll_url }
                       status = "failed"    error: "..."
 ```
 
-Frontend polls `GET /jobs/{job_id}` every 3 seconds, reads `progress.pct` to drive the progress bar, then renders cards when `status == "done"`.
+Frontend polls `GET /jobs/{job_id}` every 3 seconds, reads `progress.pct` to drive the progress bar, then renders the results view when `status == "done"`.
 
 ---
 
@@ -173,14 +173,14 @@ Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVa
 
 ## Compute model
 
-**MVP:** all computation server-side on Hampton's K8s cluster. Thread pool (`WORKERS=4`) handles concurrent jobs. No local execution.
+**MVP:** all computation server-side. Thread pool (`WORKERS=4`) handles concurrent jobs. No local execution.
 
 **Hybrid (future):** Electron desktop app runs format validation + variant filtering locally, calls server API for annotation. Keeps raw genome file on the user's device.
 
 ---
 
-## Next steps
+## Deployment checklist
 
-1. **Hampton** — deploy `api.py` to K8s: `docker compose up --build`, confirm `/health` returns `{"status":"ok"}`
-2. **Hampton** — wire Postgres: run `psql $DATABASE_URL -f db/schema.sql`, replace in-memory `_jobs` dict with `asyncpg` reads/writes
-3. **Curtis** — run `NCBI_API_KEY=<key> python scripts/generate_filters.py` to regenerate `data/acmg81_rsids.txt` from live ClinVar data
+- `docker compose up --build` — confirm `/health` returns `{"status":"ok"}`
+- `psql $DATABASE_URL -f db/schema.sql` — initialize Postgres
+- `NCBI_API_KEY=<key> python scripts/generate_filters.py` — refresh `data/acmg81_rsids.txt` from live ClinVar data
