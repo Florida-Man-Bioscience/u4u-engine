@@ -1,4 +1,4 @@
-# u4u-engine
+# u4u-engine: peptideIQ
 
 [![tests](https://github.com/curtisdearing/u4u-engine/actions/workflows/test.yml/badge.svg)](https://github.com/curtisdearing/u4u-engine/actions/workflows/test.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
