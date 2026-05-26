@@ -46,9 +46,10 @@ Public interface
 from .parsers      import parse_file
 from .validators   import validate_file_bytes
 from .quality_filter import apply_quality_filter, filter_stats
-from .filters      import filter_variants
+from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
 from .deduplicator import deduplicate
+import concurrent.futures
 from .annotators.vep     import fetch_vep, select_canonical_consequence
 from .annotators.clinvar import fetch_clinvar
 from .annotators.gnomad  import fetch_gnomad
@@ -75,6 +76,7 @@ def run_pipeline(
     file_bytes: bytes,
     filename: str,
     filters: list = (),
+    bed_filter: str = None,
     data_dir: str = "data",
     progress_callback=None,
     # V3 parameters
@@ -94,6 +96,8 @@ def run_pipeline(
     filters : list[str]
         rsID filter filenames to apply (e.g. ["acmg81_rsids.txt"]).
         Empty list = process all variants (use for VCF files).
+    bed_filter : str | None
+        Optional BED filename in `data_dir` for coordinate-based restriction.
     data_dir : str
         Path to the directory containing filter files.
     progress_callback : callable | None
@@ -139,48 +143,47 @@ def run_pipeline(
             10,
         )
 
-    # ── Step 4: rsID whitelist filter ───────────────────────────────────────
-    _progress("Applying gene panel filter", 12)
-    panel_filtered = filter_variants(quality_filtered, list(filters), data_dir)
-
-    # ── Step 5: Resolve rsid_only variants to coordinates ───────────────────
-    rsid_only   = [(v["rsid"], v.get("genotype")) for v in panel_filtered
+    # ── Step 4: Resolve rsid_only variants to coordinates ───────────────────
+    rsid_only   = [(v["rsid"], v.get("genotype")) for v in quality_filtered
                    if v["variant_type"] == "rsid_only"]
-    coord_vars  = [v for v in panel_filtered if v["variant_type"] == "coordinate"]
+    coord_vars  = [v for v in quality_filtered if v["variant_type"] == "coordinate"]
 
     if rsid_only:
-        _progress(f"Resolving {len(rsid_only)} rsIDs via Ensembl", 15)
+        _progress(f"Resolving {len(rsid_only)} rsIDs via Ensembl", 12)
 
         def _resolve_progress(current, total):
-            pct = 15 + int((current / max(total, 1)) * 10)
+            pct = 12 + int((current / max(total, 1)) * 5)
             _progress(f"Resolving rsIDs ({current}/{total})", pct)
 
         resolved = resolve_rsids(rsid_only, progress_callback=_resolve_progress)
         coord_vars.extend(resolved)
 
+    # ── Step 5: Filters (rsID whitelist & BED coordinate) ───────────────────
+    _progress("Applying targeted filters", 18)
+    # Apply rsID whitelist if provided
+    panel_filtered = filter_variants(coord_vars, list(filters), data_dir)
+    
+    # Apply coordinate BED filter if provided
+    if bed_filter:
+        _progress("Applying BED coordinate filter", 20)
+        panel_filtered = filter_variants_by_bed(panel_filtered, bed_filter, data_dir)
+
     # ── Step 6: Deduplicate ─────────────────────────────────────────────────
     _progress("Deduplicating variants", 26)
-    unique_variants = deduplicate(coord_vars)
+    unique_variants = deduplicate(panel_filtered)
 
     # ── Steps 7–9: Annotate → Score → Summarize ─────────────────────────────
-    total        = len(unique_variants)
+    # Process variants in parallel due to high IO bounds
+    total = len(unique_variants)
     final_results = []
+    
+    _progress(f"Annotating {total} variants...", 30)
 
-    for i, v in enumerate(unique_variants):
-        pct  = 30 + int((i / max(total, 1)) * 60)
-        name = v.get("rsid") or f"{v.get('chrom')}:{v.get('pos')}"
-        _progress(f"Annotating {name} ({i+1}/{total})", pct)
-
-        # Step 7: Annotate
+    def process_variant(v):
         annotated = annotate_variant(v)
-
-        # Step 8: Score
         scored = score_variant(annotated)
-
-        # Step 9: Summarize
         summary = generate_summary(scored)
-
-        # Merge summary fields into the result dict
+        
         combined = dict(scored)
         combined.update({
             "emoji":             summary.emoji,
@@ -190,9 +193,24 @@ def run_pipeline(
             "clinvar_plain":     summary.clinvar_plain,
             "action_hint":       summary.action_hint,
             "zygosity_plain":    summary.zygosity_plain,
-            # carrier_note is already in scored — no need to duplicate
         })
-        final_results.append(combined)
+        return combined
+
+    completed = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        future_to_v = {executor.submit(process_variant, v): v for v in unique_variants}
+        for future in concurrent.futures.as_completed(future_to_v):
+            try:
+                res = future.result()
+                final_results.append(res)
+            except Exception as e:
+                # Fallback on failure, dropping variant
+                print(f"[pipeline] variant mapping failed: {e}")
+            
+            completed += 1
+            if completed % max(1, total // 10) == 0 or completed == total:
+                pct = 30 + int((completed / max(total, 1)) * 55)
+                _progress(f"Annotating variants ({completed}/{total})", pct)
 
     # ── Step 8b: KEGG Pathway Mapping ──────────────────────────────────────
     _progress("Mapping KEGG pathways", 92)

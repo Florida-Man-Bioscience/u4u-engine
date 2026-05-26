@@ -121,6 +121,7 @@ def _run_pipeline_task(job_id: str, file_bytes: bytes, filename: str):
             file_bytes,
             filename,
             filters=FILTERS,
+            bed_filter="peptide_genes.bed",
             data_dir=DATA_DIR,
             progress_callback=lambda step, pct: _progress_callback(job_id, step, pct),
         )

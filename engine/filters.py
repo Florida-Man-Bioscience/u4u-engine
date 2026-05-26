@@ -92,3 +92,81 @@ def filter_variants(
         allowed.update(load_filter_set(fname, data_dir))
 
     return [v for v in variants if v.get("rsid") in allowed]
+
+
+@lru_cache(maxsize=4)
+def load_bed_file(filename: str, data_dir: str = "data") -> dict[str, list[tuple[int, int]]]:
+    """
+    Load a BED file into an interval mapping.
+
+    Returns
+    -------
+    dict[str, list[tuple[int, int]]]
+        Map of chromosome name to list of (start, end) intervals.
+    """
+    filepath = os.path.join(data_dir, filename)
+    regions: dict[str, list[tuple[int, int]]] = {}
+
+    if not os.path.exists(filepath):
+        return regions
+
+    try:
+        with open(filepath, "rt", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 3:
+                    chrom = parts[0].replace("chr", "").replace("CHR", "")
+                    start = int(parts[1])
+                    end = int(parts[2])
+                    regions.setdefault(chrom, []).append((start, end))
+    except Exception as e:
+        print(f"[filters] Warning: could not load BED {filename}: {e}")
+
+    return regions
+
+
+def filter_variants_by_bed(
+    variants: list[dict],
+    bed_filename: str,
+    data_dir: str = "data",
+) -> list[dict]:
+    """
+    Keep only variants that overlap with regions defined in a BED file.
+    Variants lacking coordinate data (chrom or pos) are kept by default
+    so they can be resolved later.
+
+    Parameters
+    ----------
+    variants     : list[dict]
+    bed_filename : str
+    data_dir     : str
+
+    Returns
+    -------
+    list[dict]
+    """
+    if not bed_filename:
+        return variants
+
+    regions = load_bed_file(bed_filename, data_dir)
+    if not regions:
+        # If BED fails to load, fallback to letting all through
+        return variants
+
+    kept = []
+    for v in variants:
+        chrom = v.get("chrom")
+        pos = v.get("pos")
+
+        # If it doesn't have coordinates (e.g. raw rsID), let it pass
+        # so resolve_rsids can annotate it with coordinates later.
+        # It should ideally be run through the filter again after resolution.
+        if not chrom or not pos:
+            kept.append(v)
+            continue
+
+        intervals = regions.get(str(chrom), [])
+        if any(start <= int(pos) <= end for start, end in intervals):
+            kept.append(v)
+
+    return kept
