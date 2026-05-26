@@ -64,6 +64,9 @@ from .annotators.prs_calculator import calculate_prs
 from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary
 from .annotators.peptide_mapper import map_peptide_coverage
 
+import logging
+log = logging.getLogger(__name__)
+
 # V3 STR caller (optional — requires BAM + ExpansionHunter binary)
 try:
     from .repeat_callers.expansion_hunter import call_ar_cag_repeat
@@ -122,6 +125,7 @@ def run_pipeline(
           - 'ar_cag_repeat': STR analysis (or None)
     """
     def _progress(step: str, pct: int):
+        log.info("Pipeline step: %s (Progress: %d%%)", step, pct)
         if progress_callback:
             progress_callback(step, pct)
 
@@ -144,34 +148,34 @@ def run_pipeline(
             10,
         )
 
-    # ── Step 4: Resolve rsid_only variants to coordinates ───────────────────
-    rsid_only   = [(v["rsid"], v.get("genotype")) for v in quality_filtered
+    # ── Step 4: Apply rsID Whitelist Filter ─────────────────────────────────
+    _progress("Applying targeted filters", 12)
+    # Apply rsID whitelist if provided
+    panel_filtered = filter_variants(quality_filtered, list(filters), data_dir)
+
+    # ── Step 5: Resolve rsid_only variants to coordinates ───────────────────
+    rsid_only   = [(v["rsid"], v.get("genotype")) for v in panel_filtered
                    if v["variant_type"] == "rsid_only"]
-    coord_vars  = [v for v in quality_filtered if v["variant_type"] == "coordinate"]
+    coord_vars  = [v for v in panel_filtered if v["variant_type"] == "coordinate"]
 
     if rsid_only:
-        _progress(f"Resolving {len(rsid_only)} rsIDs via Ensembl", 12)
+        _progress(f"Resolving {len(rsid_only)} rsIDs via Ensembl", 14)
 
         def _resolve_progress(current, total):
-            pct = 12 + int((current / max(total, 1)) * 5)
+            pct = 14 + int((current / max(total, 1)) * 5)
             _progress(f"Resolving rsIDs ({current}/{total})", pct)
 
         resolved = resolve_rsids(rsid_only, progress_callback=_resolve_progress)
         coord_vars.extend(resolved)
 
-    # ── Step 5: Filters (rsID whitelist & BED coordinate) ───────────────────
-    _progress("Applying targeted filters", 18)
-    # Apply rsID whitelist if provided
-    panel_filtered = filter_variants(coord_vars, list(filters), data_dir)
-    
-    # Apply coordinate BED filter if provided
+    # ── Step 6: Coordinate BED Filter ───────────────────────────────────────
     if bed_filter:
         _progress("Applying BED coordinate filter", 20)
-        panel_filtered = filter_variants_by_bed(panel_filtered, bed_filter, data_dir)
+        coord_vars = filter_variants_by_bed(coord_vars, bed_filter, data_dir)
 
-    # ── Step 6: Deduplicate ─────────────────────────────────────────────────
+    # ── Step 7: Deduplicate ─────────────────────────────────────────────────
     _progress("Deduplicating variants", 26)
-    unique_variants = deduplicate(panel_filtered)
+    unique_variants = deduplicate(coord_vars)
 
     # ── Steps 7–9: Annotate → Score → Summarize ─────────────────────────────
     # Process variants in parallel due to high IO bounds

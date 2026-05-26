@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getJobStatus } from "../../lib/api";
 import type { JobStatus } from "../../lib/types";
-import { VariantCard } from "../../../components/VariantCard";
+import { VariantCard } from "../../components/VariantCard";
 
 const POLL_INTERVAL_MS = 2000;
 

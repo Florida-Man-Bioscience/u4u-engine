@@ -32,6 +32,10 @@ Notes
 
 import csv
 import io
+import logging
+import time
+
+log = logging.getLogger(__name__)
 
 try:
     import pysam
@@ -62,20 +66,29 @@ def parse_file(file_bytes: bytes, filename: str) -> list[dict]:
     ValueError  If the file format is unsupported or the file is unreadable.
     """
     name = filename.lower()
+    start_time = time.time()
+    log.info("Starting to parse file: %s", filename)
+    
+    result = None
     if name.endswith(".vcf") or name.endswith(".vcf.gz"):
-        return _parse_vcf_bytes(file_bytes, filename)
+        result = _parse_vcf_bytes(file_bytes, filename)
     elif name.endswith(".txt"):
         text = file_bytes.decode("utf-8", errors="replace")
         if _is_23andme_text(text):
-            return _parse_23andme_text(text)
-        return _parse_rsid_text(text)
+            result = _parse_23andme_text(text)
+        else:
+            result = _parse_rsid_text(text)
     elif name.endswith(".csv"):
-        return _parse_csv_bytes(file_bytes)
+        result = _parse_csv_bytes(file_bytes)
     else:
         raise ValueError(
             f"Unsupported file format: {filename!r}. "
             "Accepted formats: .vcf, .vcf.gz, .txt, .csv"
         )
+        
+    duration = time.time() - start_time
+    log.info("Finished parsing file: %s in %.2fs. Total variants parsed: %d", filename, duration, len(result) if result else 0)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +268,14 @@ def _parse_23andme_text(text: str) -> list[dict]:
     Includes genotype string and inferred zygosity.
     """
     variants = []
-    for line in text.splitlines():
+    lines = text.splitlines()
+    total_lines = len(lines)
+    log.info("Parsing 23andMe text file with %d lines...", total_lines)
+    
+    for i, line in enumerate(lines):
+        if i > 0 and i % 100000 == 0:
+            log.info("Parsed %d / %d lines of 23andMe file...", i, total_lines)
+            
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
