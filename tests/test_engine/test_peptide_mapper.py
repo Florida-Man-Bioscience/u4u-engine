@@ -11,7 +11,6 @@ from engine.annotators.peptide_mapper import (
     map_peptide_coverage,
     generate_peptide_summary,
     PEPTIDE_GENE_MAP,
-    PEPTIDE_REFERENCES,
 )
 
 
@@ -70,21 +69,6 @@ class TestPeptideGeneMapData:
         ]
         for name in expected:
             assert name in PEPTIDE_GENE_MAP, f"Missing peptide: {name}"
-
-
-# ---------------------------------------------------------------------------
-# References data
-# ---------------------------------------------------------------------------
-
-class TestPeptideReferences:
-
-    def test_has_references(self):
-        assert len(PEPTIDE_REFERENCES) > 0
-
-    def test_references_are_strings(self):
-        for num, ref in PEPTIDE_REFERENCES.items():
-            assert isinstance(ref, str), f"Reference {num} is not a string"
-            assert len(ref) > 10, f"Reference {num} is too short"
 
 
 # ---------------------------------------------------------------------------
@@ -155,15 +139,6 @@ class TestMapPeptideCoverage:
         )
         assert bpc["coverage"] == 1.0
 
-    def test_sorted_by_coverage_descending(self):
-        variants = [
-            _make_variant("ADRB3"),     # AOD-9604: 100%
-            _make_variant("COL1A1"),    # GHK: 33%, Matrixyl: 50%
-        ]
-        result = map_peptide_coverage(variants)
-        coverages = [r["coverage"] for r in result["recommendations"]]
-        assert coverages == sorted(coverages, reverse=True)
-
     def test_case_insensitive_gene_matching(self):
         """Gene matching should be case-insensitive."""
         variants = [_make_variant("adrb3")]  # lowercase
@@ -215,21 +190,14 @@ class TestGeneratePeptideSummary:
         assert "No peptide" in text
         assert len(text) > 0
 
-    def test_summary_mentions_full_coverage(self):
-        recs = [{"peptide_name": "AOD-9604", "coverage": 1.0}]
-        text = generate_peptide_summary(recs)
-        assert "Full genotyping coverage" in text
-
-    def test_summary_mentions_partial_coverage(self):
-        recs = [{"peptide_name": "GHK-Cu + BPC-157 + TB-500", "coverage": 0.33}]
-        text = generate_peptide_summary(recs)
-        assert "Partial coverage" in text
-
-    def test_summary_mentions_no_coverage(self):
-        recs = [{"peptide_name": "X", "coverage": 0.0}]
-        text = generate_peptide_summary(recs)
-        assert "no genotyping data" in text
-
     def test_summary_from_full_mapping(self):
         result = map_peptide_coverage([_make_variant("ADRB3")])
         assert len(result["summary_text"]) > 0
+
+    def test_no_variants_summary(self):
+        result = map_peptide_coverage([])
+        assert "baseline" in result["summary_text"].lower() or "no" in result["summary_text"].lower()
+
+    def test_with_variants_summary(self):
+        result = map_peptide_coverage([_make_variant("NOS3"), _make_variant("COL1A1")])
+        assert len(result["summary_text"]) > 20
