@@ -39,6 +39,44 @@ pip install -e "./engine[vcf]"
 
 ---
 
+## NixOS / Nix Development
+
+A `flake.nix` is provided for reproducible development on NixOS or any system with [Nix](https://nixos.org/) installed.
+
+### Enter the dev shell
+
+```bash
+# From the repo root
+nix develop
+```
+
+This gives you Python 3.12 with `pytest`, `responses`, `requests`, `tenacity`, and Node.js 20 — everything needed to run the engine tests and build the frontend.
+
+### Run tests inside the Nix shell
+
+```bash
+# Already inside `nix develop`:
+python -m pytest tests/ -v
+
+# Or as a one-liner without entering the shell:
+nix develop --command bash -c "python -m pytest tests/ -v"
+```
+
+### Run the engine
+
+```bash
+nix develop --command python -c "
+from engine import run_pipeline
+# ... your pipeline code
+"
+```
+
+> **Note:** The Nix shell provides test and engine dependencies only. For production
+> deployment (FastAPI/uvicorn, Celery, database drivers), use Docker or `pip install`
+> as described above.
+
+---
+
 ## Quick Start
 
 ```python
