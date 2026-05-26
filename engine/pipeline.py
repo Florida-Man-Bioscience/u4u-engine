@@ -342,11 +342,13 @@ def annotate_variant(v: dict) -> dict:
     if vep_data:
         consequence, genes = select_canonical_consequence(vep_data)
         result["consequence"] = consequence
-        result["genes"]       = genes
+        
+        bed_genes = v.get("bed_genes", [])
+        result["genes"]       = list(set(genes + bed_genes))
         fallback_cv           = vep_data.get("_fallback_clinvar", {})
     else:
         result["consequence"] = "unknown"
-        result["genes"]       = []
+        result["genes"]       = v.get("bed_genes", [])
         fallback_cv           = {}
 
     # ── ClinVar (primary: NCBI eUtils; fallback: VEP colocated) ─────────────

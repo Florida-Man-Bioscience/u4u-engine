@@ -95,14 +95,14 @@ def filter_variants(
 
 
 @lru_cache(maxsize=4)
-def load_bed_file(filename: str, data_dir: str = "data") -> dict[str, list[tuple[int, int]]]:
+def load_bed_file(filename: str, data_dir: str = "data") -> dict[str, list[tuple[int, int, str]]]:
     """
     Load a BED file into an interval mapping.
 
     Returns
     -------
-    dict[str, list[tuple[int, int]]]
-        Map of chromosome name to list of (start, end) intervals.
+    dict[str, list[tuple[int, int, str]]]
+        Map of chromosome name to list of (start, end, gene) intervals.
     """
     filepath = os.path.join(data_dir, filename)
     regions: dict[str, list[tuple[int, int]]] = {}
@@ -118,7 +118,8 @@ def load_bed_file(filename: str, data_dir: str = "data") -> dict[str, list[tuple
                     chrom = parts[0].replace("chr", "").replace("CHR", "")
                     start = int(parts[1])
                     end = int(parts[2])
-                    regions.setdefault(chrom, []).append((start, end))
+                    gene = parts[3] if len(parts) >= 4 else None
+                    regions.setdefault(chrom, []).append((start, end, gene))
     except Exception as e:
         print(f"[filters] Warning: could not load BED {filename}: {e}")
 
@@ -166,7 +167,14 @@ def filter_variants_by_bed(
             continue
 
         intervals = regions.get(str(chrom), [])
-        if any(start <= int(pos) <= end for start, end in intervals):
-            kept.append(v)
+        for start, end, gene in intervals:
+            if start <= int(pos) <= end:
+                if gene:
+                    if "bed_genes" not in v:
+                        v["bed_genes"] = []
+                    if gene not in v["bed_genes"]:
+                        v["bed_genes"].append(gene)
+                kept.append(v)
+                break
 
     return kept
