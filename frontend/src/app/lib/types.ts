@@ -106,6 +106,7 @@ export interface JobStatus {
     prs_profile?: unknown;
     ar_cag_repeat?: unknown;
   };
+  partial_results?: VariantResult[];
   variant_count?: number;
 }
 

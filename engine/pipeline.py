@@ -83,6 +83,7 @@ def run_pipeline(
     bam_path: str = None,
     sex: str = None,
     ancestry: str = "Unknown",
+    partial_results: list = None,
 ) -> dict:
     """
     Run the full variant analysis pipeline.
@@ -194,6 +195,10 @@ def run_pipeline(
             "action_hint":       summary.action_hint,
             "zygosity_plain":    summary.zygosity_plain,
         })
+        
+        if partial_results is not None:
+            partial_results.append(combined)
+            
         return combined
 
     completed = 0

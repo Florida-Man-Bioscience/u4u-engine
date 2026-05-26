@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getJobStatus } from "../../lib/api";
 import type { JobStatus } from "../../lib/types";
+import { VariantCard } from "../../../components/VariantCard";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -59,7 +60,7 @@ export default function JobStatusPage() {
       </div>
 
       {error ? (
-        <div className="w-full max-w-md rounded-lg bg-red-50 border border-red-200 p-6 text-center space-y-4">
+        <div className="w-full max-w-md mx-auto rounded-lg bg-red-50 border border-red-200 p-6 text-center space-y-4">
           <p className="text-red-700 font-medium">Analysis Failed</p>
           <p className="text-sm text-red-600">{error}</p>
           <button
@@ -70,8 +71,8 @@ export default function JobStatusPage() {
           </button>
         </div>
       ) : (
-        <div className="w-full max-w-md space-y-4">
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-4">
+        <div className="w-full max-w-4xl space-y-8">
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-4 max-w-md mx-auto">
             {/* Progress bar */}
             <div>
               <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
@@ -114,6 +115,21 @@ export default function JobStatusPage() {
               />
             </div>
           </div>
+
+          {/* Progressive Variants Stream */}
+          {(status?.partial_results && status.partial_results.length > 0) && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-xl font-bold text-zinc-900 border-b border-zinc-200 pb-2 flex items-center justify-between">
+                <span>Variants Analyzed</span>
+                <span className="text-base text-zinc-500 font-normal">{status.partial_results.length} found</span>
+              </h2>
+              <div className="grid grid-cols-1 gap-4">
+                {status.partial_results.map((variant) => (
+                  <VariantCard key={variant.variant_id} variant={variant} />
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-xs text-zinc-400">
             This page updates automatically. Do not close this tab.

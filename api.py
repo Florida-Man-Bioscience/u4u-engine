@@ -116,6 +116,9 @@ def _run_pipeline_task(job_id: str, file_bytes: bytes, filename: str):
 
     log.info("job=%s starting file=%s size=%d bytes", job_id, filename, len(file_bytes))
 
+    with _jobs_lock:
+        partial_results_ref = _jobs[job_id]["partial_results"]
+
     try:
         pipeline_output = run_pipeline(
             file_bytes,
@@ -124,6 +127,7 @@ def _run_pipeline_task(job_id: str, file_bytes: bytes, filename: str):
             bed_filter="peptide_genes.bed",
             data_dir=DATA_DIR,
             progress_callback=lambda step, pct: _progress_callback(job_id, step, pct),
+            partial_results=partial_results_ref,
         )
         # V3: run_pipeline returns a dict with 'variants' and enrichment data.
         variants = pipeline_output.get("variants", [])
@@ -245,6 +249,7 @@ async def analyze(
             "progress":    {"step": "Queued", "pct": 0},
             "count":       None,
             "results":     None,
+            "partial_results": [],
             "error":       None,
             "filename":    filename,
             "file_size":   len(file_bytes),
@@ -319,9 +324,13 @@ def get_job(job_id: str, include_results: bool = True):
 
     response = dict(job)
     response["job_id"] = job_id
+    
+    # Safely copy the list to avoid mutation issues during serialization
+    response["partial_results"] = list(job.get("partial_results", []))
 
     if not include_results:
         response.pop("results", None)
+        response.pop("partial_results", None)
 
     return response
 
