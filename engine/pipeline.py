@@ -148,10 +148,27 @@ def run_pipeline(
             10,
         )
 
-    # ── Step 4: Apply rsID Whitelist Filter ─────────────────────────────────
+    # ── Step 4: Apply Target Filters ─────────────────────────────────────────
     _progress("Applying targeted filters", 12)
-    # Apply rsID whitelist if provided
-    panel_filtered = filter_variants(quality_filtered, list(filters), data_dir)
+    
+    if not filters and not bed_filter:
+        panel_filtered = quality_filtered
+    else:
+        var_set = set() # use id() to deduplicate refs
+        panel_filtered = []
+        
+        if filters:
+            list1 = filter_variants(quality_filtered, list(filters), data_dir)
+            for v in list1:
+                var_set.add(id(v))
+                panel_filtered.append(v)
+                
+        if bed_filter:
+            list2 = filter_variants_by_bed(quality_filtered, bed_filter, data_dir)
+            for v in list2:
+                if id(v) not in var_set:
+                    var_set.add(id(v))
+                    panel_filtered.append(v)
 
     # ── Step 5: Resolve rsid_only variants to coordinates ───────────────────
     rsid_only   = [(v["rsid"], v.get("genotype")) for v in panel_filtered

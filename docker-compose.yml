@@ -15,7 +15,7 @@ services:
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
-      - ./data:/app/data:ro
+      - ./data:/app/data
     restart: unless-stopped
   frontend:
     build: ./frontend
