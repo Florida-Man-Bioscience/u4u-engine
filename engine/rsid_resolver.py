@@ -20,6 +20,9 @@ Each returned dict has the canonical variant shape from parsers.py:
 
 import time
 import requests
+import sqlite3
+import json
+import os
 from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
@@ -30,6 +33,7 @@ from .parsers import _infer_zygosity_from_genotype
 _ENSEMBL_BASE    = "https://rest.ensembl.org"
 _REQUEST_TIMEOUT = 10  # seconds
 _RATE_LIMIT_SLEEP = 0.07  # ~14 req/s — within Ensembl's unauthenticated limit
+_CACHE_DB_PATH   = os.path.join(os.getenv("DATA_DIR", "data"), "rsid_cache.db")
 
 
 @retry(
@@ -60,12 +64,30 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
     except ValueError:
         return []
 
+    conn = sqlite3.connect(_CACHE_DB_PATH, timeout=10.0)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS rsid_cache (
+            rsid TEXT,
+            genotype TEXT,
+            result_json TEXT,
+            PRIMARY KEY (rsid, genotype)
+        )
+    ''')
+    cur = conn.cursor()
+    cur.execute("SELECT result_json FROM rsid_cache WHERE rsid = ? AND genotype = ?", (rsid, genotype or ""))
+    row = cur.fetchone()
+    if row:
+        conn.close()
+        return json.loads(row[0])
+
     try:
         resp = requests.get(
             f"{_ENSEMBL_BASE}/variation/human/{rsid}",
             headers={"Content-Type": "application/json"},
             timeout=_REQUEST_TIMEOUT,
         )
+        time.sleep(_RATE_LIMIT_SLEEP)
         if resp.status_code != 200:
             return []
 
@@ -98,7 +120,7 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
                 return []
 
             zygosity = _infer_zygosity_from_genotype(genotype, ref)
-            return [
+            results = [
                 {
                     "chrom":        chrom,
                     "pos":          pos,
@@ -117,7 +139,7 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
         else:
             # No genotype available — return all known alt alleles
             all_alts = [a.upper() for a in alleles[1:] if a.upper() in "ACGT"]
-            return [
+            results = [
                 {
                     "chrom":        chrom,
                     "pos":          pos,
@@ -132,8 +154,17 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
                 }
                 for alt in all_alts
             ]
+            
+        cur.execute(
+            "INSERT OR REPLACE INTO rsid_cache (rsid, genotype, result_json) VALUES (?, ?, ?)",
+            (rsid, genotype or "", json.dumps(results))
+        )
+        conn.commit()
+        conn.close()
+        return results
 
     except Exception:
+        conn.close()
         return []
 
 
@@ -168,7 +199,6 @@ def resolve_rsids(
 
         variants = resolve_rsid(rsid, genotype)
         resolved.extend(variants)
-        time.sleep(_RATE_LIMIT_SLEEP)
 
         if progress_callback:
             progress_callback(i + 1, total)
