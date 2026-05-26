@@ -179,6 +179,8 @@ def run_pipeline(
         _progress(f"Resolving {len(rsid_only)} rsIDs via Ensembl", 14)
 
         def _resolve_progress(current, total):
+            if total > 50 and current % max(1, total // 50) != 0 and current != total:
+                return
             pct = 14 + int((current / max(total, 1)) * 5)
             _progress(f"Resolving rsIDs ({current}/{total})", pct)
 
