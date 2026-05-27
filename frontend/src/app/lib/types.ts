@@ -77,6 +77,7 @@ export interface PeptideRecommendation {
   coverage: number;
   predicted_tier: string;
   prediction_description: string;
+  tier_reasons: string[];
   rationale: string;
   references: string[];
   category: string;

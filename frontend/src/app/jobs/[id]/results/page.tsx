@@ -18,26 +18,18 @@ type ViewMode = "peptides" | "variants";
 
 const PREDICTED_TIER_COLORS: Record<string, string> = {
   "Strong Fit": "bg-green-100 text-green-800 border-green-300",
-  "Altered / Reduced": "bg-yellow-100 text-yellow-800 border-yellow-300",
+  "Possible Fit": "bg-green-50 text-green-700 border-green-200",
+  "Likely Reduced": "bg-red-100 text-red-800 border-red-300",
+  "Possibly Altered": "bg-yellow-100 text-yellow-800 border-yellow-300",
   Caution: "bg-red-100 text-red-800 border-red-300",
+  "Review Recommended": "bg-amber-100 text-amber-800 border-amber-300",
+  "Review Needed": "bg-yellow-100 text-yellow-800 border-yellow-300",
   Baseline: "bg-zinc-100 text-zinc-500 border-zinc-200",
-  Unknown: "bg-zinc-100 text-zinc-500 border-zinc-200",
+  // BPC-157 predictor tiers
   likely_good: "bg-green-100 text-green-800 border-green-300",
   possible: "bg-yellow-100 text-yellow-800 border-yellow-300",
   uncertain: "bg-zinc-100 text-zinc-600 border-zinc-300",
-  low_confidence: "bg-red-50 text-red-600 border-red-200",
-};
-
-const PREDICTED_TIER_LABELS: Record<string, string> = {
-  "Strong Fit": "Strong Fit",
-  "Altered / Reduced": "Altered / Reduced",
-  Caution: "Caution",
-  Baseline: "Baseline",
-  Unknown: "Unknown",
-  likely_good: "Likely Good Candidate",
-  possible: "Possible Candidate",
-  uncertain: "Uncertain",
-  low_confidence: "Low Confidence",
+  low_confidence: "bg-zinc-100 text-zinc-500 border-zinc-200",
 };
 
 export default function ResultsPage() {
@@ -271,8 +263,7 @@ function PeptideTherapyCard({
   const tierColor =
     PREDICTED_TIER_COLORS[rec.predicted_tier] ??
     PREDICTED_TIER_COLORS.Baseline;
-  const tierLabel =
-    PREDICTED_TIER_LABELS[rec.predicted_tier] ?? rec.predicted_tier;
+  const tierLabel = rec.predicted_tier;
 
   const variants = rec.relevant_variants ?? [];
   const variantCount = variants.length;
@@ -331,9 +322,34 @@ function PeptideTherapyCard({
       {expanded && (
         <div className="border-t border-zinc-100 p-5 space-y-5">
           {/* Prediction summary */}
-          <p className="text-sm text-zinc-700 leading-relaxed">
-            {rec.prediction_description}
-          </p>
+          <div
+            className={`rounded-lg border px-4 py-3 ${tierColor}`}
+          >
+            <p className="text-sm font-medium mb-1">{tierLabel}</p>
+            <p className="text-sm opacity-80 leading-relaxed">
+              {rec.prediction_description}
+            </p>
+          </div>
+
+          {/* Why this tier */}
+          {rec.tier_reasons && rec.tier_reasons.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                Why This Prediction
+              </h3>
+              <ul className="space-y-1">
+                {rec.tier_reasons.map((reason, i) => (
+                  <li
+                    key={i}
+                    className="text-sm text-zinc-600 flex items-start gap-2"
+                  >
+                    <span className="text-zinc-400 mt-0.5 shrink-0">&#x2022;</span>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Rationale */}
           <div>

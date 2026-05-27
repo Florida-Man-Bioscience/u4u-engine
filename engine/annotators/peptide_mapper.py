@@ -115,18 +115,133 @@ PEPTIDE_GENE_MAP: dict[str, dict] = {
     },
 }
 
-def _determine_efficacy(effect_type: str, found_count: int) -> tuple[str, str]:
-    if found_count == 0:
-        return ("Baseline", "No relevant variants detected. Expected baseline efficacy.")
+def _classify_variants(relevant_variants: list[dict]) -> dict:
+    """Classify relevant variants by clinical significance."""
+    pathogenic = []
+    benign = []
+    vus = []
+    unknown = []
+
+    for v in relevant_variants:
+        cv = (v.get("clinvar") or "").lower()
+        if "pathogenic" in cv and "benign" not in cv:
+            pathogenic.append(v)
+        elif "benign" in cv:
+            benign.append(v)
+        elif "uncertain" in cv or "vus" in cv:
+            vus.append(v)
+        else:
+            unknown.append(v)
+
+    return {
+        "pathogenic": pathogenic,
+        "benign": benign,
+        "vus": vus,
+        "unknown": unknown,
+    }
+
+
+def _determine_efficacy(
+    effect_type: str,
+    relevant_variants: list[dict],
+) -> tuple[str, str, list[str]]:
+    """
+    Determine predicted efficacy tier based on effect type AND the clinical
+    significance of matched variants. Returns (tier, description, reasons).
+    """
+    if not relevant_variants:
+        return (
+            "Baseline",
+            "No variants detected in this peptide's target genes. Standard baseline efficacy expected.",
+            ["No target-gene variants found in your genome"],
+        )
+
+    classified = _classify_variants(relevant_variants)
+    has_pathogenic = len(classified["pathogenic"]) > 0
+    has_vus = len(classified["vus"]) > 0
+    has_unknown = len(classified["unknown"]) > 0
+    all_benign = all(
+        (v.get("clinvar") or "").lower().find("benign") >= 0
+        for v in relevant_variants
+        if v.get("clinvar")
+    ) and any(v.get("clinvar") for v in relevant_variants)
+
+    reasons = []
+
+    # If all matched variants are benign, this is effectively baseline
+    if all_benign:
+        for v in relevant_variants:
+            reasons.append(
+                f"{v.get('rsid') or v.get('variant_id')} in {', '.join(v.get('genes', []))} — "
+                f"classified benign, no expected impact"
+            )
+        return (
+            "Baseline",
+            "Variants detected in target genes but all classified as benign. Standard baseline efficacy expected.",
+            reasons,
+        )
+
+    # Build reasons from each variant
+    for v in relevant_variants:
+        vid = v.get("rsid") or v.get("variant_id")
+        genes = ", ".join(v.get("genes", []))
+        cv = v.get("clinvar") or "no ClinVar classification"
+        csq = v.get("consequence_plain") or v.get("consequence") or "unknown consequence"
+        reasons.append(f"{vid} in {genes} — {cv} ({csq})")
 
     if effect_type == "compensatory":
-        return ("Strong Fit", "Variants detected in target pathways. This therapeutic strongly compensates for these genetic deficits.")
-    elif effect_type == "receptor":
-        return ("Altered / Reduced", "Variants in targeted receptors detected. This may blunt or alter the therapeutic efficacy.")
-    elif effect_type == "caution":
-        return ("Caution", "Variants detected that require clinical screening (e.g. oncology risk) before initiating therapy.")
+        if has_pathogenic:
+            return (
+                "Strong Fit",
+                f"Pathogenic variant(s) detected in target pathways. "
+                f"This therapeutic is designed to compensate for these genetic deficits.",
+                reasons,
+            )
+        if has_vus or has_unknown:
+            return (
+                "Possible Fit",
+                f"Variant(s) of uncertain significance detected in target pathways. "
+                f"This therapeutic may compensate, but clinical impact is unclear.",
+                reasons,
+            )
 
-    return ("Unknown", "Variants detected with unknown net effect.")
+    elif effect_type == "receptor":
+        if has_pathogenic:
+            return (
+                "Likely Reduced",
+                f"Pathogenic variant(s) in targeted receptor gene(s). "
+                f"This is likely to reduce or alter therapeutic efficacy.",
+                reasons,
+            )
+        if has_vus or has_unknown:
+            return (
+                "Possibly Altered",
+                f"Variant(s) of uncertain significance in receptor gene(s). "
+                f"Efficacy may be altered but clinical impact is unclear.",
+                reasons,
+            )
+
+    elif effect_type == "caution":
+        if has_pathogenic:
+            return (
+                "Caution",
+                f"Pathogenic variant(s) detected that require clinical screening "
+                f"(e.g. oncology risk) before initiating therapy.",
+                reasons,
+            )
+        if has_vus or has_unknown:
+            return (
+                "Review Recommended",
+                f"Variant(s) of uncertain significance detected in safety-relevant gene(s). "
+                f"Clinical review is recommended before initiating therapy.",
+                reasons,
+            )
+
+    return (
+        "Review Needed",
+        f"Variant(s) detected in target genes with unclear net effect on this therapy.",
+        reasons,
+    )
 
 
 def _collect_relevant_variants(variants: list[dict], target_genes_upper: set[str]) -> list[dict]:
@@ -159,10 +274,12 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
         genes_found = sorted(patient_genes & target_upper)
         coverage = len(genes_found) / max(len(target_genes), 1)
 
-        predicted_tier, prediction_desc = _determine_efficacy(info["effect_type"], len(genes_found))
-
         # Attach the actual variant objects relevant to this peptide
         relevant_variants = _collect_relevant_variants(variants, target_upper)
+
+        predicted_tier, prediction_desc, tier_reasons = _determine_efficacy(
+            info["effect_type"], relevant_variants,
+        )
 
         recommendations.append({
             "peptide_name": peptide_name,
@@ -172,6 +289,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
             "coverage": round(coverage, 2),
             "predicted_tier": predicted_tier,
             "prediction_description": prediction_desc,
+            "tier_reasons": tier_reasons,
             "rationale": info["rationale"],
             "references": info["refs"],
             "category": info["category"],
