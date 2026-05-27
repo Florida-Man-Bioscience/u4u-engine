@@ -12,7 +12,27 @@ Public interface
 from __future__ import annotations
 from typing import Optional
 
+from .bpc157_predictor import BPC157_PATHWAY_GENES
+
+# Build BPC-157 standalone gene set from the predictor's pathway definitions
+_BPC157_ALL_GENES = set()
+for _pw in BPC157_PATHWAY_GENES.values():
+    _BPC157_ALL_GENES |= _pw["genes"]
+
 PEPTIDE_GENE_MAP: dict[str, dict] = {
+    "BPC-157": {
+        "genes": _BPC157_ALL_GENES,
+        "rationale": (
+            "Full BPC-157 response prediction across all relevant pathways: "
+            "NO/eNOS, VEGF/angiogenesis, inflammatory cytokines, GH/IGF-1, "
+            "collagen/tissue repair, antioxidant/HO-1, gut barrier, and "
+            "dopamine/serotonin modulation."
+        ),
+        "effect_type": "compensatory",
+        "refs": ["[1-9]"],
+        "category": "multi_pathway",
+        "category_display": "Multi-Pathway Regenerative",
+    },
     "GHK-Cu + BPC-157 + TB-500": {
         "genes": {"COL1A1", "COL1A2", "SMYD3"},
         "rationale": "Predict ECM repair capacity and collagen synthetic response.",
@@ -98,15 +118,29 @@ PEPTIDE_GENE_MAP: dict[str, dict] = {
 def _determine_efficacy(effect_type: str, found_count: int) -> tuple[str, str]:
     if found_count == 0:
         return ("Baseline", "No relevant variants detected. Expected baseline efficacy.")
-    
+
     if effect_type == "compensatory":
         return ("Strong Fit", "Variants detected in target pathways. This therapeutic strongly compensates for these genetic deficits.")
     elif effect_type == "receptor":
         return ("Altered / Reduced", "Variants in targeted receptors detected. This may blunt or alter the therapeutic efficacy.")
     elif effect_type == "caution":
         return ("Caution", "Variants detected that require clinical screening (e.g. oncology risk) before initiating therapy.")
-    
+
     return ("Unknown", "Variants detected with unknown net effect.")
+
+
+def _collect_relevant_variants(variants: list[dict], target_genes_upper: set[str]) -> list[dict]:
+    """Filter variant list to those whose genes overlap the target gene set."""
+    relevant = []
+    for v in variants:
+        genes = v.get("genes", [])
+        if isinstance(genes, str):
+            genes = [genes]
+        v_genes_upper = {g.upper() for g in genes if g}
+        if v_genes_upper & target_genes_upper:
+            relevant.append(v)
+    return relevant
+
 
 def map_peptide_coverage(variants: list[dict]) -> dict:
     patient_genes: set[str] = set()
@@ -124,8 +158,11 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
         target_upper = {g.upper() for g in target_genes}
         genes_found = sorted(patient_genes & target_upper)
         coverage = len(genes_found) / max(len(target_genes), 1)
-        
+
         predicted_tier, prediction_desc = _determine_efficacy(info["effect_type"], len(genes_found))
+
+        # Attach the actual variant objects relevant to this peptide
+        relevant_variants = _collect_relevant_variants(variants, target_upper)
 
         recommendations.append({
             "peptide_name": peptide_name,
@@ -139,6 +176,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
             "references": info["refs"],
             "category": info["category"],
             "category_display": info["category_display"],
+            "relevant_variants": relevant_variants,
         })
 
     # Sort: those with variants first, then alphabetically
@@ -151,7 +189,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
         "recommendations": recommendations,
         "summary_text": summary_text,
         "genes_found_total": sorted(patient_genes),
-        "peptides_with_coverage": peptides_with_variants, # Keeping key name for UI compatibility
+        "peptides_with_coverage": peptides_with_variants,
     }
 
 def generate_peptide_summary(recommendations: list[dict]) -> str:
@@ -159,14 +197,14 @@ def generate_peptide_summary(recommendations: list[dict]) -> str:
         return "No peptide therapy candidates were evaluated."
 
     with_variants = [r for r in recommendations if len(r["genes_found"]) > 0]
-    
+
     if not with_variants:
         return "No modifying variants were detected in any of the targeted peptide pathways. All evaluated peptides are predicted to have standard baseline efficacy."
 
     fits = [r["peptide_name"] for r in with_variants if r["predicted_tier"] == "Strong Fit"]
     altered = [r["peptide_name"] for r in with_variants if r["predicted_tier"] == "Altered / Reduced"]
     caution = [r["peptide_name"] for r in with_variants if r["predicted_tier"] == "Caution"]
-    
+
     parts = [f"Variants detected alter the predicted efficacy of {len(with_variants)} peptide(s)."]
     if fits:
         parts.append(f"Strong therapeutic fits found due to identified deficits for: {', '.join(fits)}.")

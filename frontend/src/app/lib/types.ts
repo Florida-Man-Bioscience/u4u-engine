@@ -75,10 +75,14 @@ export interface PeptideRecommendation {
   genes_found: string[];
   genes_missing: string[];
   coverage: number;
+  predicted_tier: string;
+  prediction_description: string;
   rationale: string;
   references: string[];
   category: string;
   category_display: string;
+  relevant_variants: VariantResult[];
+  bpc157_prediction?: Bpc157Prediction;
 }
 
 export interface PeptideMapping {
@@ -96,10 +100,8 @@ export interface JobStatus {
   filename?: string;
   created_at?: string;
   error_message?: string;
-  // V3: results is now a dict with variants and enrichment data
   results?: {
     variants?: VariantResult[];
-    bpc157_prediction?: Bpc157Prediction;
     peptide_recommendations?: PeptideMapping;
     pathway_summary?: unknown;
     receptor_genetics?: unknown;
@@ -109,4 +111,3 @@ export interface JobStatus {
   partial_results?: VariantResult[];
   variant_count?: number;
 }
-

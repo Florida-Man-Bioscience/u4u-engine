@@ -39,8 +39,8 @@ def _make_variant(genes, rsid=None, consequence="missense_variant"):
 
 class TestPeptideGeneMapData:
 
-    def test_has_ten_peptides(self):
-        assert len(PEPTIDE_GENE_MAP) == 10
+    def test_has_eleven_peptides(self):
+        assert len(PEPTIDE_GENE_MAP) == 11
 
     def test_all_peptides_have_required_fields(self):
         for key, entry in PEPTIDE_GENE_MAP.items():
@@ -79,7 +79,7 @@ class TestMapPeptideCoverage:
 
     def test_empty_variants_returns_all_peptides_uncovered(self):
         result = map_peptide_coverage([])
-        assert len(result["recommendations"]) == 10
+        assert len(result["recommendations"]) == 11
         assert result["peptides_with_coverage"] == 0
         for rec in result["recommendations"]:
             assert rec["coverage"] == 0

@@ -283,6 +283,15 @@ def run_pipeline(
     _progress("Mapping peptide therapy candidates", 99)
     peptide_mapping = map_peptide_coverage(final_results)
 
+    # ── Merge BPC-157 detailed prediction into the BPC-157 peptide entry ──
+    for rec in peptide_mapping["recommendations"]:
+        if rec["peptide_name"] == "BPC-157":
+            rec["bpc157_prediction"] = bpc157_prediction
+            # Override tier with the more detailed BPC-157 predictor's tier
+            rec["predicted_tier"] = bpc157_prediction["responder_tier"]
+            rec["prediction_description"] = bpc157_prediction["summary_text"]
+            break
+
     # ── Step 10: Sort ────────────────────────────────────────────────────────
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
@@ -301,7 +310,6 @@ def run_pipeline(
         },
         "prs_profile": prs_profile,
         "ar_cag_repeat": ar_cag_result,
-        "bpc157_prediction": bpc157_prediction,
         "peptide_recommendations": peptide_mapping,
     }
 

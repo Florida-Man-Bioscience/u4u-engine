@@ -210,11 +210,15 @@ def test_annotate_variant_standalone():
 # ---------------------------------------------------------------------------
 
 @resp_lib.activate
-def test_pipeline_returns_bpc157_prediction():
+def test_pipeline_returns_bpc157_prediction_in_peptide_recommendations():
     _register_happy_path(resp_lib)
     output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
-    assert "bpc157_prediction" in output
-    bpc = output["bpc157_prediction"]
+    pr = output["peptide_recommendations"]
+    bpc157_rec = next(
+        r for r in pr["recommendations"] if r["peptide_name"] == "BPC-157"
+    )
+    assert "bpc157_prediction" in bpc157_rec
+    bpc = bpc157_rec["bpc157_prediction"]
     assert "responder_tier" in bpc
     assert "disclaimer" in bpc
     assert "NOT FDA-approved" in bpc["disclaimer"]
@@ -237,6 +241,6 @@ def test_pipeline_returns_all_v3_keys():
     _register_happy_path(resp_lib)
     output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
     for key in ["variants", "pathway_summary", "receptor_genetics",
-                "prs_profile", "ar_cag_repeat", "bpc157_prediction",
+                "prs_profile", "ar_cag_repeat",
                 "peptide_recommendations"]:
         assert key in output, f"Missing V3 key: {key}"
