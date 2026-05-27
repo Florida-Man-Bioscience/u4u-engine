@@ -1,6 +1,6 @@
 import type { JobStatus, JobListItem } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://flmanbiosci.net/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, options);
