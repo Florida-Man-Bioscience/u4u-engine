@@ -20,21 +20,20 @@ Returns
 """
 
 import requests
-from functools import lru_cache
 from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
+from .cache import annotation_cache, MISS
 
 _BASE = "https://rest.uniprot.org/uniprotkb"
 _TIMEOUT = 10
 
 
-@lru_cache(maxsize=256)
 def fetch_uniprot(gene_symbol: str) -> dict | None:
     """
     Look up protein information from UniProt by gene symbol.
 
-    Results are LRU-cached since many variants share the same gene.
+    Results are cached in the persistent SQLite annotation cache.
 
     Parameters
     ----------
@@ -47,10 +46,14 @@ def fetch_uniprot(gene_symbol: str) -> dict | None:
     if not gene_symbol or not isinstance(gene_symbol, str):
         return None
 
-    data = _query_uniprot(gene_symbol.strip().upper())
-    if data is None:
-        return None
+    key = gene_symbol.strip().upper()
 
+    cached = annotation_cache.get("uniprot", key)
+    if cached is not MISS:
+        return cached
+
+    data = _query_uniprot(key)
+    annotation_cache.put("uniprot", key, data)
     return data
 
 

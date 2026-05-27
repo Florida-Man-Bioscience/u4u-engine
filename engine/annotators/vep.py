@@ -19,6 +19,7 @@ from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
 from ..validators import validate_coordinates
+from .cache import annotation_cache, MISS
 
 
 _VEP_URL = "https://rest.ensembl.org/vep/human/region"
@@ -44,6 +45,12 @@ def fetch_vep(chrom: str, pos: int, ref: str, alt: str) -> dict | None:
         return None
 
     clean_chrom = str(chrom).replace("chr", "").replace("CHR", "")
+    cache_key = f"{clean_chrom}:{pos}:{ref}:{alt}"
+
+    cached = annotation_cache.get("vep", cache_key)
+    if cached is not MISS:
+        return cached
+
     region_string = f"{clean_chrom}:{pos}-{pos}:1/{alt}"
 
     try:
@@ -75,6 +82,7 @@ def fetch_vep(chrom: str, pos: int, ref: str, alt: str) -> dict | None:
                 break
 
         result["_fallback_clinvar"] = fallback_cv
+        annotation_cache.put("vep", cache_key, result)
         return result
 
     except Exception:

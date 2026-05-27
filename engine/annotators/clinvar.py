@@ -36,6 +36,7 @@ from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
 from ..validators import validate_rsid
+from .cache import annotation_cache, MISS
 
 
 _NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "")
@@ -69,10 +70,17 @@ def fetch_clinvar(rsid: str) -> dict | None:
     except ValueError:
         return None
 
+    cached = annotation_cache.get("clinvar", rsid)
+    if cached is not MISS:
+        return cached
+
     uid = _search_clinvar_uid(rsid)
     if not uid:
+        annotation_cache.put("clinvar", rsid, None)
         return None
-    return _fetch_clinvar_summary(uid)
+    result = _fetch_clinvar_summary(uid)
+    annotation_cache.put("clinvar", rsid, result)
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -35,6 +35,7 @@ import requests
 from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
+from .cache import annotation_cache, MISS
 
 _BASE    = "https://myvariant.info/v1"
 _TIMEOUT = 10
@@ -76,6 +77,14 @@ def fetch_myvariant(
     -------
     dict | None   See module docstring for returned fields.
     """
+    # Build a stable cache key from whatever identifiers we have
+    clean_chrom = str(chrom).replace("chr", "").replace("CHR", "") if chrom else ""
+    cache_key = f"{rsid or ''}:{clean_chrom}:{pos or ''}:{ref or ''}:{alt or ''}"
+
+    cached = annotation_cache.get("myvariant", cache_key)
+    if cached is not MISS:
+        return cached
+
     data = None
 
     if rsid and str(rsid).lower().startswith("rs"):
@@ -85,9 +94,12 @@ def fetch_myvariant(
         data = _query_by_coordinate(chrom, pos, ref, alt)
 
     if data is None:
+        annotation_cache.put("myvariant", cache_key, None)
         return None
 
-    return _extract(data)
+    result = _extract(data)
+    annotation_cache.put("myvariant", cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -27,6 +27,7 @@ import requests
 from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
+from .cache import annotation_cache, MISS
 
 _BASE = "https://api.pharmgkb.org/v1/data"
 _TIMEOUT = 10
@@ -53,6 +54,10 @@ def fetch_pharmgkb(rsid: str) -> dict | None:
     if not rsid or not str(rsid).lower().startswith("rs"):
         return None
 
+    cached = annotation_cache.get("pharmgkb", rsid)
+    if cached is not MISS:
+        return cached
+
     try:
         # Step 1: Find the PharmGKB variant ID for this rsID
         resp = requests.get(
@@ -67,10 +72,12 @@ def fetch_pharmgkb(rsid: str) -> dict | None:
         data = resp.json()
         variants = data.get("data", [])
         if not variants:
+            annotation_cache.put("pharmgkb", rsid, None)
             return None
 
         variant_id = variants[0].get("id")
         if not variant_id:
+            annotation_cache.put("pharmgkb", rsid, None)
             return None
 
         # Step 2: Get clinical annotations for this variant
@@ -108,9 +115,12 @@ def fetch_pharmgkb(rsid: str) -> dict | None:
                 })
 
         if not interactions:
+            annotation_cache.put("pharmgkb", rsid, None)
             return None
 
-        return {"drug_interactions": interactions}
+        result = {"drug_interactions": interactions}
+        annotation_cache.put("pharmgkb", rsid, result)
+        return result
 
     except Exception:
         return None

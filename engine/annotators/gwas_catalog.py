@@ -27,6 +27,7 @@ import requests
 from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
+from .cache import annotation_cache, MISS
 
 _BASE = "https://www.ebi.ac.uk/gwas/rest/api"
 _TIMEOUT = 10
@@ -53,6 +54,10 @@ def fetch_gwas(rsid: str) -> dict | None:
     if not rsid or not str(rsid).lower().startswith("rs"):
         return None
 
+    cached = annotation_cache.get("gwas", rsid)
+    if cached is not MISS:
+        return cached
+
     try:
         resp = requests.get(
             f"{_BASE}/singleNucleotidePolymorphisms/{rsid}/associations",
@@ -68,6 +73,7 @@ def fetch_gwas(rsid: str) -> dict | None:
         associations = data.get("_embedded", {}).get("associations", [])
 
         if not associations:
+            annotation_cache.put("gwas", rsid, None)
             return None
 
         traits = []
@@ -125,13 +131,16 @@ def fetch_gwas(rsid: str) -> dict | None:
             })
 
         if not traits:
+            annotation_cache.put("gwas", rsid, None)
             return None
 
         # Sort by p-value (most significant first)
         traits.sort(key=lambda t: t["p_value"] if t["p_value"] is not None else 1.0)
 
         # Cap at 10 most significant associations
-        return {"trait_associations": traits[:10]}
+        result = {"trait_associations": traits[:10]}
+        annotation_cache.put("gwas", rsid, result)
+        return result
 
     except Exception:
         return None

@@ -25,6 +25,7 @@ from tenacity import (
     retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
 )
 from ..validators import validate_coordinates
+from .cache import annotation_cache, MISS
 
 
 _GNOMAD_URL = "https://gnomad.broadinstitute.org/api/"
@@ -84,12 +85,18 @@ def fetch_gnomad(chrom: str, pos: int, ref: str, alt: str) -> dict | None:
     clean_chrom = str(chrom).replace("chr", "").replace("CHR", "")
     variant_id  = f"{clean_chrom}-{pos}-{ref}-{alt}"
 
+    cached = annotation_cache.get("gnomad", variant_id)
+    if cached is not MISS:
+        return cached
+
     for dataset in _DATASETS:
         result = _query_gnomad(variant_id, dataset)
         if result is not None:
             result["dataset"] = dataset
+            annotation_cache.put("gnomad", variant_id, result)
             return result
 
+    annotation_cache.put("gnomad", variant_id, None)
     return None
 
 
