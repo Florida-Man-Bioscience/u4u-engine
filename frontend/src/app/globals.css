@@ -1,19 +1,32 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
+  --background: #f5f4f0;
+  --foreground: #0d1117;
+  --accent: #1a6b4a;
+  --accent-light: #e1f3eb;
+  --accent-mid: #2d8f61;
+  --accent-dark: #0f4530;
+  --surface: #ffffff;
+  --surface-2: #f5f4f0;
+  --surface-3: #edecea;
+  --ink-2: #3a3f4a;
+  --ink-3: #6b7280;
+  --ink-4: #9ca3af;
+  --border: #dbd9d3;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-serif: 'DM Serif Display', serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'DM Mono', monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
-

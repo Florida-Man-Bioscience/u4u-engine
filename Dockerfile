@@ -67,9 +67,10 @@ COPY api.py   api.py
 # gracefully (treats them as empty sets). Populate before deploy or mount as a volume.
 COPY data/ data/
 
-# Run as non-root user
+# Run as non-root user — ensure data/ is writable for SQLite caches
 RUN useradd --no-create-home --shell /bin/false appuser \
- && chown -R appuser:appuser /app
+ && chown -R appuser:appuser /app \
+ && chmod 777 /app/data
 USER appuser
 
 # Expose the application port

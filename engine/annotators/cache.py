@@ -8,24 +8,17 @@ repeated queries for the same gene variant skip the network call entirely.
 
 The cache database persists across sessions in DATA_DIR/annotation_cache.db.
 
-Usage
------
-    from .cache import annotation_cache
-
-    # In any annotator:
-    cached = annotation_cache.get("vep", "1:12345:A:T")
-    if cached is not _MISS:
-        return cached
-
-    result = _actual_api_call(...)
-    annotation_cache.put("vep", "1:12345:A:T", result)
-    return result
+Gracefully degrades: if the database is unwritable (e.g. Docker volume
+permissions), the cache is silently bypassed and all calls go to the API.
 """
 
 import json
+import logging
 import os
 import sqlite3
 import threading
+
+log = logging.getLogger(__name__)
 
 _CACHE_DB_PATH = os.path.join(os.getenv("DATA_DIR", "data"), "annotation_cache.db")
 
@@ -40,10 +33,17 @@ class AnnotationCache:
         self._db_path = db_path
         self._local = threading.local()
 
-    def _conn(self) -> sqlite3.Connection:
-        """Get or create a per-thread connection."""
+    def _conn(self) -> sqlite3.Connection | None:
+        """Get or create a per-thread connection. Returns None if DB is unavailable."""
         conn = getattr(self._local, "conn", None)
-        if conn is None:
+        if conn is not None:
+            return conn
+
+        # Mark as attempted so we don't retry on every call
+        if getattr(self._local, "failed", False):
+            return None
+
+        try:
             conn = sqlite3.connect(self._db_path, timeout=10.0)
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("""
@@ -55,32 +55,46 @@ class AnnotationCache:
                 )
             """)
             self._local.conn = conn
-        return conn
+            return conn
+        except Exception as exc:
+            log.warning("Annotation cache unavailable (%s): %s — falling back to API calls", self._db_path, exc)
+            self._local.failed = True
+            return None
 
     def get(self, source: str, lookup_key: str):
         """
         Look up a cached result.
 
         Returns the deserialized result (which may be None if None was cached),
-        or the _MISS sentinel if no cache entry exists.
+        or the _MISS sentinel if no cache entry exists or the DB is unavailable.
         """
         conn = self._conn()
-        row = conn.execute(
-            "SELECT result_json FROM annotation_cache WHERE source = ? AND lookup_key = ?",
-            (source, lookup_key),
-        ).fetchone()
-        if row is None:
+        if conn is None:
             return _MISS
-        return json.loads(row[0])
+        try:
+            row = conn.execute(
+                "SELECT result_json FROM annotation_cache WHERE source = ? AND lookup_key = ?",
+                (source, lookup_key),
+            ).fetchone()
+            if row is None:
+                return _MISS
+            return json.loads(row[0])
+        except Exception:
+            return _MISS
 
     def put(self, source: str, lookup_key: str, result) -> None:
-        """Store a result in the cache (including None results)."""
+        """Store a result in the cache. Silently skips if DB is unavailable."""
         conn = self._conn()
-        conn.execute(
-            "INSERT OR REPLACE INTO annotation_cache (source, lookup_key, result_json) VALUES (?, ?, ?)",
-            (source, lookup_key, json.dumps(result)),
-        )
-        conn.commit()
+        if conn is None:
+            return
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO annotation_cache (source, lookup_key, result_json) VALUES (?, ?, ?)",
+                (source, lookup_key, json.dumps(result)),
+            )
+            conn.commit()
+        except Exception:
+            pass
 
 
 # Module-level singleton
