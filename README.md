@@ -33,6 +33,9 @@ pip install -e ./engine
 
 # With VCF support (Linux/Mac only — pysam requires a C compiler)
 pip install -e "./engine[vcf]"
+
+# Enable git hooks (auto-increments version on each commit)
+git config core.hooksPath scripts
 ```
 
 **Required dependencies:** `requests>=2.31`, `tenacity>=8.2`
