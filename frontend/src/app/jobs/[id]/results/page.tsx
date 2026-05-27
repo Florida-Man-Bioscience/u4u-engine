@@ -8,7 +8,6 @@ import type {
   Tier,
   PeptideMapping,
   PeptideRecommendation,
-  Bpc157Prediction,
 } from "../../../lib/types";
 import { VariantCard } from "../../../components/VariantCard";
 import { SummaryMetrics } from "../../../components/SummaryMetrics";
@@ -23,7 +22,6 @@ const PREDICTED_TIER_COLORS: Record<string, string> = {
   Caution: "bg-red-100 text-red-800 border-red-300",
   Baseline: "bg-zinc-100 text-zinc-500 border-zinc-200",
   Unknown: "bg-zinc-100 text-zinc-500 border-zinc-200",
-  // BPC-157 specific tiers
   likely_good: "bg-green-100 text-green-800 border-green-300",
   possible: "bg-yellow-100 text-yellow-800 border-yellow-300",
   uncertain: "bg-zinc-100 text-zinc-600 border-zinc-300",
@@ -231,7 +229,6 @@ export default function ResultsPage() {
             ))}
           </div>
 
-          {/* Variant cards */}
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-zinc-400">
               No variants match the selected filter.
@@ -277,8 +274,22 @@ function PeptideTherapyCard({
   const tierLabel =
     PREDICTED_TIER_LABELS[rec.predicted_tier] ?? rec.predicted_tier;
 
-  const variantCount = rec.relevant_variants?.length ?? 0;
-  const bpc = rec.bpc157_prediction;
+  const variants = rec.relevant_variants ?? [];
+  const variantCount = variants.length;
+
+  // Build a gene → variants lookup for the per-gene table
+  const variantsByGene: Record<string, VariantResult[]> = {};
+  for (const gene of rec.genes_for_genotyping) {
+    variantsByGene[gene] = [];
+  }
+  for (const v of variants) {
+    for (const g of v.genes) {
+      const gUpper = g.toUpperCase();
+      if (gUpper in variantsByGene) {
+        variantsByGene[gUpper].push(v);
+      }
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -297,7 +308,8 @@ function PeptideTherapyCard({
               {rec.category_display}
               {variantCount > 0 && (
                 <span className="ml-2 text-zinc-400">
-                  · {variantCount} variant{variantCount !== 1 ? "s" : ""}
+                  · {variantCount} variant{variantCount !== 1 ? "s" : ""}{" "}
+                  detected
                 </span>
               )}
             </p>
@@ -331,125 +343,109 @@ function PeptideTherapyCard({
             <p className="text-sm text-zinc-600">{rec.rationale}</p>
           </div>
 
-          {/* Gene coverage badges */}
+          {/* ── Per-gene variant table ──────────────────────────────────────── */}
           <div>
             <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-              Gene Coverage ({Math.round(rec.coverage * 100)}%)
+              Target Gene Coverage ({Math.round(rec.coverage * 100)}%)
             </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {rec.genes_for_genotyping.map((gene) => {
-                const found = rec.genes_found.includes(gene);
-                return (
-                  <span
-                    key={gene}
-                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-mono ${
-                      found
-                        ? "bg-green-50 text-green-700 border border-green-200"
-                        : "bg-zinc-50 text-zinc-400 border border-zinc-200"
-                    }`}
-                  >
-                    {found ? "✓" : "○"} {gene}
-                  </span>
-                );
-              })}
+            <div className="border border-zinc-200 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-zinc-50 text-left text-xs text-zinc-500 font-medium">
+                    <th className="px-3 py-2">Gene</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Variant</th>
+                    <th className="px-3 py-2">Consequence</th>
+                    <th className="px-3 py-2">ClinVar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {rec.genes_for_genotyping.map((gene) => {
+                    const geneVariants = variantsByGene[gene] ?? [];
+                    if (geneVariants.length === 0) {
+                      return (
+                        <tr key={gene} className="text-zinc-400">
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {gene}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="inline-flex items-center gap-1 text-xs">
+                              <span className="w-2 h-2 rounded-full bg-zinc-300 inline-block" />
+                              No variant
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs">—</td>
+                          <td className="px-3 py-2 text-xs">—</td>
+                          <td className="px-3 py-2 text-xs">—</td>
+                        </tr>
+                      );
+                    }
+                    return geneVariants.map((v, idx) => (
+                      <tr key={`${gene}-${v.variant_id}-${idx}`} className="text-zinc-700">
+                        <td className="px-3 py-2 font-mono text-xs font-medium">
+                          {idx === 0 ? gene : ""}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-flex items-center gap-1 text-xs">
+                            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                            Detected
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {v.rsid ?? v.variant_id}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {v.consequence_plain || v.consequence}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {v.clinvar ? (
+                            <span
+                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
+                                v.clinvar.includes("pathogenic")
+                                  ? "bg-red-50 text-red-700"
+                                  : v.clinvar.includes("benign")
+                                    ? "bg-green-50 text-green-700"
+                                    : "bg-yellow-50 text-yellow-700"
+                              }`}
+                            >
+                              {v.clinvar}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ));
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* BPC-157 specific: pathways affected */}
-          {bpc && bpc.pathways_affected.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                Pathways Affected
-              </h3>
-              <div className="space-y-2">
-                {bpc.pathways_affected.map((p) => (
-                  <div key={p.pathway} className="flex items-start gap-2 text-sm">
-                    <span className="text-blue-500 mt-0.5">●</span>
-                    <div>
-                      <span className="font-medium text-zinc-800">
-                        {p.display_name}
-                      </span>
-                      <span className="text-zinc-400 ml-1.5">
-                        ({p.genes_hit.join(", ")} —{" "}
-                        {Math.round(p.coverage * 100)}% coverage)
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* BPC-157 specific: genetic modifiers */}
-          {bpc && bpc.candidate_factors.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                Genetic Modifiers Detected
-              </h3>
-              <div className="space-y-1.5">
-                {bpc.candidate_factors.map((f) => (
-                  <div key={f.rsid} className="text-sm text-zinc-700">
-                    <span className="font-mono text-xs bg-zinc-100 px-1 py-0.5 rounded">
-                      {f.rsid}
-                    </span>{" "}
-                    <span className="text-zinc-500">({f.gene})</span> —{" "}
-                    {f.effect}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* BPC-157 specific: biomarker recommendations */}
-          {bpc && bpc.biomarker_recommendations.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                Recommended Biomarker Panel
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {bpc.biomarker_recommendations.map((b) => (
-                  <div
-                    key={b.name}
-                    className="flex items-center justify-between text-sm bg-zinc-50 rounded px-3 py-1.5"
-                  >
-                    <span className="text-zinc-700">{b.name}</span>
-                    <span className="text-xs text-zinc-400">
-                      {b.expected_change}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Relevant variants */}
+          {/* ── Full variant cards (expandable) ────────────────────────────── */}
           {variantCount > 0 && (
             <div>
               <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                Relevant Gene Variants ({variantCount})
+                Variant Details ({variantCount})
               </h3>
               <div className="space-y-3">
-                {rec.relevant_variants.map((v) => (
+                {variants.map((v) => (
                   <VariantCard key={v.variant_id} variant={v} />
                 ))}
               </div>
             </div>
           )}
 
-          {variantCount === 0 && (
-            <div className="text-sm text-zinc-400 text-center py-4 bg-zinc-50 rounded-lg">
-              No variants detected in this peptide&apos;s target genes.
-            </div>
-          )}
-
-          {/* BPC-157 disclaimer */}
-          {bpc && (
-            <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
-              <p className="text-xs text-amber-800 leading-relaxed">
-                <strong>⚠️ Important:</strong> {bpc.disclaimer}
-              </p>
-            </div>
-          )}
+          {/* Disclaimer */}
+          <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <strong>⚠️ Important:</strong> These predictions are speculative
+              extrapolations based on known gene-pathway associations and
+              preclinical data. No validated genetic predictors exist for
+              peptide therapy response. This is NOT medical advice. Consult a
+              qualified physician before initiating any peptide therapy.
+            </p>
+          </div>
         </div>
       )}
     </div>
