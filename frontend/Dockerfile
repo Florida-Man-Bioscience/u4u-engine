@@ -22,7 +22,7 @@ COPY . .
 
 # NEXT_PUBLIC_* vars are inlined at build time by Next.js.
 # Pass via: docker build --build-arg NEXT_PUBLIC_API_BASE=http://localhost:8000
-ARG NEXT_PUBLIC_API_BASE=http://localhost:8000
+ARG NEXT_PUBLIC_API_BASE=https://flmanbiosci.net/api/v1
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 
 RUN npm run build
