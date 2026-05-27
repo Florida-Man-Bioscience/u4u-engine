@@ -7,6 +7,7 @@ Architecture
 ------------
   POST /analyze          — upload file, get back a job_id immediately
   GET  /jobs/{job_id}    — poll for status, progress, and results
+  GET  /jobs/{job_id}/dossier/{peptide_name} — get dossier HTML for a peptide
   GET  /health           — liveness check
 
 The pipeline runs in a thread pool (blocking IO — external API calls).
@@ -40,7 +41,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from engine import run_pipeline
 
@@ -349,3 +350,30 @@ def list_jobs(limit: int = 20):
             reverse=True,
         )
     return {"jobs": snapshot[:limit]}
+
+
+@app.get("/jobs/{job_id}/dossier/{peptide_name}", response_class=HTMLResponse)
+def get_dossier(job_id: str, peptide_name: str):
+    """
+    Return the pre-rendered HTML dossier for a specific peptide therapy.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job["status"] != "done":
+        raise HTTPException(status_code=409, detail="Job not yet complete")
+
+    results = job.get("results", {})
+    dossiers = results.get("dossiers", {})
+
+    if peptide_name not in dossiers:
+        available = list(dossiers.keys())
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dossier not found for '{peptide_name}'. Available: {available}",
+        )
+
+    return HTMLResponse(content=dossiers[peptide_name])

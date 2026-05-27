@@ -63,6 +63,10 @@ from .annotators.receptor_mapper import map_receptors, generate_receptor_summary
 from .annotators.prs_calculator import calculate_prs
 from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary
 from .annotators.peptide_mapper import map_peptide_coverage
+from .annotators.uniprot import fetch_uniprot
+from .annotators.pharmgkb import fetch_pharmgkb
+from .annotators.gwas_catalog import fetch_gwas
+from .dossier_generator import generate_dossiers
 
 import logging
 log = logging.getLogger(__name__)
@@ -285,7 +289,7 @@ def run_pipeline(
     _progress("Complete", 100)
 
     # ── V3 Result Assembly ─────────────────────────────────────────────────
-    return {
+    result = {
         "variants": final_results,
         "pathway_summary": {
             "pathways_hit": pathway_hits,
@@ -300,6 +304,11 @@ def run_pipeline(
         "bpc157_prediction": bpc157_prediction,
         "peptide_recommendations": peptide_mapping,
     }
+
+    # Generate per-peptide dossier reports
+    result["dossiers"] = generate_dossiers(result)
+
+    return result
 
 
 def annotate_variant(v: dict) -> dict:
@@ -398,5 +407,22 @@ def annotate_variant(v: dict) -> dict:
             if missing_gnomad and mv.get("gnomad_af") is not None:
                 result["gnomad_af"]    = mv["gnomad_af"]
                 result["gnomad_popmax"] = mv.get("gnomad_popmax")
+
+    # ── UniProt (protein function per gene) ───────────────────────────────
+    uniprot_data = []
+    for gene in result.get("genes", []):
+        up = fetch_uniprot(gene)
+        if up:
+            up["gene"] = gene
+            uniprot_data.append(up)
+    result["uniprot"] = uniprot_data if uniprot_data else None
+
+    # ── PharmGKB (drug-gene interactions) ─────────────────────────────────
+    pgkb = fetch_pharmgkb(rsid) if rsid else None
+    result["pharmgkb"] = pgkb
+
+    # ── GWAS Catalog (trait associations) ─────────────────────────────────
+    gwas = fetch_gwas(rsid) if rsid else None
+    result["gwas"] = gwas
 
     return result
