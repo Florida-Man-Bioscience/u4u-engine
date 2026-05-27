@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeFile } from "./lib/api";
+import versionData from "../../version.json";
 
 const ACCEPTED = ".vcf,.txt,.csv";
 const MAX_SIZE_MB = 100;
@@ -358,7 +359,7 @@ export default function LandingPage() {
           PeptOdyssey
         </p>
         <p className="text-xs text-[#9ca3af]">
-          Built by Florida Man Bioscience
+          Built by Florida Man Bioscience · v{versionData.version}
         </p>
       </footer>
     </div>
