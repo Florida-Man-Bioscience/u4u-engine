@@ -1,4 +1,4 @@
-import type { JobStatus, JobListItem } from "./types";
+import type { JobStatus, JobListItem, PGxProfile, DrugDetail } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
 
@@ -21,14 +21,34 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 /** Upload a genome file and start an analysis job. */
 export async function analyzeFile(
-  file: File
+  file: File,
+  currentMedications?: string[]
 ): Promise<{ job_id: string; poll_url: string }> {
   const form = new FormData();
   form.append("file", file);
-  return apiFetch<{ job_id: string; poll_url: string }>("/analyze", {
+  const qs =
+    currentMedications && currentMedications.length
+      ? `?current_medications=${encodeURIComponent(currentMedications.join(","))}`
+      : "";
+  return apiFetch<{ job_id: string; poll_url: string }>(`/analyze${qs}`, {
     method: "POST",
     body: form,
   });
+}
+
+/** Fetch the pharmacogenomics profile for a completed job. */
+export async function getPGxProfile(jobId: string): Promise<PGxProfile> {
+  return apiFetch<PGxProfile>(`/jobs/${jobId}/pgx`);
+}
+
+/** Fetch per-drug PGx evidence (CPIC recs, PRS, conformal prediction). */
+export async function getDrugDetail(
+  jobId: string,
+  drug: string
+): Promise<DrugDetail> {
+  return apiFetch<DrugDetail>(
+    `/jobs/${jobId}/drug/${encodeURIComponent(drug)}`
+  );
 }
 
 /** Fetch the current status (and results when done) of a job. */

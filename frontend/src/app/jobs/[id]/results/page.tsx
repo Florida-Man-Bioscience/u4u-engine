@@ -8,13 +8,15 @@ import type {
   Tier,
   PeptideMapping,
   PeptideRecommendation,
+  PGxProfile,
 } from "../../../lib/types";
 import { VariantCard } from "../../../components/VariantCard";
 import { SummaryMetrics } from "../../../components/SummaryMetrics";
+import { PGxReport } from "../../../components/PGxReport";
 
 const TIER_ORDER: Tier[] = ["critical", "high", "medium", "low"];
 
-type ViewMode = "peptides" | "variants";
+type ViewMode = "peptides" | "pgx" | "variants";
 
 const PREDICTED_TIER_COLORS: Record<string, string> = {
   "Strong Fit": "bg-green-100 text-green-800 border-green-300",
@@ -39,9 +41,10 @@ export default function ResultsPage() {
 
   const [results, setResults] = useState<VariantResult[] | null>(null);
   const [peptides, setPeptides] = useState<PeptideMapping | null>(null);
+  const [pgx, setPgx] = useState<PGxProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("peptides");
+  const [viewMode, setViewMode] = useState<ViewMode>("pgx");
 
   useEffect(() => {
     getJobStatus(jobId)
@@ -55,6 +58,9 @@ export default function ResultsPage() {
           }
           if (res.peptide_recommendations) {
             setPeptides(res.peptide_recommendations);
+          }
+          if (res.pgx_profile) {
+            setPgx(res.pgx_profile);
           }
         } else {
           setError("Results not available. The job may still be running.");
@@ -163,7 +169,18 @@ export default function ResultsPage() {
       <SummaryMetrics results={results} />
 
       {/* View mode toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setViewMode("pgx")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            viewMode === "pgx"
+              ? "bg-blue-700 text-white"
+              : "bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+          }`}
+        >
+          Pharmacogenomics
+          {pgx && ` (${pgx.recommendations.length})`}
+        </button>
         <button
           onClick={() => setViewMode("peptides")}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
@@ -186,6 +203,17 @@ export default function ResultsPage() {
           All Variants ({results.length})
         </button>
       </div>
+
+      {/* ── Pharmacogenomics View ──────────────────────────────────────────── */}
+      {viewMode === "pgx" && (
+        pgx ? (
+          <PGxReport profile={pgx} />
+        ) : (
+          <div className="text-center py-16 text-zinc-400 text-sm">
+            No pharmacogenomics profile available for this job.
+          </div>
+        )
+      )}
 
       {/* ── Peptide Therapies View ─────────────────────────────────────────── */}
       {viewMode === "peptides" && peptides && (
@@ -238,7 +266,9 @@ export default function ResultsPage() {
       <p className="text-center text-xs text-zinc-400 pb-8">
         {viewMode === "variants"
           ? `${filtered.length} of ${results.length} variants shown`
-          : `${peptides?.recommendations.length ?? 0} peptide therapies evaluated`}{" "}
+          : viewMode === "peptides"
+            ? `${peptides?.recommendations.length ?? 0} peptide therapies evaluated`
+            : `${pgx?.recommendations.length ?? 0} drug-specific recommendations, ${pgx?.drug_predictions.length ?? 0} drugs evaluated`}{" "}
         ·{" "}
         <button
           onClick={() => router.push("/")}

@@ -47,6 +47,7 @@ export default function LandingPage() {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [medications, setMedications] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function validateFile(f: File): string | null {
@@ -88,7 +89,11 @@ export default function LandingPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const { job_id } = await analyzeFile(file);
+      const meds = medications
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
+      const { job_id } = await analyzeFile(file, meds.length ? meds : undefined);
       router.push(`/jobs/${job_id}`);
     } catch (err: unknown) {
       setError(
@@ -323,6 +328,32 @@ export default function LandingPage() {
                   </p>
                 </>
               )}
+            </div>
+
+            {/* Current medications (optional) — drives DDGI phenoconversion */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="medications"
+                className="block text-xs font-semibold text-zinc-300 uppercase tracking-wide"
+              >
+                Current Medications{" "}
+                <span className="text-zinc-500 font-normal normal-case tracking-normal">
+                  — optional
+                </span>
+              </label>
+              <input
+                id="medications"
+                type="text"
+                value={medications}
+                onChange={(e) => setMedications(e.target.value)}
+                placeholder="e.g. paroxetine, omeprazole, fluconazole"
+                className="w-full rounded-md bg-[#0d1117] border border-[#30363d] px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-[#2d8f61] transition-colors"
+              />
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Comma-separated. Used for drug–drug–gene phenoconversion
+                (e.g. paroxetine converts CYP2D6 normal metabolizers into
+                poor metabolizers).
+              </p>
             </div>
 
             {/* Error */}

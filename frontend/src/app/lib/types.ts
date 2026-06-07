@@ -108,7 +108,79 @@ export interface JobStatus {
     receptor_genetics?: unknown;
     prs_profile?: unknown;
     ar_cag_repeat?: unknown;
+    pgx_profile?: PGxProfile;
   };
   partial_results?: VariantResult[];
   variant_count?: number;
+}
+
+/* ── Pharmacogenomics ────────────────────────────────────────────────────── */
+
+export type PGxPhenotype = "PM" | "IM" | "NM" | "RM" | "UM" | "IND";
+
+export interface StarAlleleCall {
+  gene: string;
+  diplotype: string;
+  activity_score: number | null;
+  phenotype: PGxPhenotype;
+  callers_agreed: string[];
+  confidence: number;
+  evidence_tier: string;
+  raw_calls: Record<string, string>;
+}
+
+export interface HLACall {
+  locus: string;
+  present: boolean;
+  method: string;
+  tag_rsid: string | null;
+  risk_drugs: string[];
+}
+
+export interface DrugRecommendation {
+  drug: string;
+  gene: string;
+  phenotype: PGxPhenotype;
+  recommendation: string;
+  classification: "strong" | "moderate" | "optional";
+  cpic_guideline_id: string | null;
+  source: string;
+}
+
+export interface DrugPrediction {
+  drug: string;
+  point_score: number;
+  prediction_set: string[]; // {"respond","non_respond","indeterminate"}
+  confidence_level: number;
+  contributing_genes: string[];
+  method: string;
+}
+
+export interface PRSResult {
+  trait: string;
+  score: number;
+  percentile: number | null;
+  risk_tier: "low" | "intermediate" | "high";
+  n_variants_used: number;
+  n_variants_expected: number;
+  drug_context: string[];
+}
+
+export interface PGxProfile {
+  star_alleles: StarAlleleCall[];
+  hla_calls: HLACall[];
+  recommendations: DrugRecommendation[];
+  prs_results: PRSResult[];
+  drug_predictions: DrugPrediction[];
+  phenoconversion_notes: string[];
+  input_path: string;
+  summary_text: string;
+}
+
+export interface DrugDetail {
+  drug: string;
+  recommendations: DrugRecommendation[];
+  prs: PRSResult[];
+  prediction: DrugPrediction | null;
+  hla_warnings: HLACall[];
 }
