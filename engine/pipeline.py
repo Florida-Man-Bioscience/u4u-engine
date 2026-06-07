@@ -91,6 +91,9 @@ def run_pipeline(
     sex: str = None,
     ancestry: str = "Unknown",
     partial_results: list = None,
+    # V4 pharmacogenomics parameters
+    current_medications: list = None,
+    pgx_confidence: float = 0.90,
 ) -> dict:
     """
     Run the full variant analysis pipeline.
@@ -292,6 +295,24 @@ def run_pipeline(
             rec["prediction_description"] = bpc157_prediction["summary_text"]
             break
 
+    # ── Step 8h: Pharmacogenomics (star alleles → CPIC → PRS → conformal) ──
+    _progress("Pharmacogenomics: star alleles, CPIC, PRS, conformal", 99)
+    try:
+        from .pgx.orchestrator import pgx_stage
+        pgx_profile = pgx_stage(
+            final_results,
+            medications=current_medications,
+            bam_path=bam_path,
+            confidence=pgx_confidence,
+        ).to_dict()
+    except Exception as _e:  # pragma: no cover — degrade gracefully
+        pgx_profile = {
+            "summary_text": f"PGx stage skipped: {_e}",
+            "star_alleles": [], "hla_calls": [], "recommendations": [],
+            "prs_results": [], "drug_predictions": [],
+            "phenoconversion_notes": [], "input_path": "array",
+        }
+
     # ── Step 10: Sort ────────────────────────────────────────────────────────
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
@@ -311,6 +332,7 @@ def run_pipeline(
         "prs_profile": prs_profile,
         "ar_cag_repeat": ar_cag_result,
         "peptide_recommendations": peptide_mapping,
+        "pgx_profile": pgx_profile,
     }
 
     # Generate per-peptide dossier reports
