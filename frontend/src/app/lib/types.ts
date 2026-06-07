@@ -69,6 +69,16 @@ export interface Bpc157Prediction {
   disclaimer: string;
 }
 
+export interface BiomarkerPanel {
+  peptide: string;
+  off_label_uses: string[];
+  efficacy_markers: string[];
+  safety_markers: string[];
+  citation_apa: string;
+  doi: string;
+  doi_url: string | null;
+}
+
 export interface PeptideRecommendation {
   peptide_name: string;
   genes_for_genotyping: string[];
@@ -84,6 +94,7 @@ export interface PeptideRecommendation {
   category_display: string;
   relevant_variants: VariantResult[];
   bpc157_prediction?: Bpc157Prediction;
+  biomarker_panel?: BiomarkerPanel | null;
 }
 
 export interface PeptideMapping {

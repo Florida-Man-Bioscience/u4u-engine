@@ -482,6 +482,78 @@ function PeptideTherapyCard({
             </div>
           )}
 
+          {/* Biomarker monitoring panel */}
+          {rec.biomarker_panel && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-blue-900 uppercase tracking-wide flex items-center gap-1.5">
+                <span>🧪</span> Recommended Biomarker Panel
+              </h3>
+
+              {rec.biomarker_panel.off_label_uses.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-zinc-600 mb-1">
+                    Common off-label uses
+                  </p>
+                  <ul className="space-y-0.5">
+                    {rec.biomarker_panel.off_label_uses.map((u, i) => (
+                      <li key={i} className="text-sm text-zinc-700 flex gap-2">
+                        <span className="text-blue-500 shrink-0">•</span>
+                        <span>{u}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-medium text-green-800 mb-1">
+                    Efficacy markers
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {rec.biomarker_panel.efficacy_markers.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-xs text-green-900"
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-red-800 mb-1">
+                    Safety markers
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {rec.biomarker_panel.safety_markers.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-xs text-red-900"
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                {rec.biomarker_panel.citation_apa}{" "}
+                {rec.biomarker_panel.doi_url && (
+                  <a
+                    href={rec.biomarker_panel.doi_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 underline hover:no-underline"
+                  >
+                    {rec.biomarker_panel.doi}
+                  </a>
+                )}
+              </p>
+            </div>
+          )}
+
           {/* Disclaimer */}
           <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
             <p className="text-xs text-amber-800 leading-relaxed">
