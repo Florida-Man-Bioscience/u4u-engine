@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .bpc157_predictor import BPC157_PATHWAY_GENES
+from ..peptides import get_biomarker_panel
 
 # Build BPC-157 standalone gene set from the predictor's pathway definitions
 _BPC157_ALL_GENES = set()
@@ -281,6 +282,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
             info["effect_type"], relevant_variants,
         )
 
+        panel = get_biomarker_panel(peptide_name)
         recommendations.append({
             "peptide_name": peptide_name,
             "genes_for_genotyping": sorted(target_genes),
@@ -295,6 +297,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
             "category": info["category"],
             "category_display": info["category_display"],
             "relevant_variants": relevant_variants,
+            "biomarker_panel": panel.to_dict() if panel else None,
         })
 
     # Sort: those with variants first, then alphabetically
