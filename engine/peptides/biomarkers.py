@@ -24,8 +24,53 @@ The lookup tolerates the existing engine peptide names (e.g. "BPC-157",
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any
+from dataclasses import dataclass, asdict, field, replace
+from typing import Any, Literal
+
+
+Modality = Literal[
+    "clinical_chem",          # standard chemistry panel (glucose, ALT, creatinine…)
+    "hematology",             # CBC, differential
+    "hormone",                # IGF-1, cortisol, LH, FSH, testosterone…
+    "cytokine",               # IL-6, TNF-α, IFN-γ…
+    "transcriptomic",         # mRNA or gene expression readout
+    "metabolomic",            # small-molecule metabolite
+    "proteomic",              # circulating protein not covered above
+    "lipidomic",              # lipid species / panel
+    "imaging",                # MRI, ultrasound, DXA, dermoscopy
+    "physical",               # skin thickness, BP, grip strength, body composition
+    "functional",             # VO₂max, range of motion, IIEF
+    "patient_reported",       # VAS pain, HAM-A, GAD-7, MoCA, NIHSS
+    "microbiome",             # stool 16S, fecal markers
+]
+
+Direction = Literal["increase", "decrease", "biphasic", "no_change", "variable"]
+Purpose = Literal["efficacy", "safety", "mechanism", "selectivity"]
+
+
+@dataclass(frozen=True)
+class BiomarkerMeasurement:
+    """A single literature-grounded measurement that tracks peptide response.
+
+    Designed to feed a predictive model: every field except effect_size and
+    citations is structured so the model can compare observed vs. expected.
+    """
+    name: str
+    modality: Modality
+    specimen: str                          # 'serum', 'plasma', 'urine', 'stool', 'skin biopsy', 'tendon US', 'self-report'…
+    unit: str                              # 'ng/mL', '%', 'mm', 'score', etc. — '' for categorical
+    direction: Direction                   # expected change vs. baseline
+    timeframe_weeks_min: float | None      # earliest expected detectable change
+    timeframe_weeks_max: float | None      # by when the effect typically plateaus
+    purpose: Purpose                       # efficacy / safety / mechanism / selectivity
+    effect_size: str | None = None         # free-text — '~+30% IGF-1', 'no change', etc.
+    citation_apa: str | None = None        # APA reference; None = inherits panel-level citation
+    doi: str | None = None                 # bare DOI; URL constructed at serialization
+
+    def to_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["doi_url"] = f"https://doi.org/{self.doi}" if self.doi else None
+        return d
 
 
 @dataclass(frozen=True)
@@ -36,10 +81,12 @@ class BiomarkerPanel:
     safety_markers: tuple[str, ...]
     citation_apa: str
     doi: str
+    measurements: tuple[BiomarkerMeasurement, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["doi_url"] = f"https://doi.org/{self.doi}" if self.doi else None
+        d["measurements"] = [m.to_dict() for m in self.measurements]
         return d
 
 
@@ -469,6 +516,17 @@ ALIASES: dict[str, str] = {
     "Melanotan II": "Melanotan II",
     "LL-37": "LL-37",
     "KPV": "KPV",
+}
+
+
+# ── Attach structured measurements ──────────────────────────────────────────
+# Imported lazily here to avoid a circular import (measurements.py imports
+# BiomarkerMeasurement from this module).
+from .measurements import PEPTIDE_MEASUREMENTS  # noqa: E402
+
+PEPTIDE_BIOMARKERS = {
+    name: replace(panel, measurements=PEPTIDE_MEASUREMENTS.get(name, ()))
+    for name, panel in PEPTIDE_BIOMARKERS.items()
 }
 
 

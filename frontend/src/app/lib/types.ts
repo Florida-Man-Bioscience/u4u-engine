@@ -69,6 +69,49 @@ export interface Bpc157Prediction {
   disclaimer: string;
 }
 
+export type BiomarkerModality =
+  | "clinical_chem"
+  | "hematology"
+  | "hormone"
+  | "cytokine"
+  | "transcriptomic"
+  | "metabolomic"
+  | "proteomic"
+  | "lipidomic"
+  | "imaging"
+  | "physical"
+  | "functional"
+  | "patient_reported"
+  | "microbiome";
+
+export type BiomarkerDirection =
+  | "increase"
+  | "decrease"
+  | "biphasic"
+  | "no_change"
+  | "variable";
+
+export type BiomarkerPurpose =
+  | "efficacy"
+  | "safety"
+  | "mechanism"
+  | "selectivity";
+
+export interface BiomarkerMeasurement {
+  name: string;
+  modality: BiomarkerModality;
+  specimen: string;
+  unit: string;
+  direction: BiomarkerDirection;
+  timeframe_weeks_min: number | null;
+  timeframe_weeks_max: number | null;
+  purpose: BiomarkerPurpose;
+  effect_size: string | null;
+  citation_apa: string | null;
+  doi: string | null;
+  doi_url: string | null;
+}
+
 export interface BiomarkerPanel {
   peptide: string;
   off_label_uses: string[];
@@ -77,6 +120,7 @@ export interface BiomarkerPanel {
   citation_apa: string;
   doi: string;
   doi_url: string | null;
+  measurements: BiomarkerMeasurement[];
 }
 
 export interface PeptideRecommendation {
