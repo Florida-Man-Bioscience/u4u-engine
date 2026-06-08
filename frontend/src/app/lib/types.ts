@@ -278,6 +278,7 @@ export interface RegulatoryPeptide {
   aliases: string[];
   category: RegulatoryCategorySlug;
   pcac_wave: "july_2026" | "early_2027" | null;
+  approved_indications: string[];
   medspa_uses: string[];
   history: RegulatoryHistoryEntry[];
   clinicaltrials_search_term: string;

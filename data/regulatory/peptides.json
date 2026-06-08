@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "last_curated": "2026-06-07",
+  "schema_version": 2,
+  "last_curated": "2026-06-08",
   "categories": {
     "cat1": {
       "label": "Category 1 — Legal for 503A Compounding",
@@ -35,6 +35,7 @@
       "aliases": ["Body Protection Compound 157", "PL 14736"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Tendon and ligament repair", "Gut barrier restoration", "Post-surgical recovery"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2 alongside 18 other peptides."},
@@ -51,6 +52,7 @@
       "aliases": ["Thymosin Beta-4", "TB4"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Soft-tissue and ligament repair", "Wound healing", "Anti-inflammatory recovery"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -67,6 +69,7 @@
       "aliases": ["Lys-Pro-Val", "alpha-MSH(11-13)"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Gut inflammation modulation", "Topical wound and skin recovery"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -83,6 +86,7 @@
       "aliases": ["Mitochondrial Open Reading Frame of the 12S rRNA Type-c", "MOTS-C"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Metabolic / insulin sensitization", "Mitochondrial function support"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -99,6 +103,9 @@
       "aliases": ["Met-Glu-His-Phe-Pro-Gly-Pro", "ACTH(4-7) PGP"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [
+        "Russia (Roszdravnadzor): Ischemic stroke and cognitive disorders (intranasal)"
+      ],
       "medspa_uses": ["Cognitive support (off-label)", "Nootropic"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -115,6 +122,7 @@
       "aliases": ["Epithalon", "Epithalamin", "AEDG"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Longevity / telomerase activation (research use)", "Sleep / pineal modulation"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -131,6 +139,7 @@
       "aliases": ["DSIP", "Delta Sleep-Inducing Peptide"],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
+      "approved_indications": [],
       "medspa_uses": ["Sleep architecture support", "Stress-response modulation"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -147,6 +156,9 @@
       "aliases": ["Copper Tripeptide-1", "GHK-Copper", "Prezatide Copper Acetate"],
       "category": "cat1",
       "pcac_wave": null,
+      "approved_indications": [
+        "FDA (historical, withdrawn): Wound healing (as Iamin Gel / Prezatide Copper Acetate, NDA 19-942)"
+      ],
       "medspa_uses": ["Topical skin repair", "Hair growth (topical)", "Wound healing"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2 in original 2023 list."},
@@ -162,6 +174,7 @@
       "aliases": ["Copper Tripeptide-1 (injectable)", "Prezatide Copper Acetate (injectable)"],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
+      "approved_indications": [],
       "medspa_uses": ["Systemic tissue repair (off-label injectable)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -177,6 +190,7 @@
       "aliases": ["LL-37", "Cathelicidin Antimicrobial Peptide", "CAMP"],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
+      "approved_indications": [],
       "medspa_uses": ["Antimicrobial / chronic infection adjunct", "Wound healing"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -192,6 +206,7 @@
       "aliases": ["N-hexanoic-Tyr-Ile-(6) aminohexanoic amide", "PNB-0408"],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
+      "approved_indications": [],
       "medspa_uses": ["Cognitive enhancement (off-label nootropic)", "Synaptogenesis"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -207,6 +222,9 @@
       "aliases": ["MT-II", "MT2"],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
+      "approved_indications": [
+        "Related analog only: Afamelanotide (Scenesse) is FDA-approved for erythropoietic protoporphyria; Melanotan II itself is not approved"
+      ],
       "medspa_uses": ["Tanning response (off-label)", "Libido modulation"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -222,6 +240,7 @@
       "aliases": ["Pegylated Mechano Growth Factor", "PEGylated IGF-1Ec"],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
+      "approved_indications": [],
       "medspa_uses": ["Muscle repair and hypertrophy (off-label)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -237,6 +256,7 @@
       "aliases": ["KP-10", "Metastin(45-54)"],
       "category": "cat2",
       "pcac_wave": null,
+      "approved_indications": [],
       "medspa_uses": ["Reproductive / HPG axis modulation (research)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -252,6 +272,9 @@
       "aliases": ["Growth Hormone-Releasing Peptide-2", "Pralmorelin"],
       "category": "cat2",
       "pcac_wave": null,
+      "approved_indications": [
+        "Japan PMDA: Diagnostic agent for adult growth hormone deficiency (as Pralmorelin / GHRP Kaken)"
+      ],
       "medspa_uses": ["GH secretagogue (off-label)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -267,6 +290,7 @@
       "aliases": ["MK-677", "MK-0677"],
       "category": "cat2",
       "pcac_wave": null,
+      "approved_indications": [],
       "medspa_uses": ["Oral GH secretagogue (off-label)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -282,6 +306,7 @@
       "aliases": ["Ipamorelin"],
       "category": "cat2",
       "pcac_wave": null,
+      "approved_indications": [],
       "medspa_uses": ["GH secretagogue (off-label, commonly stacked with CJC-1295)"],
       "history": [
         {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
@@ -297,6 +322,7 @@
       "aliases": ["CJC-1295 DAC", "Modified GRF (1-29)"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [],
       "medspa_uses": ["Long-acting GHRH analog (off-label, commonly stacked with Ipamorelin)"],
       "history": [
         {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list; remains research-use only."}
@@ -311,6 +337,7 @@
       "aliases": ["Anti-Obesity Drug 9604", "hGH 177-191"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [],
       "medspa_uses": ["Lipolytic / weight management (off-label)"],
       "history": [
         {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list; research-use only."}
@@ -325,9 +352,13 @@
       "aliases": ["Tα1", "Thymalfasin", "ZADAXIN"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [
+        "China NMPA, Italy AIFA, and ~30 other countries: Chronic hepatitis B (adjuvant, as Thymalfasin / ZADAXIN)",
+        "Several jurisdictions: Chronic hepatitis C adjuvant; immune support in cancer chemotherapy"
+      ],
       "medspa_uses": ["Immune modulation (off-label)", "Adjunct in viral infection support"],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list. Approved as Thymalfasin/ZADAXIN in some jurisdictions; not FDA-approved for compounding in the US."}
+        {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list. Approved as Thymalfasin/ZADAXIN in some jurisdictions; not FDA-approved in the US."}
       ],
       "clinicaltrials_search_term": "Thymosin Alpha-1 thymalfasin",
       "openfda_search_term": "Thymalfasin",
@@ -339,6 +370,9 @@
       "aliases": ["Palmitoyl Pentapeptide-4", "Pal-KTTKS"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [
+        "Cosmetic ingredient (no drug approval required): Used in topical skincare products globally"
+      ],
       "medspa_uses": ["Topical anti-aging cosmetic", "Collagen stimulation (topical)"],
       "history": [
         {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}
@@ -353,6 +387,9 @@
       "aliases": ["Acetyl Hexapeptide-3", "Acetyl Hexapeptide-8"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [
+        "Cosmetic ingredient (no drug approval required): Used in topical anti-wrinkle products globally"
+      ],
       "medspa_uses": ["Topical anti-wrinkle cosmetic", "SNARE-complex neuromodulation (topical)"],
       "history": [
         {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}
@@ -367,6 +404,9 @@
       "aliases": ["Acetyl Octapeptide-3"],
       "category": "unscheduled",
       "pcac_wave": null,
+      "approved_indications": [
+        "Cosmetic ingredient (no drug approval required): Used in topical anti-wrinkle products globally"
+      ],
       "medspa_uses": ["Topical anti-wrinkle cosmetic"],
       "history": [
         {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}

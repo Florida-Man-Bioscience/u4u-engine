@@ -59,6 +59,21 @@ export function PeptideCard({
         </p>
       )}
 
+      <div className="text-xs text-zinc-400">
+        <p className="mb-1 font-medium text-zinc-300">Approved indications</p>
+        {peptide.approved_indications.length === 0 ? (
+          <p className="italic text-zinc-500">
+            None — no FDA-approved indications (research / off-label use only)
+          </p>
+        ) : (
+          <ul className="list-disc pl-4">
+            {peptide.approved_indications.map((ind) => (
+              <li key={ind}>{ind}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {peptide.medspa_uses.length > 0 && (
         <div className="text-xs text-zinc-400">
           <p className="mb-1 font-medium text-zinc-300">Medspa uses</p>

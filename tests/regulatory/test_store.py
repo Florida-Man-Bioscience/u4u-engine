@@ -22,6 +22,8 @@ def test_every_peptide_has_required_fields():
         "name",
         "category",
         "history",
+        "approved_indications",
+        "medspa_uses",
         "clinicaltrials_search_term",
         "openfda_search_term",
         "federal_register_search_term",
@@ -29,6 +31,7 @@ def test_every_peptide_has_required_fields():
     for p in load_peptides()["peptides"]:
         missing = required - p.keys()
         assert not missing, f"{p['slug']} missing fields: {missing}"
+        assert isinstance(p["approved_indications"], list)
 
 
 def test_categories_referenced_by_peptides_exist():
