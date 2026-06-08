@@ -529,3 +529,38 @@ def get_drug(job_id: str, drug: str):
         "prediction": pred,
         "hla_warnings": hla,
     }
+
+
+# ── Regulatory dashboard ──────────────────────────────────────────────────────
+
+
+@app.get("/regulatory/peptides")
+async def get_regulatory_peptides(include_live: bool = True):
+    """
+    FDA regulatory status per peptide — curated categorization plus live
+    augments (ClinicalTrials.gov counts, openFDA recalls, Federal Register
+    notices). Live source failures do not fail the request; each source
+    carries a `status` of "fresh" | "stale" | "unavailable".
+    """
+    from engine.regulatory import build_dashboard_payload
+
+    loop = asyncio.get_event_loop()
+    payload = await loop.run_in_executor(
+        _executor, lambda: build_dashboard_payload(include_live=include_live)
+    )
+    return payload
+
+
+@app.get("/regulatory/events")
+async def get_regulatory_events(include_live: bool = True):
+    """
+    Critical regulatory dates, the event timeline, official source links,
+    and a live count of comments on docket FDA-2025-N-6895.
+    """
+    from engine.regulatory import build_events_payload
+
+    loop = asyncio.get_event_loop()
+    payload = await loop.run_in_executor(
+        _executor, lambda: build_events_payload(include_live=include_live)
+    )
+    return payload

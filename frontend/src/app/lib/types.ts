@@ -195,3 +195,141 @@ export interface DrugDetail {
   prediction: DrugPrediction | null;
   hla_warnings: HLACall[];
 }
+
+/* ── Regulatory dashboard ─────────────────────────────────────────────────── */
+
+export type RegulatoryCategorySlug =
+  | "cat1"
+  | "cat2"
+  | "removed_from_cat2"
+  | "pcac_review"
+  | "unscheduled";
+
+export interface RegulatoryCategory {
+  label: string;
+  color: "green" | "red" | "purple" | "amber" | "gray";
+  description: string;
+}
+
+export interface RegulatoryHistoryEntry {
+  date: string;
+  status: RegulatoryCategorySlug;
+  note: string;
+}
+
+export type LiveSourceStatus = "fresh" | "stale" | "unavailable";
+
+export interface LiveEnvelope<T> {
+  data: T | null;
+  fetched_at: number | null;
+  status: LiveSourceStatus;
+  source: string;
+}
+
+export interface ClinicalTrialsLive {
+  search_term: string;
+  total_trials: number;
+  active_trials: number;
+  latest_phase: string | null;
+  recent_studies: Array<{
+    nct_id: string;
+    title: string | null;
+    status: string | null;
+    phase: string | null;
+    url: string;
+  }>;
+}
+
+export interface OpenFdaLive {
+  search_term: string;
+  recalls_total: number;
+  recalls: Array<{
+    recall_number: string | null;
+    reason: string | null;
+    status: string | null;
+    classification: string | null;
+    report_date: string | null;
+    product_description: string | null;
+  }>;
+  adverse_events_total: number | null;
+}
+
+export interface FederalRegisterLive {
+  search_term: string;
+  total: number;
+  documents: Array<{
+    title: string | null;
+    document_number: string | null;
+    publication_date: string | null;
+    url: string | null;
+    abstract: string | null;
+  }>;
+}
+
+export interface PeptideLiveData {
+  clinicaltrials?: LiveEnvelope<ClinicalTrialsLive>;
+  openfda?: LiveEnvelope<OpenFdaLive>;
+  federal_register?: LiveEnvelope<FederalRegisterLive>;
+}
+
+export interface RegulatoryPeptide {
+  slug: string;
+  name: string;
+  aliases: string[];
+  category: RegulatoryCategorySlug;
+  pcac_wave: "july_2026" | "early_2027" | null;
+  medspa_uses: string[];
+  history: RegulatoryHistoryEntry[];
+  clinicaltrials_search_term: string;
+  openfda_search_term: string;
+  federal_register_search_term: string;
+  engine_covered: boolean;
+  live: PeptideLiveData;
+}
+
+export interface RegulatoryPeptidesPayload {
+  categories: Record<RegulatoryCategorySlug, RegulatoryCategory>;
+  peptides: RegulatoryPeptide[];
+  stats: {
+    by_category: Partial<Record<RegulatoryCategorySlug, number>>;
+    by_pcac_wave: Partial<Record<"july_2026" | "early_2027", number>>;
+    total_peptides: number;
+  };
+  last_curated: string | null;
+}
+
+export interface RegulatoryEvent {
+  date: string;
+  title: string;
+  kind: "category_change" | "policy" | "pcac" | "deadline" | "rulemaking";
+  status: "past" | "upcoming" | "tbd";
+  impact: string;
+  source_url: string;
+  source_label: string;
+}
+
+export interface RegulatorySource {
+  label: string;
+  url: string;
+  description: string;
+}
+
+export interface DocketLiveSummary {
+  docket_id: string;
+  comments_count: number | null;
+  last_comment_posted_at: string | null;
+  docket_url: string;
+}
+
+export interface RegulatoryEventsPayload {
+  events: RegulatoryEvent[];
+  official_sources: RegulatorySource[];
+  pcac_contact: {
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+  regulations_gov_docket_id: string | null;
+  docket_live: LiveEnvelope<DocketLiveSummary> | null;
+  last_curated: string | null;
+}

@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "last_curated": "2026-06-07",
+  "regulations_gov_docket_id": "FDA-2025-N-6895",
+  "pcac_contact": {
+    "name": "Takyiah Stevenson",
+    "email": "takyiah.stevenson@fda.hhs.gov",
+    "role": "Pharmacy Compounding Advisory Committee (PCAC) Designated Federal Officer"
+  },
+  "events": [
+    {
+      "date": "2023-09-29",
+      "title": "19 peptides moved to Category 2",
+      "kind": "category_change",
+      "status": "past",
+      "impact": "FDA placed 19 peptides on Category 2 of the 503A Bulks List, signaling enforcement risk for compounding pharmacies.",
+      "source_url": "https://www.fda.gov/drugs/human-drug-compounding/503a-bulks-list",
+      "source_label": "FDA 503A Bulks List"
+    },
+    {
+      "date": "2026-02-27",
+      "title": "HHS Secretary Kennedy signals intent to reclassify peptides",
+      "kind": "policy",
+      "status": "past",
+      "impact": "Public statement (The Joe Rogan Experience) signaling HHS intent to revisit Category 2 placements.",
+      "source_url": "https://www.fda.gov/drugs/human-drug-compounding",
+      "source_label": "FDA Compounding Policy"
+    },
+    {
+      "date": "2026-04-15",
+      "title": "PCAC July 23-24, 2026 meeting notice published",
+      "kind": "pcac",
+      "status": "past",
+      "impact": "FDA published the public notice and agenda for the July PCAC meeting to review 7 peptides removed from Category 2.",
+      "source_url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "source_label": "FDA Advisory Committee Calendar"
+    },
+    {
+      "date": "2026-04-22",
+      "title": "12 peptides removed from Category 2",
+      "kind": "category_change",
+      "status": "past",
+      "impact": "Federal Register Doc. 2026-07361 (Docket FDA-2025-N-6895) removed 12 peptides from Category 2 pending PCAC review.",
+      "source_url": "https://www.regulations.gov/docket/FDA-2025-N-6895",
+      "source_label": "Regulations.gov FDA-2025-N-6895"
+    },
+    {
+      "date": "2026-05-05",
+      "title": "GHK-Cu (non-injectable) re-added to Category 1",
+      "kind": "category_change",
+      "status": "past",
+      "impact": "Topical/non-injectable copper tripeptide-1 re-added to the 503A Bulks List Category 1 — legal for compounding.",
+      "source_url": "https://www.fda.gov/drugs/human-drug-compounding/503a-bulks-list",
+      "source_label": "FDA 503A Bulks List"
+    },
+    {
+      "date": "2026-06-30",
+      "title": "Deadline to register for PCAC oral testimony",
+      "kind": "deadline",
+      "status": "upcoming",
+      "impact": "Last day for medspa advocates and clinicians to register to provide oral testimony at the July PCAC meeting.",
+      "source_url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "source_label": "FDA Advisory Committee Calendar"
+    },
+    {
+      "date": "2026-07-09",
+      "title": "Written comment deadline",
+      "kind": "deadline",
+      "status": "upcoming",
+      "impact": "Last day to submit written comments to the docket that PCAC members will see before the meeting.",
+      "source_url": "https://www.regulations.gov/docket/FDA-2025-N-6895",
+      "source_label": "Regulations.gov FDA-2025-N-6895"
+    },
+    {
+      "date": "2026-07-22",
+      "title": "Public docket closes",
+      "kind": "deadline",
+      "status": "upcoming",
+      "impact": "Hard cutoff (11:59 PM ET) for any docket submissions related to FDA-2025-N-6895.",
+      "source_url": "https://www.regulations.gov/docket/FDA-2025-N-6895",
+      "source_label": "Regulations.gov FDA-2025-N-6895"
+    },
+    {
+      "date": "2026-07-23",
+      "title": "PCAC Day 1 review (BPC-157, TB-500, KPV, MOTS-c)",
+      "kind": "pcac",
+      "status": "upcoming",
+      "impact": "First day of PCAC peptide review. Vote outcomes inform whether peptides return to Category 1, remain off the list, or move back to Category 2.",
+      "source_url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "source_label": "FDA Advisory Committee Calendar"
+    },
+    {
+      "date": "2026-07-24",
+      "title": "PCAC Day 2 review (Emideltide, Semax, Epitalon)",
+      "kind": "pcac",
+      "status": "upcoming",
+      "impact": "Second day of PCAC peptide review. Same vote outcomes apply.",
+      "source_url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "source_label": "FDA Advisory Committee Calendar"
+    },
+    {
+      "date": "2027-02-01",
+      "title": "Second PCAC wave",
+      "kind": "pcac",
+      "status": "tbd",
+      "impact": "Second wave review for GHK-Cu (injectable), LL-37, Dihexa, PEG-MGF, Melanotan II. Exact date TBD.",
+      "source_url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "source_label": "FDA Advisory Committee Calendar"
+    },
+    {
+      "date": "2028-01-01",
+      "title": "Final FDA rulemaking (estimated)",
+      "kind": "rulemaking",
+      "status": "tbd",
+      "impact": "FDA rulemaking to formally place reviewed peptides on or off the 503A Bulks List. Typically 1+ years after PCAC vote.",
+      "source_url": "https://www.fda.gov/drugs/human-drug-compounding/503a-bulks-list",
+      "source_label": "FDA 503A Bulks List"
+    }
+  ],
+  "official_sources": [
+    {
+      "label": "FDA 503A Bulks List (main)",
+      "url": "https://www.fda.gov/drugs/human-drug-compounding/503a-bulks-list",
+      "description": "Primary FDA page listing Category 1 (legal) and Category 2 (prohibited) bulk drug substances for 503A compounding."
+    },
+    {
+      "label": "FDA 503A Category List PDF",
+      "url": "https://www.fda.gov/media/110653/download",
+      "description": "Downloadable PDF of the current 503A Bulks List categories."
+    },
+    {
+      "label": "FDA Category 2 Safety Risks Page",
+      "url": "https://www.fda.gov/drugs/human-drug-compounding/category-2-bulk-drug-substances-nominated-503a-pharmacy-compounding",
+      "description": "FDA's stated safety rationale for Category 2 placements."
+    },
+    {
+      "label": "PCAC July 23-24, 2026 Meeting Notice",
+      "url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar",
+      "description": "Pharmacy Compounding Advisory Committee meeting calendar and notices."
+    },
+    {
+      "label": "Public Comment Docket FDA-2025-N-6895",
+      "url": "https://www.regulations.gov/docket/FDA-2025-N-6895",
+      "description": "Active docket for the 2026 peptide removal action and PCAC review."
+    },
+    {
+      "label": "FDA Human Drug Compounding (program home)",
+      "url": "https://www.fda.gov/drugs/human-drug-compounding",
+      "description": "FDA program page for 503A and 503B compounding policy."
+    }
+  ]
+}

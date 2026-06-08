@@ -1,4 +1,11 @@
-import type { JobStatus, JobListItem, PGxProfile, DrugDetail } from "./types";
+import type {
+  JobStatus,
+  JobListItem,
+  PGxProfile,
+  DrugDetail,
+  RegulatoryPeptidesPayload,
+  RegulatoryEventsPayload,
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
 
@@ -61,4 +68,20 @@ export async function listJobs(
   limit = 50
 ): Promise<{ jobs: JobListItem[] }> {
   return apiFetch<{ jobs: JobListItem[] }>(`/jobs?limit=${limit}`);
+}
+
+/** Curated peptide regulatory status, augmented with live source data. */
+export async function getRegulatoryPeptides(
+  includeLive = true
+): Promise<RegulatoryPeptidesPayload> {
+  const qs = includeLive ? "" : "?include_live=false";
+  return apiFetch<RegulatoryPeptidesPayload>(`/regulatory/peptides${qs}`);
+}
+
+/** Critical regulatory dates, timeline, sources, and live docket comment count. */
+export async function getRegulatoryEvents(
+  includeLive = true
+): Promise<RegulatoryEventsPayload> {
+  const qs = includeLive ? "" : "?include_live=false";
+  return apiFetch<RegulatoryEventsPayload>(`/regulatory/events${qs}`);
 }
