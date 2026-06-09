@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AddPatientForm } from "./components/AddPatientForm";
-import { deletePatient, listPatients } from "./lib/api";
+import { deletePatient, listPatients, seedDemoData } from "./lib/api";
 import type { Patient } from "./lib/types";
 
 export default function TrackingHome() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -27,6 +29,38 @@ export default function TrackingHome() {
     refresh();
   }, []);
 
+  async function loadDemoData() {
+    const hasData = patients.length > 0;
+    if (
+      hasData &&
+      !confirm(
+        `Reset and reload demo data? This will delete ${patients.length} existing patient(s) and reseed.`,
+      )
+    ) {
+      return;
+    }
+    setSeeding(true);
+    setSeedMessage(null);
+    setError(null);
+    try {
+      const result = await seedDemoData({ force: hasData });
+      if (result.skipped) {
+        setSeedMessage(
+          `Tracking DB already has ${result.skipped} patient(s) — no changes made.`,
+        );
+      } else {
+        setSeedMessage(
+          `Loaded ${result.patients} patient(s), ${result.treatments} treatment(s), ${result.measurements} measurement(s).`,
+        );
+      }
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "failed to seed");
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <header className="flex items-end justify-between gap-4">
@@ -41,7 +75,25 @@ export default function TrackingHome() {
             .
           </p>
         </div>
+        <button
+          type="button"
+          onClick={loadDemoData}
+          disabled={seeding}
+          className="whitespace-nowrap rounded border border-teal-700 bg-white px-3 py-1.5 text-sm text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+        >
+          {seeding
+            ? "Loading…"
+            : patients.length > 0
+              ? "Reload demo data"
+              : "Load demo data"}
+        </button>
       </header>
+
+      {seedMessage && (
+        <p className="rounded border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800">
+          {seedMessage}
+        </p>
+      )}
 
       <AddPatientForm onCreated={(p) => setPatients((xs) => [p, ...xs])} />
 

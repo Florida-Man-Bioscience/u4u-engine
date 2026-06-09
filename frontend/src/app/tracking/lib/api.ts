@@ -114,6 +114,23 @@ export const getBiomarkerCatalog = (peptide: string) =>
     `/tracking/peptides/${encodeURIComponent(peptide)}/biomarkers`
   );
 
+export interface SeedResult {
+  patients: number;
+  treatments: number;
+  measurements: number;
+  skipped: number;
+}
+
+export const seedDemoData = (body: {
+  force?: boolean;
+  patients?: number;
+  seed?: number;
+}) =>
+  req<SeedResult>("/tracking/seed", {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+
 export const getCohort = (params: {
   peptide: string;
   biomarker: string;

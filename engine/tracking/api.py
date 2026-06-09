@@ -222,3 +222,32 @@ def cohort(
         dose_max=dose_max,
     )
     return result.to_dict()
+
+
+# ── Demo data seed ──────────────────────────────────────────────────────────
+
+class SeedIn(BaseModel):
+    force: bool = False
+    patients: int = Field(default=12, ge=1, le=100)
+    seed: int = 42
+
+
+@router.post("/seed")
+def seed_demo_data(body: SeedIn | None = None) -> dict[str, Any]:
+    """Populate the tracking DB with synthetic demo data.
+
+    Idempotent by default: returns ``{"skipped": N}`` if patients already
+    exist. Pass ``{"force": true}`` to wipe (FK cascade) and reseed.
+    """
+    import random
+
+    from .seed import seed as run_seed
+
+    body = body or SeedIn()
+    stats = run_seed(
+        _conn(),
+        rng=random.Random(body.seed),
+        n_patients=body.patients,
+        force=body.force,
+    )
+    return stats

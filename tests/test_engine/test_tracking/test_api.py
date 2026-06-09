@@ -69,6 +69,36 @@ def test_cohort_endpoint_returns_expected_direction(client):
     assert body["trajectories"]
 
 
+def test_seed_endpoint_is_idempotent(client):
+    # First call: empty DB → seeds.
+    r = client.post("/tracking/seed", json={"patients": 4})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["patients"] == 4
+    assert body["skipped"] == 0
+    assert body["treatments"] > 0
+    assert body["measurements"] > 0
+
+    # Second call: already seeded → skips.
+    r = client.post("/tracking/seed", json={"patients": 4})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["skipped"] == 4
+    assert body["patients"] == 0
+
+
+def test_seed_force_wipes_and_reseeds(client):
+    r = client.post("/tracking/seed", json={"patients": 3})
+    assert r.json()["patients"] == 3
+    # force=true should wipe then reseed with a different count
+    r = client.post("/tracking/seed", json={"patients": 5, "force": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["patients"] == 5
+    # Verify the GET reflects the new count.
+    listed = client.get("/tracking/patients").json()
+    assert len(listed) == 5
+
+
 def test_csv_upload(client):
     r = client.post("/tracking/patients", json={"label": "C"})
     pid = r.json()["id"]
