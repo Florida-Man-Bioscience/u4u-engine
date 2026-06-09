@@ -78,10 +78,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
+
+# ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
+from engine.tracking.api import router as _tracking_router  # noqa: E402
+app.include_router(_tracking_router)
 
 # ── Job store ─────────────────────────────────────────────────────────────────
 # Schema per job:
