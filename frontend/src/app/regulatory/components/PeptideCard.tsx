@@ -97,7 +97,11 @@ export function PeptideCard({
             )}
           </dd>
           {trials && (
-            <LiveBadge status={trials.status} fetchedAt={trials.fetched_at} />
+            <LiveBadge
+              status={trials.status}
+              fetchedAt={trials.fetched_at}
+              variant="subtle"
+            />
           )}
         </div>
         <div>
@@ -106,7 +110,11 @@ export function PeptideCard({
             {openfda?.data?.recalls_total ?? "—"}
           </dd>
           {openfda && (
-            <LiveBadge status={openfda.status} fetchedAt={openfda.fetched_at} />
+            <LiveBadge
+              status={openfda.status}
+              fetchedAt={openfda.fetched_at}
+              variant="subtle"
+            />
           )}
         </div>
         <div>
@@ -114,7 +122,13 @@ export function PeptideCard({
           <dd className="mt-0.5 text-sm font-semibold text-zinc-100">
             {fr?.data?.total ?? "—"}
           </dd>
-          {fr && <LiveBadge status={fr.status} fetchedAt={fr.fetched_at} />}
+          {fr && (
+            <LiveBadge
+              status={fr.status}
+              fetchedAt={fr.fetched_at}
+              variant="subtle"
+            />
+          )}
         </div>
       </dl>
 
