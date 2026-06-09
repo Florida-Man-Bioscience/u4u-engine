@@ -53,6 +53,9 @@ nosetests.xml
 # Data files (large, not committed)
 data/*.gz
 data/*.txt
+data/*.db
+data/*.db-shm
+data/*.db-wal
 !data/.gitkeep
 
 # Previous version folder

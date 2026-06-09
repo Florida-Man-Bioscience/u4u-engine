@@ -59,7 +59,8 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 
 # Copy application code
-COPY engine/ engine/
+COPY engine/  engine/
+COPY scripts/ scripts/
 COPY api.py   api.py
 
 # Copy rsID filter files.
@@ -68,7 +69,8 @@ COPY api.py   api.py
 COPY data/ data/
 
 # Run as non-root user — ensure data/ is writable for SQLite caches
-RUN useradd --no-create-home --shell /bin/false appuser \
+RUN chmod +x /app/scripts/docker-entrypoint.sh \
+ && useradd --no-create-home --shell /bin/false appuser \
  && chown -R appuser:appuser /app \
  && chmod 777 /app/data
 USER appuser
@@ -83,5 +85,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # Start uvicorn.
 # Hampton: set --workers to match CPU count on the K8s node.
 # Gunicorn with uvicorn workers is an alternative for multi-process deployments:
+#   ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 #   CMD ["gunicorn", "api:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+#
+# Set SEED_DEMO_DATA=1 to populate the biomarker tracking DB with synthetic
+# patients/treatments/measurements on first start. The seeder is idempotent —
+# it skips on container restart when patients already exist.
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

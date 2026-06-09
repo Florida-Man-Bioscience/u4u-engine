@@ -14,6 +14,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Populate the biomarker tracking DB with synthetic demo data on first
+      # start. Idempotent: skipped on restart if patients already exist.
+      # Unset (or remove this line) to keep tracking empty in production.
+      SEED_DEMO_DATA: "1"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
