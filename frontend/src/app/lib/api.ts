@@ -26,20 +26,97 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Upload a genome file and start an analysis job. */
-export async function analyzeFile(
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  /** 0..1 fraction; null when total size is not known (rare). */
+  fraction: number | null;
+  /** True after the bytes have finished sending and we are waiting on the server response. */
+  done: boolean;
+}
+
+interface AnalyzeOpts {
+  currentMedications?: string[];
+  onProgress?: (p: UploadProgress) => void;
+  signal?: AbortSignal;
+}
+
+/**
+ * Upload a genome file and start an analysis job, reporting upload progress.
+ *
+ * Uses XMLHttpRequest because `fetch` does not expose upload progress events
+ * on browsers as of 2026. The progress callback fires on every chunk written
+ * to the wire, plus once with `done: true` after the body has fully uploaded
+ * (the server may still be processing while we await its JSON response).
+ */
+export function analyzeFile(
   file: File,
-  currentMedications?: string[]
+  optsOrMeds?: string[] | AnalyzeOpts
 ): Promise<{ job_id: string; poll_url: string }> {
-  const form = new FormData();
-  form.append("file", file);
+  const opts: AnalyzeOpts = Array.isArray(optsOrMeds)
+    ? { currentMedications: optsOrMeds }
+    : (optsOrMeds ?? {});
   const qs =
-    currentMedications && currentMedications.length
-      ? `?current_medications=${encodeURIComponent(currentMedications.join(","))}`
+    opts.currentMedications && opts.currentMedications.length
+      ? `?current_medications=${encodeURIComponent(opts.currentMedications.join(","))}`
       : "";
-  return apiFetch<{ job_id: string; poll_url: string }>(`/analyze${qs}`, {
-    method: "POST",
-    body: form,
+
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/analyze${qs}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (!opts.onProgress) return;
+      opts.onProgress({
+        loaded: e.loaded,
+        total: e.lengthComputable ? e.total : 0,
+        fraction: e.lengthComputable && e.total > 0 ? e.loaded / e.total : null,
+        done: false,
+      });
+    };
+    xhr.upload.onload = () => {
+      if (!opts.onProgress) return;
+      opts.onProgress({
+        loaded: file.size,
+        total: file.size,
+        fraction: 1,
+        done: true,
+      });
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error("Invalid server response"));
+        }
+      } else {
+        let message = `HTTP ${xhr.status}`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          message = body?.detail ?? body?.message ?? message;
+        } catch {
+          // ignore
+        }
+        reject(new Error(message));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+    if (opts.signal) {
+      if (opts.signal.aborted) {
+        xhr.abort();
+        return;
+      }
+      opts.signal.addEventListener("abort", () => xhr.abort(), { once: true });
+    }
+
+    xhr.send(form);
   });
 }
 

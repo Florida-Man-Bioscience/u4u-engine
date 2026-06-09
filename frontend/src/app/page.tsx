@@ -48,6 +48,10 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [medications, setMedications] = useState("");
+  const [uploadLoaded, setUploadLoaded] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
+  const [uploadFraction, setUploadFraction] = useState<number | null>(null);
+  const [uploadDone, setUploadDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function validateFile(f: File): string | null {
@@ -88,19 +92,39 @@ export default function LandingPage() {
     if (!file) return;
     setError(null);
     setSubmitting(true);
+    setUploadLoaded(0);
+    setUploadTotal(file.size);
+    setUploadFraction(0);
+    setUploadDone(false);
     try {
       const meds = medications
         .split(",")
         .map((m) => m.trim())
         .filter(Boolean);
-      const { job_id } = await analyzeFile(file, meds.length ? meds : undefined);
+      const { job_id } = await analyzeFile(file, {
+        currentMedications: meds.length ? meds : undefined,
+        onProgress: (p) => {
+          setUploadLoaded(p.loaded);
+          setUploadTotal(p.total || file.size);
+          setUploadFraction(p.fraction);
+          setUploadDone(p.done);
+        },
+      });
       router.push(`/jobs/${job_id}`);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred."
       );
       setSubmitting(false);
+      setUploadFraction(null);
+      setUploadDone(false);
     }
+  }
+
+  function formatBytes(n: number): string {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
   }
 
   return (
@@ -363,13 +387,64 @@ export default function LandingPage() {
               </div>
             )}
 
+            {/* Upload progress */}
+            {submitting && (
+              <div
+                className="rounded-md border border-[#1a6b4a]/40 bg-[#0d1117]/50 px-4 py-3"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="mb-1.5 flex items-baseline justify-between text-xs text-zinc-300">
+                  <span>
+                    {uploadDone
+                      ? "Starting analysis…"
+                      : uploadFraction !== null
+                        ? `Uploading… ${Math.round(uploadFraction * 100)}%`
+                        : "Uploading…"}
+                  </span>
+                  <span className="font-mono text-zinc-500">
+                    {formatBytes(uploadLoaded)}
+                    {uploadTotal ? ` / ${formatBytes(uploadTotal)}` : ""}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                  {uploadFraction === null || uploadDone ? (
+                    // Indeterminate sweep while we wait for the server response
+                    // (or when length isn't computable).
+                    <div className="h-full w-1/3 animate-[upload-sweep_1.2s_ease-in-out_infinite] bg-[#2d8f61]" />
+                  ) : (
+                    <div
+                      className="h-full bg-[#2d8f61] transition-[width] duration-150 ease-out"
+                      style={{ width: `${Math.round(uploadFraction * 100)}%` }}
+                    />
+                  )}
+                </div>
+                <style jsx>{`
+                  @keyframes upload-sweep {
+                    0% {
+                      transform: translateX(-100%);
+                    }
+                    100% {
+                      transform: translateX(300%);
+                    }
+                  }
+                `}</style>
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
               disabled={!file || submitting}
               className="w-full rounded-lg bg-[#1a6b4a] text-white py-3.5 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2d8f61] transition-colors shadow-lg shadow-[#1a6b4a]/20"
             >
-              {submitting ? "Uploading…" : "Analyze Variants"}
+              {submitting
+                ? uploadDone
+                  ? "Starting…"
+                  : uploadFraction !== null
+                    ? `Uploading ${Math.round(uploadFraction * 100)}%`
+                    : "Uploading…"
+                : "Analyze Variants"}
             </button>
           </form>
 

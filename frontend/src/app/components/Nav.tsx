@@ -25,6 +25,12 @@ export function Nav() {
             History
           </Link>
           <Link
+            href="/tracking"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            Tracking
+          </Link>
+          <Link
             href="/regulatory"
             className="text-zinc-400 hover:text-white transition-colors"
           >
