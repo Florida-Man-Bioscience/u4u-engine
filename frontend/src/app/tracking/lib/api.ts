@@ -2,8 +2,11 @@ import type {
   BiomarkerCatalogEntry,
   CohortPeptideSummary,
   CohortResult,
+  GeneticPrior,
+  GeneticsResponse,
   Measurement,
   Patient,
+  PredictionResult,
   Treatment,
 } from "./types";
 
@@ -113,6 +116,31 @@ export const getBiomarkerCatalog = (peptide: string) =>
   req<BiomarkerCatalogEntry[]>(
     `/tracking/peptides/${encodeURIComponent(peptide)}/biomarkers`
   );
+
+export const getGenetics = (patientId: string) =>
+  req<GeneticsResponse>(`/tracking/patients/${patientId}/genetics`);
+
+export const regenerateGenetics = (patientId: string, seed?: number) => {
+  const qs = seed !== undefined ? `?seed=${seed}` : "";
+  return req<GeneticsResponse>(
+    `/tracking/patients/${patientId}/genetics/synthetic${qs}`,
+    { method: "POST", body: "{}" },
+  );
+};
+
+export const getPriors = (patientId: string) =>
+  req<{ priors: GeneticPrior[] }>(`/tracking/patients/${patientId}/priors`);
+
+export const getPrediction = (
+  patientId: string,
+  peptide: string,
+  biomarker: string,
+) => {
+  const u = new URLSearchParams({ peptide, biomarker });
+  return req<PredictionResult>(
+    `/tracking/patients/${patientId}/predictions?${u.toString()}`,
+  );
+};
 
 export interface SeedResult {
   patients: number;

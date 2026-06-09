@@ -5,9 +5,12 @@ import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { AddMeasurementForm } from "../../components/AddMeasurementForm";
 import { AddTreatmentForm } from "../../components/AddTreatmentForm";
 import { BiomarkerLineChart } from "../../components/BiomarkerLineChart";
+import { GeneticsCard } from "../../components/GeneticsCard";
+import { PosteriorChart } from "../../components/PosteriorChart";
 import {
   getBiomarkerCatalog,
   getPatient,
+  getPrediction,
   listMeasurements,
   listTreatments,
 } from "../../lib/api";
@@ -15,6 +18,7 @@ import type {
   BiomarkerCatalogEntry,
   Measurement,
   Patient,
+  PredictionResult,
   Treatment,
 } from "../../lib/types";
 
@@ -29,6 +33,7 @@ export default function PatientDetail({
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [catalog, setCatalog] = useState<BiomarkerCatalogEntry[]>([]);
   const [activeTreatmentId, setActiveTreatmentId] = useState<string>("");
+  const [predictions, setPredictions] = useState<Record<string, PredictionResult>>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -76,6 +81,27 @@ export default function PatientDetail({
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [measurements]);
 
+  // Fetch a Bayesian prediction for each (active peptide, biomarker) shown.
+  useEffect(() => {
+    if (!activeTreatment) return;
+    const peptide = activeTreatment.peptide_name;
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, PredictionResult> = {};
+      for (const [name] of grouped) {
+        try {
+          next[name] = await getPrediction(id, peptide, name);
+        } catch {
+          // skip — likely an empty / mismatched biomarker
+        }
+      }
+      if (!cancelled) setPredictions(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, activeTreatment, grouped]);
+
   if (error) {
     return (
       <div className="mx-auto max-w-5xl p-6">
@@ -106,6 +132,16 @@ export default function PatientDetail({
             .join(" · ") || "—"}
         </p>
       </header>
+
+      <section>
+        <h2 className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-500">
+          Genetics &amp; per-peptide priors
+        </h2>
+        <GeneticsCard
+          patientId={id}
+          treatmentPeptides={treatments.map((t) => t.peptide_name)}
+        />
+      </section>
 
       <section>
         <h2 className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-500">
@@ -169,6 +205,9 @@ export default function PatientDetail({
         {grouped.map(([name, rows]) => {
           const expected = catalog.find((c) => c.name === name) ?? null;
           const start = activeTreatment?.start_date ?? null;
+          const prediction = predictions[name] ?? null;
+          const post = prediction?.posterior;
+          const prior = prediction?.prior;
           return (
             <div key={name} className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="mb-2 flex items-baseline justify-between">
@@ -178,11 +217,50 @@ export default function PatientDetail({
                   {expected ? ` · expected ${expected.direction}` : ""}
                 </span>
               </div>
-              <BiomarkerLineChart
-                measurements={rows}
-                expected={expected}
-                treatmentStartIso={start}
-              />
+              {post && (
+                <div className="mb-2 grid grid-cols-2 gap-3 rounded bg-slate-50 px-3 py-2 text-xs sm:grid-cols-4">
+                  <div>
+                    <div className="text-slate-500">Prior (genetics)</div>
+                    <div className="font-mono text-slate-800">
+                      {prior
+                        ? `${(prior.mean_pct_change * 100).toFixed(1)}% ± ${(prior.sd_pct_change * 100).toFixed(1)}%`
+                        : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Posterior mean</div>
+                    <div className="font-mono text-teal-700">
+                      {`${(post.mean_pct_change * 100).toFixed(1)}%`}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">95% credible</div>
+                    <div className="font-mono text-slate-800">
+                      [{(post.credible_lo_95 * 100).toFixed(1)}%, {(post.credible_hi_95 * 100).toFixed(1)}%]
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Info gain</div>
+                    <div className="font-mono text-slate-800">
+                      {`n_eff ${post.n_effective.toFixed(1)}`}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {start ? (
+                <PosteriorChart
+                  measurements={rows}
+                  treatmentStartIso={start}
+                  expected={expected}
+                  prediction={prediction}
+                />
+              ) : (
+                <BiomarkerLineChart
+                  measurements={rows}
+                  expected={expected}
+                  treatmentStartIso={start}
+                />
+              )}
             </div>
           );
         })}

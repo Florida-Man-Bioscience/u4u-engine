@@ -51,3 +51,17 @@ CREATE INDEX IF NOT EXISTS idx_measurements_patient    ON measurements(patient_i
 CREATE INDEX IF NOT EXISTS idx_measurements_treatment  ON measurements(treatment_id);
 CREATE INDEX IF NOT EXISTS idx_measurements_biomarker  ON measurements(biomarker_name);
 CREATE INDEX IF NOT EXISTS idx_measurements_at         ON measurements(measured_at);
+
+-- ── Genetic profile (one row per patient) ───────────────────────────────────
+-- profile_json: JSON-serialised GeneticProfile (see engine/tracking/genetics.py)
+--   {
+--     "variants": [{rsid, gene, genotype, peptide_effects: {peptide: weight}, ...}],
+--     "generated_at": "...",
+--     "source": "synthetic" | "uploaded"
+--   }
+CREATE TABLE IF NOT EXISTS patient_genetics (
+    patient_id   TEXT PRIMARY KEY REFERENCES patients(id) ON DELETE CASCADE,
+    profile_json TEXT NOT NULL,
+    source       TEXT NOT NULL DEFAULT 'synthetic',
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);

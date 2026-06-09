@@ -19,6 +19,7 @@ from engine.peptides import PEPTIDE_BIOMARKERS, get_biomarker_panel
 
 from . import analysis, service
 from .db import get_conn
+from .genetics import GeneticProfile, derive_prior, generate_synthetic_profile
 
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -222,6 +223,72 @@ def cohort(
         dose_max=dose_max,
     )
     return result.to_dict()
+
+
+# ── Genetic profile + Bayesian predictions ──────────────────────────────────
+
+@router.get("/patients/{patient_id}/genetics")
+def get_genetics(patient_id: str) -> dict[str, Any]:
+    if service.get_patient(_conn(), patient_id) is None:
+        raise HTTPException(404, "patient not found")
+    raw = service.get_genetic_profile_json(_conn(), patient_id)
+    if raw is None:
+        return {"profile": None, "source": None, "created_at": None}
+    profile_json, source, created_at = raw
+    profile = GeneticProfile.from_json(profile_json)
+    return {
+        "profile": profile.to_dict(),
+        "source": source,
+        "created_at": created_at,
+    }
+
+
+@router.post("/patients/{patient_id}/genetics/synthetic")
+def generate_genetics(patient_id: str, seed: int | None = None) -> dict[str, Any]:
+    """Generate (or regenerate) a synthetic genetic profile for a patient."""
+    if service.get_patient(_conn(), patient_id) is None:
+        raise HTTPException(404, "patient not found")
+    import random
+    rng = random.Random(seed) if seed is not None else random.Random()
+    profile = generate_synthetic_profile(rng)
+    service.set_genetic_profile(
+        _conn(), patient_id, profile.to_json(), source="synthetic"
+    )
+    return {
+        "profile": profile.to_dict(),
+        "source": "synthetic",
+    }
+
+
+@router.get("/patients/{patient_id}/predictions")
+def get_predictions(
+    patient_id: str, peptide: str, biomarker: str
+) -> dict[str, Any]:
+    """Bayesian prediction for one (patient, peptide, biomarker)."""
+    if service.get_patient(_conn(), patient_id) is None:
+        raise HTTPException(404, "patient not found")
+    return analysis.predict_response(
+        _conn(),
+        patient_id=patient_id,
+        peptide_name=peptide,
+        biomarker_name=biomarker,
+    )
+
+
+@router.get("/patients/{patient_id}/priors")
+def get_priors(patient_id: str) -> dict[str, Any]:
+    """All per-peptide priors derived from the patient's genetic profile."""
+    if service.get_patient(_conn(), patient_id) is None:
+        raise HTTPException(404, "patient not found")
+    raw = service.get_genetic_profile_json(_conn(), patient_id)
+    if raw is None:
+        return {"priors": []}
+    profile = GeneticProfile.from_json(raw[0])
+    priors: list[dict[str, Any]] = []
+    for peptide_name in sorted(PEPTIDE_BIOMARKERS.keys()):
+        prior = derive_prior(profile, peptide_name)
+        priors.append(prior.to_dict())
+    return {"priors": priors}
 
 
 # ── Demo data seed ──────────────────────────────────────────────────────────

@@ -101,3 +101,80 @@ export interface CohortResult {
   time_bins: TimeBin[];
   dose_response: DoseResponseRow[];
 }
+
+// ── Genetics + Bayesian predictions ────────────────────────────────────────
+
+export interface GeneticVariant {
+  rsid: string;
+  gene: string;
+  chromosome: string;
+  genotype: "hom_ref" | "het" | "hom_alt";
+  effect_allele: string;
+  other_allele: string;
+  dosage: number;
+  peptide_effects: Record<string, number>;
+  description: string;
+}
+
+export interface GeneticProfile {
+  variants: GeneticVariant[];
+  generated_at: string;
+  source: string;
+}
+
+export interface GeneticsResponse {
+  profile: GeneticProfile | null;
+  source: string | null;
+  created_at: string | null;
+}
+
+export interface GeneticPrior {
+  peptide: string;
+  mean_pct_change: number;
+  sd_pct_change: number;
+  n_relevant_variants: number;
+  aggregate_weight: number;
+}
+
+export interface Likelihood {
+  mean_pct_change: number;
+  sd_pct_change: number;
+  n_observations: number;
+  baseline: number;
+}
+
+export interface Posterior {
+  mean_pct_change: number;
+  sd_pct_change: number;
+  credible_lo_95: number;
+  credible_hi_95: number;
+  n_effective: number;
+}
+
+export interface PredictivePoint {
+  weeks_since_start: number;
+  mean: number;
+  lo_95: number;
+  hi_95: number;
+}
+
+export interface PredictiveCurve {
+  points: PredictivePoint[];
+}
+
+export interface PredictionResult {
+  patient_id: string;
+  peptide: string;
+  biomarker_name: string;
+  expected: BiomarkerCatalogEntry | null;
+  treatment_id: string | null;
+  treatment_start: string | null;
+  tau_weeks: number;
+  baseline: number | null;
+  n_measurements: number;
+  prior: GeneticPrior | null;
+  likelihood: Likelihood | null;
+  posterior: Posterior;
+  posterior_predictive: PredictiveCurve;
+  prior_predictive: PredictiveCurve;
+}

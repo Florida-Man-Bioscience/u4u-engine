@@ -23,6 +23,9 @@ from typing import Any
 from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
+from . import bayes, service
+from .genetics import GeneticProfile, derive_prior
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -309,6 +312,151 @@ def available_biomarkers(conn: sqlite3.Connection, peptide_name: str) -> list[di
         d["n_observed"] = counts.get(m.name, 0)
         out.append(d)
     return out
+
+
+# ── Bayesian per-patient predictions ────────────────────────────────────────
+
+def _weeks_since(start: str, when: str) -> float | None:
+    return _weeks_between(start, when)
+
+
+def _tau_for(expected: BiomarkerMeasurement | None,
+             *, default_weeks: float = 4.0) -> float:
+    """Use the panel's expected timeframe as the approach time constant."""
+    if expected is None:
+        return default_weeks
+    if expected.timeframe_weeks_max:
+        return max(expected.timeframe_weeks_max / 2.0, 1.0)
+    if expected.timeframe_weeks_min:
+        return max(expected.timeframe_weeks_min, 1.0)
+    return default_weeks
+
+
+def predict_response(
+    conn: sqlite3.Connection,
+    *,
+    patient_id: str,
+    peptide_name: str,
+    biomarker_name: str,
+) -> dict[str, Any]:
+    """Bayesian prediction for one (patient, peptide, biomarker).
+
+    Returns a payload containing:
+      - prior:           GeneticPrior derived from the patient's profile
+      - likelihood:      effective observation summarising measurements
+      - posterior:       Normal-Normal update
+      - expected:        the BiomarkerMeasurement panel entry (for context)
+      - baseline:        baseline value used (median of pre-window measurements)
+      - posterior_predictive: trajectory + 95% credible band over weeks
+      - prior_predictive:     same shape, using only the genetic prior
+    """
+    panel = get_biomarker_panel(peptide_name)
+    expected: BiomarkerMeasurement | None = None
+    if panel is not None:
+        target = biomarker_name.lower().strip()
+        for m in panel.measurements:
+            if m.name.lower().strip() == target:
+                expected = m
+                break
+
+    # ── Prior from genetics ──
+    raw = service.get_genetic_profile_json(conn, patient_id)
+    if raw is None:
+        prior = None
+        prior_mean, prior_sd = 0.0, 0.3
+    else:
+        profile = GeneticProfile.from_json(raw[0])
+        prior = derive_prior(profile, peptide_name)
+        prior_mean, prior_sd = prior.mean_pct_change, prior.sd_pct_change
+
+    # ── Find the active treatment for this peptide ──
+    treatments = service.list_treatments_for_patient(conn, patient_id)
+    treatment = next((t for t in treatments if t.peptide_name == peptide_name), None)
+
+    measurements = service.list_measurements_for_patient(
+        conn, patient_id, biomarker_name=biomarker_name
+    )
+
+    # Time-align measurements to treatment_start. If there's no treatment,
+    # we still expose the prior but cannot fit a likelihood.
+    observations: list[tuple[float, float]] = []
+    if treatment is not None:
+        for m in measurements:
+            w = _weeks_since(treatment.start_date, m.measured_at)
+            if w is None or w < 0:
+                continue
+            observations.append((w, m.value))
+
+    tau = _tau_for(expected)
+    baseline = bayes.estimate_baseline(observations)
+    noise_pct = 0.10  # rough measurement noise as fraction of value
+    likelihood = (
+        bayes.effective_observation(
+            baseline=baseline,
+            observations=observations,
+            tau_weeks=tau,
+            noise_pct=noise_pct,
+        )
+        if baseline is not None else None
+    )
+
+    posterior = bayes.update(
+        prior_mean=prior_mean,
+        prior_sd=prior_sd,
+        likelihood=likelihood,
+    )
+
+    # ── Predictive trajectories ──
+    max_w = max((w for w, _ in observations), default=0.0)
+    cap = max(max_w + 8.0, (expected.timeframe_weeks_max or 12.0) if expected else 12.0)
+    week_grid = [
+        round(x, 2)
+        for x in (
+            0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0, 26.0, 36.0, 52.0
+        )
+        if x <= cap
+    ]
+    if not week_grid or week_grid[-1] < cap:
+        week_grid.append(round(cap, 2))
+
+    posterior_predictive = (
+        bayes.predictive_curve(
+            baseline=baseline,
+            posterior=posterior,
+            tau_weeks=tau,
+            week_grid=week_grid,
+        )
+        if baseline is not None else bayes.PredictiveCurve(points=[])
+    )
+
+    # Prior-only predictive: posterior == prior (no likelihood)
+    prior_only = bayes.update(prior_mean=prior_mean, prior_sd=prior_sd, likelihood=None)
+    prior_predictive = (
+        bayes.predictive_curve(
+            baseline=baseline,
+            posterior=prior_only,
+            tau_weeks=tau,
+            week_grid=week_grid,
+        )
+        if baseline is not None else bayes.PredictiveCurve(points=[])
+    )
+
+    return {
+        "patient_id": patient_id,
+        "peptide": peptide_name,
+        "biomarker_name": biomarker_name,
+        "expected": expected.to_dict() if expected else None,
+        "treatment_id": treatment.id if treatment else None,
+        "treatment_start": treatment.start_date if treatment else None,
+        "tau_weeks": tau,
+        "baseline": baseline,
+        "n_measurements": len(observations),
+        "prior": prior.to_dict() if prior else None,
+        "likelihood": likelihood.to_dict() if likelihood else None,
+        "posterior": posterior.to_dict(),
+        "posterior_predictive": posterior_predictive.to_dict(),
+        "prior_predictive": prior_predictive.to_dict(),
+    }
 
 
 def peptides_with_data(conn: sqlite3.Connection) -> list[dict[str, Any]]:

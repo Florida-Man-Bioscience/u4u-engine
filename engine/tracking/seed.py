@@ -30,6 +30,10 @@ from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
 from . import service
+from .genetics import (
+    generate_synthetic_profile,
+    responder_strength_from_profile,
+)
 
 
 # ── Baselines + effect knobs ────────────────────────────────────────────────
@@ -224,6 +228,7 @@ def seed(
         conn.commit()
 
     patients = []
+    profiles: dict[str, "GeneticProfile"] = {}  # noqa: F821 — forward use only
     for i in range(n_patients):
         sex, byr = PATIENT_DEMOGRAPHICS[i % len(PATIENT_DEMOGRAPHICS)]
         if i >= len(PATIENT_DEMOGRAPHICS):
@@ -237,6 +242,15 @@ def seed(
         )
         patients.append(p)
         stats["patients"] += 1
+
+        # Each patient gets a synthetic genetic profile. The aggregate
+        # variant weight for a peptide drives their responder_strength on
+        # that peptide — so the Bayesian prior derived from genetics will
+        # genuinely predict the observed response.
+        profile = generate_synthetic_profile(rng)
+        profiles[p.id] = profile
+        service.set_genetic_profile(conn, p.id, profile.to_json(),
+                                    source="synthetic")
 
     for p in patients:
         n_treatments = 1 if rng.random() < 0.55 else 2
@@ -261,7 +275,12 @@ def seed(
             if panel is None:
                 continue
 
-            responder = max(0.0, rng.gauss(0.85, 0.35))
+            # Per-peptide responder strength: derived from the patient's
+            # genetic profile (so the priors are predictive), with a small
+            # random jitter to reflect non-genetic variance.
+            profile = profiles[p.id]
+            genetic_strength = responder_strength_from_profile(profile, scenario.peptide)
+            responder = max(0.0, genetic_strength * rng.gauss(1.0, 0.18))
             dose_f = _dose_factor(dose, scenario.doses)
             n_markers = min(len(panel.measurements), rng.randint(4, 6))
             markers = rng.sample(list(panel.measurements), k=n_markers)

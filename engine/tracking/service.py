@@ -209,6 +209,41 @@ CSV_REQUIRED = {"patient_id", "biomarker_name", "value", "measured_at"}
 CSV_OPTIONAL = {"treatment_id", "modality", "unit", "notes"}
 
 
+# ── Genetic profile ─────────────────────────────────────────────────────────
+
+def set_genetic_profile(
+    conn: sqlite3.Connection,
+    patient_id: str,
+    profile_json: str,
+    *,
+    source: str = "synthetic",
+) -> None:
+    """Upsert a genetic profile for a patient."""
+    conn.execute(
+        """INSERT INTO patient_genetics (patient_id, profile_json, source)
+           VALUES (?, ?, ?)
+           ON CONFLICT(patient_id) DO UPDATE SET
+               profile_json = excluded.profile_json,
+               source = excluded.source,
+               created_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')""",
+        (patient_id, profile_json, source),
+    )
+    conn.commit()
+
+
+def get_genetic_profile_json(
+    conn: sqlite3.Connection, patient_id: str
+) -> tuple[str, str, str] | None:
+    """Return (profile_json, source, created_at) or None."""
+    row = conn.execute(
+        "SELECT profile_json, source, created_at FROM patient_genetics WHERE patient_id = ?",
+        (patient_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return row["profile_json"], row["source"], row["created_at"]
+
+
 def parse_measurement_csv(text: str) -> tuple[list[dict], list[str]]:
     """Parse a CSV blob into measurement records.
 
