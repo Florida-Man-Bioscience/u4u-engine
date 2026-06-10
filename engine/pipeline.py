@@ -45,17 +45,33 @@ Public interface
 
 from .parsers      import parse_file
 from .validators   import validate_file_bytes
+from .genome_build import detect_build, plan_build_handling
+from .liftover     import liftover_available, lift_variants_to_grch38
 from .quality_filter import apply_quality_filter, filter_stats
 from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
 from .deduplicator import deduplicate
 import concurrent.futures
-from .annotators.vep     import fetch_vep, select_canonical_consequence
+from .annotators.vep     import (
+    fetch_vep, select_canonical_consequence, select_insilico, select_protein_change,
+)
 from .annotators.clinvar import fetch_clinvar
 from .annotators.gnomad  import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
+from .acmg     import (
+    classify_acmg, AcmgConfig, load_lof_mechanism_genes,
+    load_known_pathogenic_aa, summarize_acmg,
+)
+
+# Built once: the curated LoF-mechanism gene set (lets PVS1 be counted) and the
+# known-pathogenic-AA reference (lets PS1/PM5 be applied). Both default to
+# their data files, which are conservative/empty until curated.
+_ACMG_CONFIG = AcmgConfig(
+    lof_mechanism_genes=load_lof_mechanism_genes(),
+    known_pathogenic_aa=load_known_pathogenic_aa(),
+)
 
 # V3 annotators
 from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
@@ -140,9 +156,39 @@ def run_pipeline(
     _progress("Validating file", 2)
     validate_file_bytes(file_bytes, filename)
 
+    # ── Step 1b: Genome build gate ──────────────────────────────────────────
+    # Coordinate files on a confirmed non-GRCh38 build are rejected before any
+    # coordinate-based annotation can silently mis-map them — unless liftover is
+    # explicitly enabled, in which case GRCh37 coordinates are lifted to GRCh38
+    # after parsing. The detected build is recorded on the result.
+    _progress("Checking genome build", 3)
+    genome_build = detect_build(file_bytes, filename)
+    build_plan = plan_build_handling(
+        genome_build, filename,
+        liftover_available=liftover_available(genome_build["build"]),
+    )
+    if build_plan["action"] == "reject":
+        raise ValueError(build_plan["message"])
+    log.info("Detected genome build: %s (%s); action=%s",
+             genome_build["build"], genome_build["source"], build_plan["action"])
+
     # ── Step 2: Parse ───────────────────────────────────────────────────────
     _progress("Parsing file", 5)
     raw_variants = parse_file(file_bytes, filename)
+
+    # ── Step 2b: Liftover (only when planned) ───────────────────────────────
+    if build_plan["action"] == "liftover":
+        _progress("Lifting coordinates to GRCh38", 6)
+        raw_variants, unmapped = lift_variants_to_grch38(raw_variants)
+        genome_build = {
+            **genome_build,
+            "original_build": build_plan["from_build"],
+            "lifted_to": "GRCh38",
+            "liftover_unmapped": len(unmapped),
+        }
+        if unmapped:
+            log.warning("liftover: %d coordinate variant(s) could not be mapped to GRCh38",
+                        len(unmapped))
 
     # ── Step 3: Quality filter ──────────────────────────────────────────────
     _progress("Applying quality filter", 8)
@@ -224,28 +270,53 @@ def run_pipeline(
             "clinvar_plain":     summary.clinvar_plain,
             "action_hint":       summary.action_hint,
             "zygosity_plain":    summary.zygosity_plain,
+            "tier_basis":        summary.tier_basis,
         })
-        
+
+        # Transparent ACMG/AMP evidence assembly (subset; requires human
+        # sign-out). Kept separate from the heuristic priority score/tier.
+        combined["acmg"] = classify_acmg(combined, _ACMG_CONFIG)
+
         if partial_results is not None:
             partial_results.append(combined)
             
         return combined
 
     completed = 0
+    annotation_failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_v = {executor.submit(process_variant, v): v for v in unique_variants}
         for future in concurrent.futures.as_completed(future_to_v):
+            v = future_to_v[future]
             try:
                 res = future.result()
                 final_results.append(res)
             except Exception as e:
-                # Fallback on failure, dropping variant
-                print(f"[pipeline] variant mapping failed: {e}")
-            
+                # Do NOT silently drop the variant: a dropped variant is
+                # indistinguishable from a true-negative and could be a
+                # clinically critical finding. Record it loudly so the caller
+                # can detect the incomplete analysis and block reporting.
+                vid = v.get("rsid") or (
+                    f"{v.get('chrom')}:{v.get('pos')}" if v.get("chrom") else "unknown"
+                )
+                annotation_failures.append({
+                    "variant_id": vid,
+                    "location": f"{v.get('chrom')}:{v.get('pos')}" if v.get("chrom") else None,
+                    "rsid": v.get("rsid"),
+                    "error": f"{type(e).__name__}: {e}",
+                })
+                log.error("variant annotation failed for %s: %s", vid, e)
+
             completed += 1
             if completed % max(1, total // 10) == 0 or completed == total:
                 pct = 30 + int((completed / max(total, 1)) * 55)
                 _progress(f"Annotating variants ({completed}/{total})", pct)
+
+    if annotation_failures:
+        log.error(
+            "annotation incomplete: %d of %d variant(s) failed and are NOT in results",
+            len(annotation_failures), total,
+        )
 
     # ── Step 8b: KEGG Pathway Mapping ──────────────────────────────────────
     _progress("Mapping KEGG pathways", 92)
@@ -318,8 +389,20 @@ def run_pipeline(
 
     _progress("Complete", 100)
 
+    # ── ACMG result-level summary (counts + ClinVar discordances) ───────────
+    acmg_summary = summarize_acmg(final_results)
+
     # ── V3 Result Assembly ─────────────────────────────────────────────────
     result = {
+        "genome_build": genome_build,
+        "acmg_summary": acmg_summary,
+        "analysis_status": {
+            "expected_variants": total,
+            "annotated_variants": len(final_results),
+            "failed_variants": len(annotation_failures),
+            "failures": annotation_failures,
+            "complete": len(annotation_failures) == 0,
+        },
         "variants": final_results,
         "pathway_summary": {
             "pathways_hit": pathway_hits,
@@ -383,7 +466,17 @@ def annotate_variant(v: dict) -> dict:
     if vep_data:
         consequence, genes = select_canonical_consequence(vep_data)
         result["consequence"] = consequence
-        
+
+        sift_pred, polyphen_pred = select_insilico(vep_data)
+        result["sift_pred"]     = sift_pred
+        result["polyphen_pred"] = polyphen_pred
+
+        protein_change = select_protein_change(vep_data)
+        if protein_change:
+            result["protein_pos"] = protein_change["protein_pos"]
+            result["ref_aa"]      = protein_change["ref_aa"]
+            result["alt_aa"]      = protein_change["alt_aa"]
+
         bed_genes = v.get("bed_genes", [])
         result["genes"]       = list(set(genes + bed_genes))
         fallback_cv           = vep_data.get("_fallback_clinvar", {})

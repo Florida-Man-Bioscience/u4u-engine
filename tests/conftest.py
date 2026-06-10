@@ -5,6 +5,12 @@ Shared test fixtures for the u4u-engine test suite.
 import os
 import tempfile
 import pytest
+
+# The API authenticates by default (fails closed). Tests exercise endpoints
+# directly via TestClient, so enable the explicit dev/test override before the
+# app module is imported.
+os.environ.setdefault("ALLOW_INSECURE_NO_AUTH", "1")
+
 from engine.annotators import cache as cache_module
 
 

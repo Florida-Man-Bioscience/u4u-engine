@@ -71,6 +71,21 @@ def test_pipeline_csv_returns_results():
 
 
 @resp_lib.activate
+def test_pipeline_reports_build_and_completeness():
+    _register_happy_path(resp_lib)
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    # Genome build is detected/recorded (CSV → unknown, but present)
+    assert "genome_build" in output
+    assert output["genome_build"]["build"] in ("GRCh38", "unknown")
+    # Annotation completeness is reconciled and reported (no silent drops)
+    status = output["analysis_status"]
+    assert status["expected_variants"] == 1
+    assert status["annotated_variants"] == 1
+    assert status["failed_variants"] == 0
+    assert status["complete"] is True
+
+
+@resp_lib.activate
 def test_pipeline_result_has_all_required_fields():
     _register_happy_path(resp_lib)
     output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
@@ -168,6 +183,17 @@ def test_pipeline_rejects_oversized_file():
     big = b"x" * (101 * 1024 * 1024)
     with pytest.raises(ValueError, match="100 MB"):
         run_pipeline(big, "test.csv")
+
+
+def test_pipeline_rejects_grch37_vcf():
+    grch37_vcf = (
+        b"##fileformat=VCFv4.2\n"
+        b"##reference=hg19\n"
+        b"##contig=<ID=1,length=249250621>\n"
+        b"#CHROM\tPOS\tID\tREF\tALT\n"
+    )
+    with pytest.raises(ValueError, match="GRCh38"):
+        run_pipeline(grch37_vcf, "patient.vcf")
 
 
 # ---------------------------------------------------------------------------

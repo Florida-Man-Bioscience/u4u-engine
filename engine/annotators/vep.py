@@ -131,3 +131,81 @@ def select_canonical_consequence(vep_result: dict) -> tuple[str, list[str]]:
     })
     csq = vep_result.get("most_severe_consequence", "unknown")
     return csq, genes
+
+
+def select_insilico(vep_result: dict) -> tuple[str | None, str | None]:
+    """
+    Extract SIFT and PolyPhen predictions from the clinically-relevant
+    transcript (MANE Select, then canonical, then any transcript that has them).
+
+    Returns (sift_prediction, polyphen_prediction), each a lowercased label
+    (e.g. "deleterious"/"tolerated", "probably_damaging"/"benign") or None.
+    """
+    transcripts = vep_result.get("transcript_consequences", []) or []
+
+    def _pick(predicate):
+        for t in transcripts:
+            if predicate(t) and (t.get("sift_prediction") or t.get("polyphen_prediction")):
+                return t
+        return None
+
+    def _flags(t):
+        f = t.get("flags") or []
+        return [f] if isinstance(f, str) else f
+
+    t = (
+        _pick(lambda x: "mane_select" in _flags(x))
+        or _pick(lambda x: x.get("canonical") == 1)
+        or _pick(lambda x: True)
+    )
+    if not t:
+        return None, None
+    sift = t.get("sift_prediction")
+    polyphen = t.get("polyphen_prediction")
+    return (sift.lower() if sift else None), (polyphen.lower() if polyphen else None)
+
+
+def select_protein_change(vep_result: dict) -> dict | None:
+    """
+    Extract the single-residue protein change (for PS1/PM5) from the
+    clinically-relevant transcript.
+
+    Returns ``{"gene", "protein_pos", "ref_aa", "alt_aa"}`` for a simple
+    missense (amino_acids like "R/W"), or None when not a single-residue
+    substitution.
+    """
+    transcripts = vep_result.get("transcript_consequences", []) or []
+
+    def _flags(t):
+        f = t.get("flags") or []
+        return [f] if isinstance(f, str) else f
+
+    def _pick(predicate):
+        for t in transcripts:
+            if predicate(t) and t.get("amino_acids") and t.get("protein_start") is not None:
+                return t
+        return None
+
+    t = (
+        _pick(lambda x: "mane_select" in _flags(x))
+        or _pick(lambda x: x.get("canonical") == 1)
+        or _pick(lambda x: True)
+    )
+    if not t:
+        return None
+    aa = str(t.get("amino_acids", ""))
+    if "/" not in aa:
+        return None  # not a substitution (e.g. synonymous)
+    ref_aa, alt_aa = aa.split("/", 1)
+    if len(ref_aa) != 1 or len(alt_aa) != 1:
+        return None  # only simple single-residue substitutions
+    try:
+        pos = int(t.get("protein_start"))
+    except (TypeError, ValueError):
+        return None
+    return {
+        "gene": t.get("gene_symbol"),
+        "protein_pos": pos,
+        "ref_aa": ref_aa.upper(),
+        "alt_aa": alt_aa.upper(),
+    }

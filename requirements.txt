@@ -15,6 +15,8 @@ redis>=5.0
 
 # Genomics
 pysam>=0.22
+# Optional: GRCh37->GRCh38 liftover (only needed when ENABLE_LIFTOVER=1)
+# pyliftover>=0.4
 
 # PDF Generation
 reportlab>=4.1
@@ -25,6 +27,9 @@ aiohttp>=3.9
 
 # Data
 pydantic>=2.6
+
+# Security (job-store encryption at rest)
+cryptography>=42.0
 
 # Testing
 pytest>=8.0

@@ -69,8 +69,8 @@ class DrugPrediction:
     """HGNN/rule-based drug response prediction with conformal prediction set."""
     drug: str
     point_score: float                   # 0..1 raw model output (responder probability)
-    prediction_set: list[str]            # subset of {"respond","non_respond"} (or ["indeterminate"])
-    confidence_level: float              # e.g. 0.90 for 90% coverage
+    prediction_set: list[str]            # {"respond","non_respond"}, ["indeterminate"], or ["uncalibrated"]
+    confidence_level: float | None       # 0.90 for 90% coverage; None when uncalibrated (no guarantee)
     contributing_genes: list[str]
     method: str                          # "hgnn" | "rule_based_fallback"
 

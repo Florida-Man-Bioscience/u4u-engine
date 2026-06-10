@@ -1,0 +1,17 @@
+# Known-pathogenic amino-acid changes, used by engine/acmg for PS1 / PM5.
+#
+# Format (tab- or comma-separated), one per line:
+#     GENE<TAB>protein_position<TAB>alt_amino_acid(single-letter)
+#
+# PS1 fires when a variant's amino-acid change matches a row exactly
+# (same gene, position, and alt residue). PM5 fires when a variant is a
+# DIFFERENT alt residue at a position that has any row.
+#
+# This file is intentionally EMPTY of data rows. It MUST be populated from a
+# curated, versioned source of expert-reviewed pathogenic missense variants
+# (e.g. ClinVar 2-4 star / ClinGen) before PS1/PM5 are used clinically. With no
+# rows, PS1/PM5 are never applied.
+#
+# Example (commented out — do not rely on without curation):
+# BRCA1	1699	W
+# BRCA1	1699	Q

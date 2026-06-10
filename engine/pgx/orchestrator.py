@@ -70,9 +70,20 @@ def _summarize(profile: PGxProfile) -> str:
         parts.append(f"{len(profile.phenoconversion_notes)} phenoconversion event(s)")
     if n_recs:
         parts.append(f"{n_recs} drug-specific recommendation(s)")
-    if not parts:
-        return "No actionable pharmacogenomic findings."
-    return "; ".join(parts) + "."
+
+    base = "; ".join(parts) + "." if parts else "No actionable pharmacogenomic findings."
+
+    # Surface the calibration status of any drug-response predictions so the
+    # absence of a conformal coverage guarantee is never hidden.
+    if profile.drug_predictions and all(
+        d.confidence_level is None for d in profile.drug_predictions
+    ):
+        base += (
+            " Drug-response predictions are uncalibrated: no validated "
+            "calibration set is configured, so no confidence guarantee is "
+            "provided for the prediction sets."
+        )
+    return base
 
 
 def pgx_stage(

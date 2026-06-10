@@ -205,7 +205,7 @@ class TestGenerateSummary:
         assert len(result["summary_text"]) > 0
         assert "BPC-157" in result["summary_text"]
 
-    def test_good_candidate_summary_mentions_likely(self):
+    def test_good_candidate_summary_is_neutral(self):
         variants = [
             _make_variant("NOS3", rsid="rs1799983"),
             _make_variant("IL6", rsid="rs1800795"),
@@ -213,7 +213,11 @@ class TestGenerateSummary:
             _make_variant("COL1A1", rsid="rs1800012"),
         ]
         result = predict_bpc157_response(variants)
-        assert "LIKELY GOOD" in result["summary_text"]
+        text = result["summary_text"].lower()
+        # Describes pathway overlap, not a prediction of benefit
+        assert "overlap" in text
+        assert "not a prediction" in text
+        assert "likely good candidate" not in text
 
     def test_summary_standalone_function(self):
         prediction = {
@@ -224,7 +228,7 @@ class TestGenerateSummary:
         }
         text = generate_bpc157_summary(prediction)
         assert len(text) > 0
-        assert "POSSIBLE" in text
+        assert "partial overlap" in text.lower()
 
     def test_elevated_factors_mentioned(self):
         prediction = {
