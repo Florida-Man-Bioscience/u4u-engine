@@ -3,6 +3,7 @@ Tests for the ACMG/AMP evidence-combining rules and the evidence classifier.
 """
 from engine.acmg import (
     AcmgConfig, Classification, EvidenceCode, Strength, classify_acmg, combine,
+    load_lof_mechanism_genes,
 )
 
 
@@ -100,3 +101,42 @@ def test_clinvar_not_used_as_code_but_reported():
     out = classify_acmg(v)
     assert out["clinvar_comparison"] == "Pathogenic"
     assert all("PP5" not in c["code"] and "BP6" not in c["code"] for c in out["applied_codes"])
+
+
+# ── Curated LoF gene list ───────────────────────────────────────────────────
+
+def test_lof_gene_list_loads_and_contains_known_genes():
+    genes = load_lof_mechanism_genes()
+    assert genes
+    assert "BRCA1" in genes and "MLH1" in genes
+
+
+def test_pvs1_counted_for_curated_lof_gene_via_default_loader():
+    cfg = AcmgConfig(lof_mechanism_genes=load_lof_mechanism_genes())
+    v = {"genes": ["BRCA2"], "consequence": "frameshift_variant", "gnomad_af": 0.0,
+         "sift_pred": "deleterious", "polyphen_pred": "probably_damaging"}
+    out = classify_acmg(v, cfg)
+    assert any(c["code"] == "PVS1" for c in out["applied_codes"])
+
+
+# ── SIFT / PolyPhen → PP3 / BP4 ─────────────────────────────────────────────
+
+def test_concordant_sift_polyphen_deleterious_gives_pp3():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "sift_pred": "deleterious", "polyphen_pred": "probably_damaging"}
+    out = classify_acmg(v)
+    assert any(c["code"] == "PP3" for c in out["applied_codes"])
+
+
+def test_concordant_sift_polyphen_benign_gives_bp4():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "sift_pred": "tolerated", "polyphen_pred": "benign"}
+    out = classify_acmg(v)
+    assert any(c["code"] == "BP4" for c in out["applied_codes"])
+
+
+def test_discordant_sift_polyphen_gives_neither():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "sift_pred": "deleterious", "polyphen_pred": "benign"}
+    out = classify_acmg(v)
+    assert all(c["code"] not in ("PP3", "BP4") for c in out["applied_codes"])

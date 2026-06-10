@@ -11,7 +11,9 @@ qualified human sign-out — it is not a final clinical classification. See
 """
 
 from .criteria import Classification, EvidenceCode, Strength, combine
-from .classifier import AcmgConfig, assign_codes, classify_acmg
+from .classifier import (
+    AcmgConfig, assign_codes, classify_acmg, load_lof_mechanism_genes,
+)
 
 __all__ = [
     "Classification",
@@ -21,4 +23,5 @@ __all__ = [
     "AcmgConfig",
     "assign_codes",
     "classify_acmg",
+    "load_lof_mechanism_genes",
 ]

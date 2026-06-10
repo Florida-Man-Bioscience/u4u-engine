@@ -1,0 +1,70 @@
+# Genes for which loss-of-function (LoF) is an established disease mechanism.
+#
+# Used by engine/acmg to decide whether PVS1 (null variant, very strong) may be
+# COUNTED toward an ACMG/AMP classification. A null variant in a gene NOT on
+# this list is reported as a candidate code requiring curation, never counted.
+#
+# This is a curated *starter* set restricted to genes with well-established
+# haploinsufficiency / LoF mechanism (e.g. ClinGen Dosage Sensitivity
+# "sufficient evidence for haploinsufficiency"). It is intentionally
+# conservative and MUST be reviewed and expanded by qualified curators before
+# clinical use. Genes that act predominantly by dominant-negative or
+# gain-of-function mechanisms are deliberately excluded (PVS1 does not apply).
+#
+# One gene symbol per line; blank lines and #-comments ignored. Case-insensitive.
+
+# Hereditary cancer — DNA repair / tumor suppressors (LoF mechanism)
+BRCA1
+BRCA2
+PALB2
+ATM
+CHEK2
+BARD1
+RAD51C
+RAD51D
+BRIP1
+NBN
+# Lynch syndrome (mismatch repair)
+MLH1
+MSH2
+MSH6
+PMS2
+EPCAM
+# Polyposis / GI
+APC
+SMAD4
+BMPR1A
+# Tumor suppressors with haploinsufficiency
+TP53
+PTEN
+STK11
+RB1
+NF1
+NF2
+VHL
+TSC1
+TSC2
+MEN1
+CDH1
+BAP1
+WT1
+FLCN
+FH
+DICER1
+SMARCB1
+SMARCA4
+# Paraganglioma/pheochromocytoma (SDHx)
+SDHB
+SDHC
+SDHD
+SDHAF2
+# Hematologic predisposition
+RUNX1
+GATA2
+ETV6
+# Cardiovascular — sarcomere/lipid (LoF mechanism)
+MYBPC3
+LDLR
+LMNA
+# Connective tissue (LoF mechanism subset)
+COL3A1

@@ -52,13 +52,16 @@ from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
 from .deduplicator import deduplicate
 import concurrent.futures
-from .annotators.vep     import fetch_vep, select_canonical_consequence
+from .annotators.vep     import fetch_vep, select_canonical_consequence, select_insilico
 from .annotators.clinvar import fetch_clinvar
 from .annotators.gnomad  import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
-from .acmg     import classify_acmg
+from .acmg     import classify_acmg, AcmgConfig, load_lof_mechanism_genes
+
+# Built once: the curated LoF-mechanism gene set that lets PVS1 be counted.
+_ACMG_CONFIG = AcmgConfig(lof_mechanism_genes=load_lof_mechanism_genes())
 
 # V3 annotators
 from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
@@ -262,7 +265,7 @@ def run_pipeline(
 
         # Transparent ACMG/AMP evidence assembly (subset; requires human
         # sign-out). Kept separate from the heuristic priority score/tier.
-        combined["acmg"] = classify_acmg(combined)
+        combined["acmg"] = classify_acmg(combined, _ACMG_CONFIG)
 
         if partial_results is not None:
             partial_results.append(combined)
@@ -449,7 +452,11 @@ def annotate_variant(v: dict) -> dict:
     if vep_data:
         consequence, genes = select_canonical_consequence(vep_data)
         result["consequence"] = consequence
-        
+
+        sift_pred, polyphen_pred = select_insilico(vep_data)
+        result["sift_pred"]     = sift_pred
+        result["polyphen_pred"] = polyphen_pred
+
         bed_genes = v.get("bed_genes", [])
         result["genes"]       = list(set(genes + bed_genes))
         fallback_cv           = vep_data.get("_fallback_clinvar", {})

@@ -224,6 +224,17 @@ def _render_variant_details(v: dict, target_genes: set) -> str:
             f'{"".join(items_html)}</div>'
         )
 
+    # ACMG/AMP automated evidence assembly — explicitly pending clinician sign-out.
+    acmg = v.get("acmg")
+    if acmg and acmg.get("classification"):
+        codes = ", ".join(c["code"] for c in acmg.get("applied_codes", [])) or "no countable codes"
+        blocks.append(
+            f'<div class="detail-block"><strong>ACMG/AMP (automated — pending clinician sign-out):</strong> '
+            f'{_e(acmg["classification"])} '
+            f'<span style="color:var(--ink-3);">[{_e(codes)}]</span>. '
+            f'Not a final clinical classification.</div>'
+        )
+
     return "\n".join(blocks)
 
 

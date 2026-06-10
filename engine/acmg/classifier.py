@@ -32,9 +32,34 @@ always True).
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .criteria import Classification, EvidenceCode, Strength, combine
+
+_LOF_GENES_PATH = os.getenv(
+    "ACMG_LOF_GENES",
+    str(Path(__file__).resolve().parents[2] / "data" / "acmg" / "lof_mechanism_genes.txt"),
+)
+
+
+def load_lof_mechanism_genes(path: str | None = None) -> frozenset:
+    """
+    Load the curated set of genes for which LoF is an established mechanism
+    (used to decide whether PVS1 may be counted). Returns an empty set if the
+    file is absent.
+    """
+    p = Path(path or _LOF_GENES_PATH)
+    if not p.exists():
+        return frozenset()
+    genes = set()
+    for line in p.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        genes.add(s.upper())
+    return frozenset(genes)
 
 # Null / loss-of-function consequences (SO terms) relevant to PVS1.
 _NULL_CONSEQUENCES = frozenset({
@@ -132,16 +157,42 @@ def assign_codes(variant: dict, config: AcmgConfig | None = None) -> tuple[list[
             "PM4", Strength.MODERATE,
             f"Protein length change ({consequence}). Caveat: not assessed for repeat regions."))
 
-    # ── PP3 / BP4: optional in-silico call, only if explicitly provided ──────
-    insilico = (variant.get("insilico_pred") or "").lower()
-    if insilico in ("deleterious", "damaging", "pathogenic"):
+    # ── PP3 / BP4: in-silico call (explicit meta-predictor, or concordant
+    #    SIFT + PolyPhen). Supporting strength; conservative (requires
+    #    concordance) to avoid over-calling. ────────────────────────────────
+    call, basis = _insilico_call(variant)
+    if call == "deleterious":
         applied.append(EvidenceCode(
-            "PP3", Strength.SUPPORTING, f"In-silico meta-prediction: {insilico}."))
-    elif insilico in ("benign", "tolerated", "neutral"):
+            "PP3", Strength.SUPPORTING, f"In-silico computational evidence: {basis}."))
+    elif call == "benign":
         applied.append(EvidenceCode(
-            "BP4", Strength.BENIGN_SUPPORTING, f"In-silico meta-prediction: {insilico}."))
+            "BP4", Strength.BENIGN_SUPPORTING, f"In-silico computational evidence: {basis}."))
 
     return applied, candidate
+
+
+def _insilico_call(variant: dict) -> tuple[str | None, str]:
+    """
+    Resolve an in-silico deleterious/benign call.
+
+    Priority: an explicit ``insilico_pred`` (e.g. a calibrated meta-predictor
+    such as REVEL mapped to a label) wins; otherwise require **concordant**
+    SIFT + PolyPhen (``sift_pred`` / ``polyphen_pred``). Returns
+    ``(call, basis_text)`` where call is "deleterious" | "benign" | None.
+    """
+    explicit = (variant.get("insilico_pred") or "").lower()
+    if explicit in ("deleterious", "damaging", "pathogenic"):
+        return "deleterious", f"meta-predictor={explicit}"
+    if explicit in ("benign", "tolerated", "neutral"):
+        return "benign", f"meta-predictor={explicit}"
+
+    sift = (variant.get("sift_pred") or "").lower()
+    polyphen = (variant.get("polyphen_pred") or "").lower()
+    if sift == "deleterious" and polyphen == "probably_damaging":
+        return "deleterious", "SIFT=deleterious & PolyPhen=probably_damaging"
+    if sift == "tolerated" and polyphen == "benign":
+        return "benign", "SIFT=tolerated & PolyPhen=benign"
+    return None, ""
 
 
 def classify_acmg(variant: dict, config: AcmgConfig | None = None) -> dict:
