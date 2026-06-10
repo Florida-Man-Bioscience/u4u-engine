@@ -1437,6 +1437,33 @@ FDA human-factors guidance typically expects on the order of **≥ 15 representa
 
 ---
 
+## Appendix P — Phase-0 Remediation Status (Living Changelog)
+
+The body of this plan describes the system *as authored*. This appendix records
+the Phase-0 "containment" remediation that has since landed in code, so the plan
+stays honest as a living document. The original gap analysis (§5) is deliberately
+left intact as the baseline.
+
+**Important:** these changes make the system **safe-by-default and honest about
+its limits**. They are necessary but **not sufficient** for clinical use — they
+do not by themselves constitute analytical or clinical validation (Phases 2–4),
+which remain outstanding.
+
+| Item | Launch-blocker | What landed | Residual work |
+|---|---|---|---|
+| Genome build (H-01, B-1) | yes | `engine/genome_build.py` detects build; pipeline rejects confirmed non-GRCh38 coordinate (VCF) files; build recorded on result and surfaced via API. Optional, opt-in GRCh37→GRCh38 liftover (`engine/liftover.py`, `ENABLE_LIFTOVER`). | Validate detection accuracy on a labeled corpus; validate liftover concordance (§9.3); broaden build-detection evidence sources. |
+| Silent variant drop (H-07, B-2) | yes | Annotation failures are logged at ERROR and recorded; result carries `analysis_status` (expected/annotated/failed/complete); API surfaces it. | Report-blocking policy on incompleteness; retry/queue strategy; per-annotator status (§9.7). |
+| Synthetic conformal calibration (H-03) | yes | `conformal.py` no longer fabricates a guarantee; returns `["uncalibrated"]`/`confidence_level=None` unless a real calibration set is supplied; PGx summary states this. | Assemble a real, exchangeable calibration set and **empirically verify coverage** before enabling confidence output (§11.4). |
+| Investigational efficacy claims (H-04, B-4) | yes | Peptide mapper marks non-FDA-approved peptides investigational with a neutral `pathway_match_label` + disclaimer; dossier drops "Predicted Efficacy" for them; BPC-157 and receptor-mapper narratives neutralized to mechanistic, non-predictive, non-dosing language. | Decide final disposition (remove vs IRB-research); human-factors validation of the reframed output (§14); curated regulatory-status source. |
+| API auth + PHI at rest (H-08, B-3) | yes | All endpoints except `/health` require an API key (fail-closed; `ALLOW_INSECURE_NO_AUTH` dev override); job store encrypted with a Fernet `JOB_STORE_KEY` (else in-memory only); medications moved out of the URL query string. | Per-user identity/RBAC, audit trail (Part 11), key management, retention controls, pen-test (§13). |
+| Demo-data segregation | — | Tracking seeder labels synthetic patients `DEMO-NNN`; seeding remains opt-in. | Enforce hard separation of demo vs clinical datastores in any deployment. |
+| Heuristic scoring as clinical significance (H-02, B-6) | yes | *Not yet addressed in code.* | Replace with ACMG/AMP classification or strictly relabel as non-clinical prioritization (§10.1). |
+| QMS / risk file / validated configuration (B-7) | yes | *Process work, not code.* | Stand up the minimum QMS, risk file, and frozen validated configuration (§6–§8). |
+
+**Test status at time of writing:** full engine suite passing (499 tests), including new coverage for build detection/rejection, liftover, completeness reconciliation, uncalibrated/calibrated conformal output, investigational gating, API authentication, the medications form field, and demo labeling.
+
+---
+
 ### Closing note
 
 This plan is deliberately candid about the distance between the current prototype and a clinically validated system, because an honest gap analysis is the only useful starting point for real validation. The engineering in this repository is substantial and, in places, thoughtful (authentic CPIC/PharmVar definitions, mathematically sound Bayesian and conformal *frameworks*, graceful degradation, present-tense disclaimers). The work ahead is not to discard it but to (1) make it correct and safe by default, (2) prove it reads the genome accurately, (3) replace or properly validate every interpretive and predictive claim with sourced evidence and human oversight, (4) protect the data, (5) communicate honestly to clinicians and patients, and (6) keep the investigational from masquerading as the validated. Each of those is specified above with standards, study designs, acceptance criteria, and governance. The first and most urgent technical action remains unambiguous: **resolve the silent genome-build assumption before anything touches a real patient.**
