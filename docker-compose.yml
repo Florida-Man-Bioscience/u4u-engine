@@ -50,9 +50,17 @@ services:
     #   http://localhost/api/...    → api (FastAPI)
     # The individual services' host port mappings above are kept so you
     # can still hit each one directly during debugging.
+    #
+    # For production set SITE_ADDRESS in .env (e.g.
+    #   SITE_ADDRESS=flmanbiosci.net, www.flmanbiosci.net
+    # ) and Caddy will auto-provision Let's Encrypt certs on port 443.
     image: caddy:2-alpine
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:-:80}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

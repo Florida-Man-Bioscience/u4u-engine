@@ -5,11 +5,18 @@
 #   /_next/*     → frontend (Next.js chunks/assets)
 #   everything   → website  (marketing site)
 #
-# In production swap `:80` for your hostname (e.g. `flmanbiosci.net`) and
-# Caddy will provision Let's Encrypt automatically.
+# SITE_ADDRESS controls how Caddy binds:
+#   dev:  SITE_ADDRESS=":80"                                 (default)
+#   prod: SITE_ADDRESS="flmanbiosci.net, www.flmanbiosci.net"
+# In production Caddy auto-provisions Let's Encrypt for the listed hosts.
 
-:80 {
+{$SITE_ADDRESS::80} {
     encode zstd gzip
+
+    # Redirect www → apex (only fires when the request actually arrives on
+    # the www host, so this is a no-op in dev where SITE_ADDRESS is ":80").
+    @www host www.flmanbiosci.net
+    redir @www https://flmanbiosci.net{uri} permanent
 
     @api path /api/*
     handle @api {
