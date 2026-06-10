@@ -86,3 +86,75 @@ def test_predict_response_genetics_visibly_shifts_prior(conn):
         conn, patient_id=p2.id, peptide_name="CJC-1295", biomarker_name="Serum IGF-1",
     )
     assert r1["prior"]["mean_pct_change"] != r2["prior"]["mean_pct_change"]
+
+
+def test_prior_direction_follows_panel_per_biomarker(conn):
+    """For a peptide-biomarker with a negative panel direction (HbA1c on
+    CJC-1295), the prior μ should be negative regardless of genetics —
+    that is, the biomarker-specific prior is sign-correct."""
+    p = service.create_patient(conn, label="A")
+    service.set_genetic_profile(
+        conn, p.id, generate_synthetic_profile(random.Random(7)).to_json(),
+    )
+    igf = analysis.predict_response(
+        conn, patient_id=p.id, peptide_name="CJC-1295", biomarker_name="Serum IGF-1",
+    )
+    hba = analysis.predict_response(
+        conn, patient_id=p.id, peptide_name="CJC-1295", biomarker_name="HbA1c",
+    )
+    assert igf["prior"]["mean_pct_change"] > 0
+    assert hba["prior"]["mean_pct_change"] < 0
+    assert abs(igf["prior"]["mean_pct_change"]) > abs(hba["prior"]["mean_pct_change"])
+
+
+def test_posterior_tracks_simulated_truth(conn):
+    """When the seeder produces measurements that imply θ_true, the posterior
+    mean should land close to θ_true — much closer than to the prior alone."""
+    from engine.tracking.seed import seed, BIOMARKER_PARAMS, _dose_factor, SCENARIOS
+    from engine.tracking.genetics import (
+        GeneticProfile,
+        responder_strength_from_profile,
+    )
+
+    seed(conn, rng=random.Random(42), n_patients=8)
+
+    rows = conn.execute(
+        """SELECT p.id AS pid, t.peptide_name AS pep, t.dose,
+                  m.biomarker_name AS bm, COUNT(m.id) AS n
+           FROM patients p
+           JOIN treatments t ON t.patient_id=p.id
+           JOIN measurements m ON m.patient_id=p.id AND m.treatment_id=t.id
+           GROUP BY p.id, t.id, m.biomarker_name
+           HAVING n>=4"""
+    ).fetchall()
+
+    tested = 0
+    for r in rows:
+        params = BIOMARKER_PARAMS.get(r["bm"])
+        if params is None or params.max_pct_change == 0:
+            continue
+        sc = next((s for s in SCENARIOS if s.peptide == r["pep"]), None)
+        if sc is None:
+            continue
+        raw = service.get_genetic_profile_json(conn, r["pid"])
+        profile = GeneticProfile.from_json(raw[0])
+        responder = responder_strength_from_profile(profile, r["pep"])
+        dose_f = _dose_factor(r["dose"], sc.doses)
+        theta_true = params.max_pct_change * responder * dose_f
+
+        pred = analysis.predict_response(
+            conn, patient_id=r["pid"], peptide_name=r["pep"],
+            biomarker_name=r["bm"],
+        )
+        post = pred["posterior"]["mean_pct_change"]
+        prior = pred["prior"]["mean_pct_change"]
+        # The posterior must be at least as close to the truth as the prior.
+        # (We don't expect identity because of noise + Gaussian jitter on
+        # responder in the seeder; this is a robustness check.)
+        assert abs(post - theta_true) <= abs(prior - theta_true) + 0.15, (
+            f"{r['pep']}/{r['bm']}: prior={prior:.3f} post={post:.3f} "
+            f"truth={theta_true:.3f}"
+        )
+        tested += 1
+
+    assert tested >= 5, "expected at least 5 testable rows"

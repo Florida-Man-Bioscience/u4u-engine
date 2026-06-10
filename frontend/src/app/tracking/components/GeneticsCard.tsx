@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { getGenetics, getPriors, regenerateGenetics } from "../lib/api";
 import type {
-  GeneticPrior,
   GeneticsResponse,
   GeneticVariant,
+  ResponderPrior,
 } from "../lib/types";
 
 interface Props {
@@ -14,14 +14,14 @@ interface Props {
   treatmentPeptides: string[];
 }
 
-function fmtPct(x: number): string {
+function fmtDelta(x: number): string {
   const sign = x >= 0 ? "+" : "";
-  return `${sign}${(x * 100).toFixed(1)}%`;
+  return `${sign}${(x * 100).toFixed(0)}%`;
 }
 
 export function GeneticsCard({ patientId, treatmentPeptides }: Props) {
   const [genetics, setGenetics] = useState<GeneticsResponse | null>(null);
-  const [priors, setPriors] = useState<GeneticPrior[]>([]);
+  const [priors, setPriors] = useState<ResponderPrior[]>([]);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +71,7 @@ export function GeneticsCard({ patientId, treatmentPeptides }: Props) {
           const aOn = treatmentSet.has(a.peptide) ? 1 : 0;
           const bOn = treatmentSet.has(b.peptide) ? 1 : 0;
           if (aOn !== bOn) return bOn - aOn;
-          return Math.abs(b.mean_pct_change) - Math.abs(a.mean_pct_change);
+          return Math.abs(b.mean - 1) - Math.abs(a.mean - 1);
         }),
     [priors, treatmentSet],
   );
@@ -104,13 +104,14 @@ export function GeneticsCard({ patientId, treatmentPeptides }: Props) {
       {filteredPriors.length > 0 && (
         <div className="mb-3">
           <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
-            Per-peptide priors{" "}
-            <span className="text-slate-400">(mean ± 1σ)</span>
+            Per-peptide responder strength{" "}
+            <span className="text-slate-400">(1.00× = average)</span>
           </div>
           <ul className="divide-y divide-slate-100 rounded border border-slate-200 text-sm">
             {filteredPriors.slice(0, 8).map((p) => {
               const onTx = treatmentSet.has(p.peptide);
-              const positive = p.mean_pct_change >= 0;
+              const delta = p.mean - 1;
+              const positive = delta >= 0;
               return (
                 <li
                   key={p.peptide}
@@ -130,10 +131,10 @@ export function GeneticsCard({ patientId, treatmentPeptides }: Props) {
                         positive ? "font-mono text-teal-700" : "font-mono text-rose-700"
                       }
                     >
-                      {fmtPct(p.mean_pct_change)}
+                      {p.mean.toFixed(2)}×
                     </span>
                     <span className="ml-1 font-mono text-slate-400">
-                      ±{(p.sd_pct_change * 100).toFixed(1)}%
+                      ({fmtDelta(delta)} vs avg, ±{(p.sd * 100).toFixed(0)}%)
                     </span>
                     <span className="ml-2 text-slate-400">
                       {p.n_relevant_variants}v

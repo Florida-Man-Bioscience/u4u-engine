@@ -128,10 +128,32 @@ export interface GeneticsResponse {
   created_at: string | null;
 }
 
+/**
+ * Per-(peptide, biomarker) Normal prior on fractional change at the panel's
+ * expected timeframe. Mean = r × expected_pct_panel; sd combines responder
+ * uncertainty with panel-effect uncertainty.
+ */
 export interface GeneticPrior {
   peptide: string;
+  biomarker: string;
   mean_pct_change: number;
   sd_pct_change: number;
+  n_relevant_variants: number;
+  aggregate_weight: number;
+  expected_pct_panel: number;
+  responder_mean: number;
+  responder_sd: number;
+}
+
+/**
+ * Per-peptide prior on the latent responder strength r. r = 1.0 means
+ * "average responder"; r > 1.0 stronger; r < 1.0 weaker. Returned by
+ * /tracking/patients/{id}/priors.
+ */
+export interface ResponderPrior {
+  peptide: string;
+  mean: number;
+  sd: number;
   n_relevant_variants: number;
   aggregate_weight: number;
 }

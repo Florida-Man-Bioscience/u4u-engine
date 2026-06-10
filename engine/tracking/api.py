@@ -19,7 +19,11 @@ from engine.peptides import PEPTIDE_BIOMARKERS, get_biomarker_panel
 
 from . import analysis, service
 from .db import get_conn
-from .genetics import GeneticProfile, derive_prior, generate_synthetic_profile
+from .genetics import (
+    GeneticProfile,
+    derive_responder_prior,
+    generate_synthetic_profile,
+)
 
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -277,7 +281,12 @@ def get_predictions(
 
 @router.get("/patients/{patient_id}/priors")
 def get_priors(patient_id: str) -> dict[str, Any]:
-    """All per-peptide priors derived from the patient's genetic profile."""
+    """All per-peptide responder-strength priors derived from the patient's
+    genetic profile. r=1.0 is an average responder; r>1 stronger, r<1 weaker.
+
+    Per-biomarker % change priors require a biomarker context and are
+    surfaced by /tracking/patients/{id}/predictions.
+    """
     if service.get_patient(_conn(), patient_id) is None:
         raise HTTPException(404, "patient not found")
     raw = service.get_genetic_profile_json(_conn(), patient_id)
@@ -286,8 +295,8 @@ def get_priors(patient_id: str) -> dict[str, Any]:
     profile = GeneticProfile.from_json(raw[0])
     priors: list[dict[str, Any]] = []
     for peptide_name in sorted(PEPTIDE_BIOMARKERS.keys()):
-        prior = derive_prior(profile, peptide_name)
-        priors.append(prior.to_dict())
+        r = derive_responder_prior(profile, peptide_name)
+        priors.append(r.to_dict())
     return {"priors": priors}
 
 

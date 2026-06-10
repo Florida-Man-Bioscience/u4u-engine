@@ -296,59 +296,133 @@ def generate_synthetic_profile(
 
 
 # ── Prior derivation ────────────────────────────────────────────────────────
+#
+# Model
+# -----
+# Latent per-patient *responder strength* r for a peptide is centered at 1.0:
+#   r = 1 means "average responder — the panel's documented effect happens"
+#   r = 0 means "non-responder — no change vs baseline"
+#   r > 1 means "stronger than panel"
+#
+# For each biomarker b, the asymptotic % change from baseline is
+#   θ_b = r × expected_pct_panel[b]
+#
+# so positive panel directions stay positive, negative stay negative, and
+# magnitudes scale per biomarker.
+#
+# Genetics provides a Normal prior on r:
+#   r ~ Normal(1 + R_DELTA_SCALE · tanh(g), σ_r²)
+# where g is the patient's aggregate variant weight for the peptide.
+# σ_r shrinks with more relevant variants (more information).
 
-# Maps the dimensionless aggregate weight from a profile into a prior mean
-# on percent-change (as a fraction, e.g. 0.30 = +30%). The squashing keeps
-# extreme genetic profiles from claiming silly effect sizes.
+R_DELTA_SCALE = 0.72   # peak |r - 1| from genetics ≈ 0.72 (i.e. r in [0.28, 1.72])
+R_BASE_SD     = 0.18   # baseline σ on r when very few relevant variants
+R_MIN_SD      = 0.06   # never claim more precision than this on r
 
-PRIOR_SCALE = 0.4      # how much aggregate weight maps to fraction change
-PRIOR_BASE_SD = 0.18   # baseline uncertainty when no relevant variants
-PRIOR_INFO_SD = 0.04   # per-relevant-variant reduction (additive precision)
+# Additional uncertainty in the panel's documented expected_pct itself.
+# Acts as a floor on the biomarker prior so we don't pretend the panel
+# numbers are exact.
+PANEL_REL_SD  = 0.20   # ±20% uncertainty in expected_pct (relative)
+PRIOR_MIN_SD  = 0.04   # absolute floor on σ_pct (in fraction-change units)
 
 
 @dataclass(frozen=True)
-class GeneticPrior:
-    """Prior on the patient's percent-change response to a peptide."""
+class ResponderPrior:
+    """Per-peptide prior on responder strength r (centered at 1.0)."""
     peptide: str
-    mean_pct_change: float          # e.g. 0.30 = +30%
-    sd_pct_change: float            # 1σ on the prior
+    mean: float
+    sd: float
     n_relevant_variants: int
-    aggregate_weight: float         # raw weight before squashing
+    aggregate_weight: float
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "peptide": self.peptide,
-            "mean_pct_change": round(self.mean_pct_change, 4),
-            "sd_pct_change": round(self.sd_pct_change, 4),
+            "mean": round(self.mean, 4),
+            "sd": round(self.sd, 4),
             "n_relevant_variants": self.n_relevant_variants,
             "aggregate_weight": round(self.aggregate_weight, 4),
         }
 
 
-def derive_prior(profile: GeneticProfile, peptide_name: str) -> GeneticPrior:
-    """Aggregate variant weights and squash into a Normal prior on % change.
+@dataclass(frozen=True)
+class GeneticPrior:
+    """Biomarker-specific Normal prior on fractional change at panel timeframe."""
+    peptide: str
+    biomarker: str
+    mean_pct_change: float          # e.g. +0.30 = +30%
+    sd_pct_change: float
+    n_relevant_variants: int
+    aggregate_weight: float
+    expected_pct_panel: float       # the panel's documented effect for this marker
+    responder_mean: float           # latent r prior mean
+    responder_sd: float
 
-    Uses a tanh squash so total weights ~ |x|>>1 saturate.
-    Variance shrinks with more relevant variants (more information).
-    """
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "peptide": self.peptide,
+            "biomarker": self.biomarker,
+            "mean_pct_change": round(self.mean_pct_change, 4),
+            "sd_pct_change": round(self.sd_pct_change, 4),
+            "n_relevant_variants": self.n_relevant_variants,
+            "aggregate_weight": round(self.aggregate_weight, 4),
+            "expected_pct_panel": round(self.expected_pct_panel, 4),
+            "responder_mean": round(self.responder_mean, 4),
+            "responder_sd": round(self.responder_sd, 4),
+        }
+
+
+def derive_responder_prior(profile: GeneticProfile, peptide_name: str) -> ResponderPrior:
+    """Per-peptide prior on responder strength r."""
     summary = profile.peptide_effect_summary(peptide_name)
     n = summary["n_relevant_variants"]
     w = summary["total_weight"]
-    mean = PRIOR_SCALE * math.tanh(w)
-    # Precision adds per-variant; floor SD at PRIOR_INFO_SD.
-    sd = max(PRIOR_INFO_SD,
-             PRIOR_BASE_SD / math.sqrt(1 + 0.5 * n))
-    return GeneticPrior(
+    mean = 1.0 + R_DELTA_SCALE * math.tanh(w)
+    sd = max(R_MIN_SD, R_BASE_SD / math.sqrt(1 + 0.5 * n))
+    return ResponderPrior(
         peptide=peptide_name,
-        mean_pct_change=mean,
-        sd_pct_change=sd,
+        mean=mean,
+        sd=sd,
         n_relevant_variants=n,
         aggregate_weight=w,
     )
 
 
+def derive_prior(
+    profile: GeneticProfile,
+    peptide_name: str,
+    *,
+    expected_pct: float,
+    biomarker_name: str = "",
+) -> GeneticPrior:
+    """Biomarker-specific prior on θ = fractional change at panel timeframe.
+
+    The prior mean and σ scale with the panel's documented effect for this
+    biomarker, so e.g. GH peak (expected +150%) gets a prior near +200% for
+    a strong responder while HbA1c (expected -5%) gets a prior near -7%.
+    """
+    r = derive_responder_prior(profile, peptide_name)
+    mean_pct = r.mean * expected_pct
+    # σ_pct combines two sources: uncertainty in r and uncertainty in the
+    # panel's expected_pct itself (both multiplicative on the same scale).
+    sd_from_r = r.sd * abs(expected_pct)
+    sd_from_panel = PANEL_REL_SD * abs(expected_pct)
+    sd_pct = max(PRIOR_MIN_SD, math.hypot(sd_from_r, sd_from_panel))
+    return GeneticPrior(
+        peptide=peptide_name,
+        biomarker=biomarker_name,
+        mean_pct_change=mean_pct,
+        sd_pct_change=sd_pct,
+        n_relevant_variants=r.n_relevant_variants,
+        aggregate_weight=r.aggregate_weight,
+        expected_pct_panel=expected_pct,
+        responder_mean=r.mean,
+        responder_sd=r.sd,
+    )
+
+
 def responder_strength_from_profile(profile: GeneticProfile, peptide_name: str) -> float:
-    """Convert prior mean into the responder-strength scalar used by the
-    measurement seeder. Centered at 1.0 (= average responder)."""
-    prior = derive_prior(profile, peptide_name)
-    return max(0.0, 1.0 + 1.8 * prior.mean_pct_change)
+    """Convert the genetic profile into the responder-strength scalar used by
+    the measurement seeder. Centered at 1.0 (= average responder)."""
+    r = derive_responder_prior(profile, peptide_name)
+    return max(0.0, r.mean)

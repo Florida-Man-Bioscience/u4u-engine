@@ -24,6 +24,7 @@ from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
 from . import bayes, service
+from .biomarker_params import expected_pct_change
 from .genetics import GeneticProfile, derive_prior
 
 
@@ -360,13 +361,26 @@ def predict_response(
                 break
 
     # ── Prior from genetics ──
+    # The prior is biomarker-specific: μ = r · expected_pct_panel[biomarker].
+    # That keeps the prior mean in the right direction and magnitude per
+    # biomarker (e.g. HbA1c gets a small negative prior, GH peak a large
+    # positive one), rather than a one-size-fits-all peptide-level number.
+    expected_pct = expected_pct_change(expected, biomarker_name)
     raw = service.get_genetic_profile_json(conn, patient_id)
     if raw is None:
         prior = None
-        prior_mean, prior_sd = 0.0, 0.3
+        # No genetics: prior centred on the panel's expected effect with
+        # wide uncertainty (responder strength unknown, treat as 1.0 ± 0.4).
+        prior_mean = expected_pct
+        prior_sd = max(0.04, 0.4 * abs(expected_pct))
     else:
         profile = GeneticProfile.from_json(raw[0])
-        prior = derive_prior(profile, peptide_name)
+        prior = derive_prior(
+            profile,
+            peptide_name,
+            expected_pct=expected_pct,
+            biomarker_name=biomarker_name,
+        )
         prior_mean, prior_sd = prior.mean_pct_change, prior.sd_pct_change
 
     # ── Find the active treatment for this peptide ──

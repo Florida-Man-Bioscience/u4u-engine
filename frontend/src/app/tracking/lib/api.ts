@@ -2,11 +2,11 @@ import type {
   BiomarkerCatalogEntry,
   CohortPeptideSummary,
   CohortResult,
-  GeneticPrior,
   GeneticsResponse,
   Measurement,
   Patient,
   PredictionResult,
+  ResponderPrior,
   Treatment,
 } from "./types";
 
@@ -129,7 +129,7 @@ export const regenerateGenetics = (patientId: string, seed?: number) => {
 };
 
 export const getPriors = (patientId: string) =>
-  req<{ priors: GeneticPrior[] }>(`/tracking/patients/${patientId}/priors`);
+  req<{ priors: ResponderPrior[] }>(`/tracking/patients/${patientId}/priors`);
 
 export const getPrediction = (
   patientId: string,

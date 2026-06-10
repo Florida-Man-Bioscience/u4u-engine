@@ -30,6 +30,7 @@ from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
 from . import service
+from .biomarker_params import BIOMARKER_PARAMS, Params, params_for
 from .genetics import (
     generate_synthetic_profile,
     responder_strength_from_profile,
@@ -37,101 +38,11 @@ from .genetics import (
 
 
 # ── Baselines + effect knobs ────────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class Params:
-    baseline: float           # rough physiologic baseline
-    max_pct_change: float     # asymptotic effect at max dose ("hot" responder)
-    noise_pct: float          # gaussian noise as fraction of current value
-    tau_weeks: float          # time constant for the exponential approach
-
-
-BIOMARKER_PARAMS: dict[str, Params] = {
-    # GH axis (CJC-1295 / Ipamorelin / GHRP-2 / MGF)
-    "Serum IGF-1":              Params(180.0, 0.55, 0.06, 3.0),
-    "Serum IGFBP-3":            Params(4.0,   0.40, 0.06, 3.5),
-    "GH peak":                  Params(2.0,   1.50, 0.20, 0.5),
-    "GH AUC":                   Params(8.0,   1.30, 0.20, 0.5),
-    "IGF-1 vs age-adjusted reference": Params(0.0, 0.30, 0.10, 4.0),
-    "Lean body mass (DXA)":     Params(62.0,  0.05, 0.02, 8.0),
-    "Body weight":              Params(78.0,  0.04, 0.015, 4.0),
-    "Grip strength":            Params(38.0,  0.10, 0.05, 6.0),
-
-    # Repair (BPC-157 / TB-500 / Thymosin Beta-4)
-    "Serum VEGF":               Params(110.0, 0.45, 0.10, 2.0),
-    "Plasma nitrite/nitrate (NOx)": Params(35.0, 0.50, 0.10, 1.5),
-    "Pain VAS":                 Params(6.0,  -0.65, 0.10, 3.0),
-    "Joint range of motion":    Params(110.0, 0.18, 0.05, 4.0),
-    "Tendon thickness (ultrasound)": Params(4.5, 0.15, 0.08, 6.0),
-    "Wound closure area":       Params(20.0,  3.50, 0.10, 2.0),
-    "Dermal wound closure":     Params(15.0,  4.00, 0.10, 2.0),
-    "Wound area (absolute)":    Params(1800.0, -0.80, 0.10, 3.0),
-    "Wound area closure":       Params(15.0,  4.00, 0.10, 2.5),
-
-    # Metabolic (MOTS-c / AOD-9604)
-    "HOMA-IR":                  Params(3.4,  -0.45, 0.10, 4.0),
-    "Fasting glucose":          Params(102.0, -0.10, 0.04, 4.0),
-    "HbA1c":                    Params(5.9,  -0.05, 0.02, 12.0),
-    "VO2max":                   Params(34.0,  0.12, 0.06, 6.0),
-    "% body fat (DXA)":         Params(30.0, -0.12, 0.04, 8.0),
-    "Waist circumference":      Params(96.0, -0.05, 0.02, 8.0),
-    "Serum leptin":             Params(18.0, -0.30, 0.10, 6.0),
-
-    # Skin (GHK-Cu)
-    "Wrinkle depth (imaging)":  Params(40.0, -0.25, 0.06, 6.0),
-    "Skin thickness (ultrasound)": Params(1.4, 0.15, 0.05, 6.0),
-    "Hair density (trichoscopy)": Params(180.0, 0.20, 0.06, 12.0),
-
-    # Immune (Thymosin Alpha-1)
-    "CD4/CD8 ratio":            Params(0.9, 0.60, 0.10, 4.0),
-    "Absolute CD4+ T-lymphocyte count": Params(380.0, 0.55, 0.08, 4.0),
-
-    # Inflammation cytokines
-    "Serum IL-6":               Params(5.5, -0.45, 0.15, 3.0),
-    "Serum TNF-alpha":          Params(7.0, -0.40, 0.15, 3.0),
-    "hs-CRP":                   Params(3.2, -0.40, 0.15, 4.0),
-    "Serum hs-CRP":             Params(3.2, -0.40, 0.15, 4.0),
-
-    # Patient-reported scales
-    "Hamilton Anxiety (HAM-A)": Params(22.0, -0.45, 0.10, 3.0),
-    "GAD-7 score":              Params(13.0, -0.45, 0.10, 3.0),
-    "MoCA":                     Params(24.0,  0.12, 0.04, 12.0),
-    "MoCA score":               Params(24.0,  0.12, 0.04, 12.0),
-    "NIHSS":                    Params(8.0,  -0.50, 0.10, 4.0),
-    "Pittsburgh Sleep Quality Index (PSQI)": Params(11.0, -0.50, 0.10, 4.0),
-    "OSDI ocular symptom score": Params(28.0, -0.45, 0.10, 4.0),
-    "IIEF-5":                   Params(15.0, 0.40, 0.08, 4.0),
-
-    # Safety markers (mostly flat)
-    "ALT":                      Params(28.0, 0.0,  0.10, 4.0),
-    "Serum creatinine":         Params(0.95, 0.0,  0.06, 4.0),
-    "CBC with differential":    Params(7.0,  0.0,  0.08, 4.0),
-    "Serum copper":             Params(95.0, 0.0,  0.05, 4.0),
-    "Ceruloplasmin":            Params(28.0, 0.0,  0.05, 4.0),
-    "Serum lactate":            Params(1.6,  0.0,  0.08, 4.0),
-    "PSA":                      Params(1.1,  0.0,  0.10, 8.0),
-    "Blood pressure":           Params(124.0, 0.0, 0.04, 4.0),
-    "Blood pressure / heart rate": Params(124.0, 0.0, 0.04, 4.0),
-
-    # Selectivity (flat by design)
-    "Serum cortisol":           Params(14.0, 0.0,  0.08, 4.0),
-    "Serum prolactin":          Params(8.0,  0.0,  0.10, 4.0),
-    "WADA hGH isoform immunoassay": Params(1.0, 0.0, 0.02, 4.0),
-}
-
+# BIOMARKER_PARAMS / Params now live in engine/tracking/biomarker_params.py
+# so the analysis layer can read the same numbers without circular imports.
 
 def _baseline_for(b: BiomarkerMeasurement) -> Params:
-    """Look up explicit params, or pick a sane default by direction."""
-    if b.name in BIOMARKER_PARAMS:
-        return BIOMARKER_PARAMS[b.name]
-    direction_default = {
-        "increase":   Params(100.0,  0.30, 0.10, 4.0),
-        "decrease":   Params(100.0, -0.25, 0.10, 4.0),
-        "biphasic":   Params(100.0,  0.20, 0.10, 4.0),
-        "no_change":  Params(100.0,  0.00, 0.10, 4.0),
-        "variable":   Params(100.0,  0.15, 0.15, 4.0),
-    }
-    return direction_default.get(b.direction, Params(100.0, 0.20, 0.10, 4.0))
+    return params_for(b)
 
 
 # ── Treatment scenarios ─────────────────────────────────────────────────────
