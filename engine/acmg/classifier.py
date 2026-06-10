@@ -38,10 +38,9 @@ from pathlib import Path
 
 from .criteria import Classification, EvidenceCode, Strength, combine
 
-_LOF_GENES_PATH = os.getenv(
-    "ACMG_LOF_GENES",
-    str(Path(__file__).resolve().parents[2] / "data" / "acmg" / "lof_mechanism_genes.txt"),
-)
+_DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "acmg"
+_LOF_GENES_PATH = os.getenv("ACMG_LOF_GENES", str(_DATA_DIR / "lof_mechanism_genes.txt"))
+_KNOWN_AA_PATH = os.getenv("ACMG_KNOWN_PATHOGENIC_AA", str(_DATA_DIR / "known_pathogenic_aa.tsv"))
 
 
 def load_lof_mechanism_genes(path: str | None = None) -> frozenset:
@@ -60,6 +59,34 @@ def load_lof_mechanism_genes(path: str | None = None) -> frozenset:
             continue
         genes.add(s.upper())
     return frozenset(genes)
+
+
+def load_known_pathogenic_aa(path: str | None = None) -> dict:
+    """
+    Load the known-pathogenic-amino-acid reference for PS1/PM5 from a TSV with
+    columns ``gene<TAB>protein_pos<TAB>alt_aa`` (blank lines and #-comments
+    ignored). Returns ``{(GENE_UPPER, pos): {alt_aa, ...}}`` — empty when the
+    file is absent or has no data rows (so PS1/PM5 stay unapplied by default).
+    """
+    p = Path(path or _KNOWN_AA_PATH)
+    if not p.exists():
+        return {}
+    ref: dict = {}
+    for line in p.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = s.replace(",", "\t").split("\t")
+        if len(parts) < 3:
+            continue
+        gene, pos_s, alt_aa = parts[0].strip().upper(), parts[1].strip(), parts[2].strip().upper()
+        try:
+            pos = int(pos_s)
+        except ValueError:
+            continue
+        if gene and alt_aa:
+            ref.setdefault((gene, pos), set()).add(alt_aa)
+    return ref
 
 # Null / loss-of-function consequences (SO terms) relevant to PVS1.
 _NULL_CONSEQUENCES = frozenset({

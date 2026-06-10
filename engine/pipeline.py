@@ -60,10 +60,18 @@ from .annotators.gnomad  import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
-from .acmg     import classify_acmg, AcmgConfig, load_lof_mechanism_genes, summarize_acmg
+from .acmg     import (
+    classify_acmg, AcmgConfig, load_lof_mechanism_genes,
+    load_known_pathogenic_aa, summarize_acmg,
+)
 
-# Built once: the curated LoF-mechanism gene set that lets PVS1 be counted.
-_ACMG_CONFIG = AcmgConfig(lof_mechanism_genes=load_lof_mechanism_genes())
+# Built once: the curated LoF-mechanism gene set (lets PVS1 be counted) and the
+# known-pathogenic-AA reference (lets PS1/PM5 be applied). Both default to
+# their data files, which are conservative/empty until curated.
+_ACMG_CONFIG = AcmgConfig(
+    lof_mechanism_genes=load_lof_mechanism_genes(),
+    known_pathogenic_aa=load_known_pathogenic_aa(),
+)
 
 # V3 annotators
 from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary

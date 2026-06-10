@@ -13,6 +13,7 @@ qualified human sign-out — it is not a final clinical classification. See
 from .criteria import Classification, EvidenceCode, Strength, combine
 from .classifier import (
     AcmgConfig, assign_codes, classify_acmg, load_lof_mechanism_genes,
+    load_known_pathogenic_aa,
 )
 from .aggregate import summarize_acmg
 from .signoff import apply_signoff, VALID_ACTIONS
@@ -26,6 +27,7 @@ __all__ = [
     "assign_codes",
     "classify_acmg",
     "load_lof_mechanism_genes",
+    "load_known_pathogenic_aa",
     "summarize_acmg",
     "apply_signoff",
     "VALID_ACTIONS",

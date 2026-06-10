@@ -3,7 +3,7 @@ Tests for the ACMG/AMP evidence-combining rules and the evidence classifier.
 """
 from engine.acmg import (
     AcmgConfig, Classification, EvidenceCode, Strength, classify_acmg, combine,
-    load_lof_mechanism_genes,
+    load_lof_mechanism_genes, load_known_pathogenic_aa,
 )
 
 
@@ -167,3 +167,15 @@ def test_no_ps1_pm5_without_reference():
          "protein_pos": 1699, "alt_aa": "W"}
     out = classify_acmg(v)  # default config: no reference
     assert all(c["code"] not in ("PS1", "PM5") for c in out["applied_codes"])
+
+
+def test_known_aa_loader_parses_tsv(tmp_path):
+    f = tmp_path / "known.tsv"
+    f.write_text("# comment\nBRCA1\t1699\tW\nbrca1,1699,Q\nbad row\n", encoding="utf-8")
+    ref = load_known_pathogenic_aa(str(f))
+    assert ref[("BRCA1", 1699)] == {"W", "Q"}
+
+
+def test_known_aa_loader_empty_when_file_has_no_rows():
+    # The shipped data file is intentionally comment-only → empty reference.
+    assert load_known_pathogenic_aa() == {}
