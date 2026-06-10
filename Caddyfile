@@ -1,0 +1,32 @@
+# Single-entry reverse proxy for the whole stack.
+#
+#   /api/*       → api      (FastAPI)
+#   /tracking*   → frontend (Next.js tracking app)
+#   /_next/*     → frontend (Next.js chunks/assets)
+#   everything   → website  (marketing site)
+#
+# In production swap `:80` for your hostname (e.g. `flmanbiosci.net`) and
+# Caddy will provision Let's Encrypt automatically.
+
+:80 {
+    encode zstd gzip
+
+    @api path /api/*
+    handle @api {
+        reverse_proxy api:8000
+    }
+
+    @frontend path /tracking* /_next/*
+    handle @frontend {
+        reverse_proxy frontend:3000
+    }
+
+    handle {
+        reverse_proxy website:80
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

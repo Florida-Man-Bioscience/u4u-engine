@@ -43,3 +43,26 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
+  proxy:
+    # Caddy reverse proxy in front of the whole stack.
+    #   http://localhost/           → website (marketing)
+    #   http://localhost/tracking   → frontend (Next.js)
+    #   http://localhost/api/...    → api (FastAPI)
+    # The individual services' host port mappings above are kept so you
+    # can still hit each one directly during debugging.
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - frontend
+      - website
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
