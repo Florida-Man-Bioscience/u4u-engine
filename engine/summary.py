@@ -41,6 +41,10 @@ class ConsumerSummary:
     tier:              str
     zygosity_plain:    Optional[str]
     carrier_note:      Optional[str]
+    # "clinvar" when the tier is backed by a ClinVar clinical classification;
+    # "heuristic_priority" when it is only an internal prioritization signal
+    # (predicted molecular impact + rarity) and NOT a clinical determination.
+    tier_basis:        str = "heuristic_priority"
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +197,12 @@ def generate_summary(scored: dict) -> ConsumerSummary:
     clinvar_plain     = f"According to clinical geneticists, this variant {_clinvar_to_plain(clinvar, disease)}."
     zygosity_plain    = _zygosity_to_plain(zygosity)
 
+    # The tier is only a clinical statement when ClinVar backs it. Without a
+    # ClinVar classification, critical/high are internal prioritization signals
+    # (predicted impact + rarity), NOT clinical determinations — say so plainly.
+    has_clinvar = bool(clinvar)
+    tier_basis = "clinvar" if has_clinvar else "heuristic_priority"
+
     # Carrier findings get special headline/action treatment regardless of tier
     if carrier_note:
         emoji    = "🔵"
@@ -201,6 +211,19 @@ def generate_summary(scored: dict) -> ConsumerSummary:
             "As a carrier of a recessive variant, you typically won't be affected "
             "by this condition yourself. This may be relevant for family planning — "
             "consider discussing with a genetic counselor if you have questions."
+        )
+    elif tier in ("critical", "high") and not has_clinvar:
+        # Heuristic prioritization only — must not read as a clinical finding.
+        emoji    = "🟠" if tier == "high" else "🔴"
+        headline = (
+            f"This variant in {genes} is flagged as {tier} priority for review "
+            f"based on predicted molecular impact and rarity — this is a "
+            f"prioritization signal, not a clinical diagnosis."
+        )
+        action_hint = (
+            "There is no ClinVar clinical classification for this variant. The "
+            "priority reflects predicted impact, not confirmed significance; a "
+            "clinician can review the underlying evidence before drawing conclusions."
         )
     elif tier == "critical":
         emoji    = "🔴"
@@ -243,4 +266,5 @@ def generate_summary(scored: dict) -> ConsumerSummary:
         tier=tier,
         zygosity_plain=zygosity_plain,
         carrier_note=carrier_note,
+        tier_basis=tier_basis,
     )

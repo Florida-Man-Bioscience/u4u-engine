@@ -137,6 +137,9 @@ gnomad_homozygote_count int|None
 
 score              int        priority score
 tier               str        "critical" | "high" | "medium" | "low"
+tier_basis         str        "clinvar" (tier backed by a ClinVar classification)
+                              | "heuristic_priority" (internal prioritization only,
+                              NOT a clinical determination)
 reasons            list[str]  scoring factors
 frequency_derived_label str|None  additive frequency context (never overwrites clinvar)
 carrier_note       str|None   set for heterozygous variants in recessive genes

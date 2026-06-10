@@ -256,6 +256,7 @@ def run_pipeline(
             "clinvar_plain":     summary.clinvar_plain,
             "action_hint":       summary.action_hint,
             "zygosity_plain":    summary.zygosity_plain,
+            "tier_basis":        summary.tier_basis,
         })
         
         if partial_results is not None:
