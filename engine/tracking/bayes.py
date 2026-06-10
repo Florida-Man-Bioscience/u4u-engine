@@ -100,6 +100,40 @@ class PredictiveCurve:
         return {"points": [p.to_dict() for p in self.points]}
 
 
+@dataclass(frozen=True)
+class ExpectedWindow:
+    """Bayes-informed window in which the biomarker is expected to change.
+
+    Derived from the posterior on θ together with the panel-derived time
+    constant τ: weeks_min is when the predicted change first reaches
+    ``detection_fraction`` of its asymptote, weeks_max is when it has
+    plateaued (``plateau_fraction`` of asymptote).
+
+    ``credible`` is True iff the 95% credible interval on θ excludes 0,
+    i.e. we are statistically confident the biomarker will move at all.
+    When False, the window is still defined (so the chart has something to
+    draw) but the direction is reported as 'inconclusive'.
+    """
+    weeks_min: float
+    weeks_max: float
+    direction: str
+    asymptote_pct_change: float
+    credible: bool
+    detection_fraction: float
+    plateau_fraction: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "weeks_min": round(self.weeks_min, 2),
+            "weeks_max": round(self.weeks_max, 2),
+            "direction": self.direction,
+            "asymptote_pct_change": round(self.asymptote_pct_change, 4),
+            "credible": self.credible,
+            "detection_fraction": self.detection_fraction,
+            "plateau_fraction": self.plateau_fraction,
+        }
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def approach(weeks: float, tau_weeks: float) -> float:
@@ -221,3 +255,196 @@ def estimate_baseline(observations: Sequence[tuple[float, float]],
         return statistics.median(early)
     # Fallback: take the chronologically earliest measurement.
     return min(observations, key=lambda kv: kv[0])[1]
+
+
+# ── Joint Bayesian fit for (baseline, θ) ────────────────────────────────────
+
+def joint_fit_likelihood(
+    *,
+    observations: Sequence[tuple[float, float]],
+    tau_weeks: float,
+    baseline_prior_mean: float,
+    baseline_prior_sd: float,
+    noise_pct: float = 0.10,
+    min_weeks: float = 0.0,
+) -> tuple[Likelihood, float] | None:
+    """Jointly estimate baseline ``b`` and θ from raw measurements.
+
+    Model
+    -----
+        y_i = b · (1 + θ · a(w_i)) + ε_i,    ε_i ~ N(0, σ²)
+
+    Reparameterised as a linear regression in (b, φ) with φ ≡ b·θ::
+
+        y_i = b + φ · a(w_i) + ε_i
+
+    Prior:  b ~ Normal(b₀, σ_b²) (informative — typically the panel's
+            documented physiologic baseline). φ has an essentially flat
+            prior so the data drives the slope.
+
+    The likelihood on θ is recovered via the delta method::
+
+        θ̂ = φ̂ / b̂
+        Var(θ̂) ≈ Var(φ̂)/b̂² + Var(b̂)·φ̂²/b̂⁴ − 2·Cov(b̂,φ̂)·φ̂/b̂³
+
+    Why this matters
+    ----------------
+    The previous approach used the earliest measurement as baseline. If
+    that measurement was already weeks into treatment, the baseline got
+    biased upward and θ̂ collapsed toward zero. The joint fit instead
+    anchors b on the panel's documented baseline and lets the slope across
+    the approach curve a(w) reveal θ, regardless of whether a pre-baseline
+    sample exists.
+
+    Returns ``(Likelihood, refined_baseline)`` or ``None`` if the system
+    is underdetermined (e.g. zero usable observations).
+    """
+    pts = [(w, y) for w, y in observations if w >= min_weeks]
+    if not pts:
+        return None
+    if baseline_prior_mean <= 0 or baseline_prior_sd <= 0:
+        return None
+
+    a_vec = [approach(w, tau_weeks) for w, _ in pts]
+    y_vec = [y for _, y in pts]
+    n = len(pts)
+
+    # Initial σ² from the panel's noise estimate; refined from residuals.
+    sigma2 = max((noise_pct * baseline_prior_mean) ** 2, 1e-9)
+    sigma_b2 = baseline_prior_sd ** 2
+    # Very weak prior on φ — used only to prevent singularity when every
+    # measurement is at the same a(w) (rare but possible).
+    sigma_phi2 = max((10.0 * baseline_prior_sd) ** 2, 1.0)
+
+    sx = sum(a_vec)
+    sxx = sum(a * a for a in a_vec)
+    sy = sum(y_vec)
+    sxy = sum(a * y for a, y in zip(a_vec, y_vec))
+
+    b_hat = baseline_prior_mean
+    phi_hat = 0.0
+    var_b = sigma_b2
+    var_phi = sigma_phi2
+    cov_bp = 0.0
+
+    for _ in range(4):
+        # Posterior precision Λ = X'X/σ² + diag(1/σ_b², 1/σ_φ²)
+        A = n / sigma2 + 1.0 / sigma_b2
+        B = sx / sigma2
+        D = sxx / sigma2 + 1.0 / sigma_phi2
+
+        det = A * D - B * B
+        if abs(det) < 1e-18:
+            return None
+
+        rhs0 = sy / sigma2 + baseline_prior_mean / sigma_b2
+        rhs1 = sxy / sigma2  # φ prior centred at 0 → no contribution
+
+        # μ = Λ⁻¹ · rhs;   Σ = Λ⁻¹
+        b_hat = (D * rhs0 - B * rhs1) / det
+        phi_hat = (-B * rhs0 + A * rhs1) / det
+        var_b = D / det
+        var_phi = A / det
+        cov_bp = -B / det
+
+        if n >= 3:
+            # Refine σ² from residuals (degrees of freedom = n − 2).
+            resid = [y - (b_hat + phi_hat * a) for y, a in zip(y_vec, a_vec)]
+            ss = sum(r * r for r in resid)
+            df = max(n - 2, 1)
+            sigma2_new = ss / df
+            # Floor σ² at ~25% of the panel-noise estimate to avoid
+            # underconfidence on tightly-fitted but small samples.
+            sigma2_new = max(sigma2_new, 0.25 * (noise_pct * abs(b_hat)) ** 2)
+            if abs(sigma2_new - sigma2) / sigma2 < 1e-3:
+                sigma2 = sigma2_new
+                break
+            sigma2 = sigma2_new
+
+    if b_hat <= 0:
+        return None
+
+    theta_hat = phi_hat / b_hat
+    # Delta-method variance on θ = φ / b.
+    var_theta = (
+        var_phi / (b_hat ** 2)
+        + var_b * (phi_hat ** 2) / (b_hat ** 4)
+        - 2.0 * cov_bp * phi_hat / (b_hat ** 3)
+    )
+    # Floor at the per-observation pooled-noise scale so we never claim
+    # zero uncertainty even with a perfect fit.
+    floor = (noise_pct / max(math.sqrt(n), 1.0)) ** 2
+    sd_theta = math.sqrt(max(var_theta, floor, 1e-9))
+
+    likelihood = Likelihood(
+        mean_pct_change=theta_hat,
+        sd_pct_change=sd_theta,
+        n_observations=n,
+        baseline=b_hat,
+    )
+    return likelihood, b_hat
+
+
+# ── Bayes-informed expected timeframe ───────────────────────────────────────
+
+def expected_window(
+    *,
+    posterior: Posterior,
+    tau_weeks: float,
+    detection_noise_pct: float = 0.05,
+    plateau_fraction: float = 0.95,
+) -> ExpectedWindow:
+    """Posterior-derived 'when do we expect to see this change' window.
+
+    The timing flows from the posterior magnitude — a strong responder
+    crosses the detection threshold earlier than a weak one. Specifically:
+
+        weeks_min   first week the predicted |Δ/baseline| exceeds
+                    ``detection_noise_pct`` (~ 1 measurement-noise s.d.).
+                    Solve  |θ_post| · a(w) = detection_noise_pct  ⇒
+                    w = -τ · ln(1 - detection_noise_pct / |θ_post|).
+        weeks_max   ``plateau_fraction`` of the asymptotic approach
+                    (≈ 3·τ at 95%).
+
+    A larger |θ_post| → earlier weeks_min. A posterior so weak it never
+    crosses the detection threshold yields weeks_min = weeks_max (window
+    collapses) and ``credible = False`` so the chart can de-emphasise it.
+
+    ``detection_fraction`` is exposed as the implied fraction-of-asymptote
+    that was crossed at weeks_min, for display.
+    """
+    plateau_fraction = min(max(plateau_fraction, 0.5), 0.999)
+    weeks_max = -tau_weeks * math.log(1.0 - plateau_fraction) if tau_weeks > 0 else 0.0
+
+    theta = posterior.mean_pct_change
+    abs_theta = abs(theta)
+
+    credible = (
+        posterior.credible_lo_95 > 0
+        or posterior.credible_hi_95 < 0
+    )
+
+    if not credible or abs_theta <= detection_noise_pct or tau_weeks <= 0:
+        # Posterior can't promise the effect ever exceeds noise. Collapse
+        # the window to the plateau marker so the chart still renders
+        # something, but flag it inconclusive.
+        direction = "inconclusive"
+        weeks_min = weeks_max
+        detection_fraction = 0.0
+    else:
+        detection_fraction = detection_noise_pct / abs_theta
+        # Cap detection_fraction at plateau_fraction so weeks_min <= weeks_max
+        # in the rare case detection_noise_pct/|θ| > plateau_fraction.
+        detection_fraction = min(detection_fraction, plateau_fraction)
+        weeks_min = -tau_weeks * math.log(1.0 - detection_fraction)
+        direction = "increase" if theta > 0 else "decrease"
+
+    return ExpectedWindow(
+        weeks_min=weeks_min,
+        weeks_max=weeks_max,
+        direction=direction,
+        asymptote_pct_change=theta,
+        credible=credible,
+        detection_fraction=detection_fraction,
+        plateau_fraction=plateau_fraction,
+    )

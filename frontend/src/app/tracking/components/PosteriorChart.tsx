@@ -7,6 +7,7 @@ import {
   Legend,
   Line,
   ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   Tooltip,
@@ -105,29 +106,65 @@ export function PosteriorChart({
           formatter={(value: number, name: string) => [Number(value).toFixed(2), name]}
           labelFormatter={(v) => `${v} weeks`}
         />
-        {expected &&
-          (expected.timeframe_weeks_min !== null ||
-            expected.timeframe_weeks_max !== null) && (
-            <ReferenceArea
-              x1={expected.timeframe_weeks_min ?? 0}
-              x2={expected.timeframe_weeks_max ?? xMax}
-              fill={
-                expected.direction === "increase"
-                  ? "#bbf7d0"
-                  : expected.direction === "decrease"
-                    ? "#fecaca"
-                    : "#e0e7ff"
-              }
-              fillOpacity={0.25}
-              stroke="none"
-              label={{
-                value: `expected: ${expected.direction}`,
-                position: "insideTopLeft",
-                fill: "#475569",
-                fontSize: 11,
-              }}
-            />
-          )}
+        {(() => {
+          // Bayes-informed window from the posterior, with a dashed
+          // outline of the prior-only window so the user can see how the
+          // measurements shifted the expected timeframe. Falls back to
+          // the static panel range when no prediction is available.
+          const w = prediction?.expected_window;
+          const priorW = prediction?.prior_expected_window;
+          const x1 = w ? w.weeks_min : (expected?.timeframe_weeks_min ?? null);
+          const x2 = w ? w.weeks_max : (expected?.timeframe_weeks_max ?? null);
+          if (x1 === null && x2 === null) return null;
+          const direction = w?.direction ?? expected?.direction ?? "variable";
+          const credible = w?.credible ?? true;
+          const fill =
+            direction === "increase"
+              ? "#bbf7d0"
+              : direction === "decrease"
+                ? "#fecaca"
+                : "#e0e7ff";
+          const label = w
+            ? `posterior: ${direction}${credible ? "" : " (uncertain)"} · asymptote ${(w.asymptote_pct_change * 100).toFixed(0)}%`
+            : `expected: ${direction}`;
+          return (
+            <>
+              <ReferenceArea
+                x1={x1 ?? 0}
+                x2={x2 ?? xMax}
+                fill={fill}
+                fillOpacity={credible ? 0.25 : 0.12}
+                stroke="none"
+                label={{
+                  value: label,
+                  position: "insideTopLeft",
+                  fill: "#475569",
+                  fontSize: 11,
+                }}
+              />
+              {priorW && (
+                <>
+                  <ReferenceLine
+                    x={priorW.weeks_min}
+                    stroke="#94a3b8"
+                    strokeDasharray="3 3"
+                    label={{
+                      value: "prior window",
+                      position: "top",
+                      fill: "#94a3b8",
+                      fontSize: 10,
+                    }}
+                  />
+                  <ReferenceLine
+                    x={priorW.weeks_max}
+                    stroke="#94a3b8"
+                    strokeDasharray="3 3"
+                  />
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {/* 95% credible band on the posterior predictive mean.
             Implemented as stacked areas: lo (transparent) + width (translucent). */}

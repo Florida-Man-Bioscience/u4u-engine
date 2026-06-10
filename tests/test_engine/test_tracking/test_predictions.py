@@ -107,6 +107,50 @@ def test_prior_direction_follows_panel_per_biomarker(conn):
     assert abs(igf["prior"]["mean_pct_change"]) > abs(hba["prior"]["mean_pct_change"])
 
 
+def test_posterior_recovers_theta_without_pre_baseline(conn):
+    """Regression: when measurements start mid-treatment (no pre-baseline
+    sample), the joint baseline+θ fit should still recover θ rather than
+    collapse to zero."""
+    import math
+    from datetime import datetime, timedelta
+
+    p = service.create_patient(conn, label="MID-START")
+    t = service.create_treatment(
+        conn, patient_id=p.id, peptide_name="CJC-1295",
+        start_date="2026-01-01", dose=2.0, dose_unit="mg",
+    )
+    # True trajectory: baseline=180, θ=+0.50, τ=3.0 — but no measurement
+    # is taken before week 4, so the previous estimator would bias
+    # baseline upward and underestimate θ.
+    start = datetime(2026, 1, 1)
+    for week in (4, 8, 12, 16):
+        a = 1 - math.exp(-week / 3.0)
+        val = 180 * (1 + 0.50 * a)
+        when = (start + timedelta(weeks=week)).date().isoformat()
+        service.create_measurement(
+            conn, patient_id=p.id, treatment_id=t.id,
+            biomarker_name="Serum IGF-1", value=val, measured_at=when,
+            modality="hormone",
+        )
+
+    pred = analysis.predict_response(
+        conn, patient_id=p.id, peptide_name="CJC-1295",
+        biomarker_name="Serum IGF-1",
+    )
+    post_mean = pred["posterior"]["mean_pct_change"]
+    # Should land within 15 percentage points of truth (0.50), not stuck
+    # near zero. The pre-fix value was around 0.18.
+    assert 0.35 < post_mean < 0.65, f"posterior θ={post_mean:.3f}, want ~0.50"
+    # Baseline should be near 180, not the inflated earliest measurement.
+    assert pred["baseline"] is not None
+    assert abs(pred["baseline"] - 180) / 180 < 0.20
+
+    # Expected window should be credible and increasing.
+    win = pred["expected_window"]
+    assert win["credible"] is True
+    assert win["direction"] == "increase"
+
+
 def test_posterior_tracks_simulated_truth(conn):
     """When the seeder produces measurements that imply θ_true, the posterior
     mean should land close to θ_true — much closer than to the prior alone."""

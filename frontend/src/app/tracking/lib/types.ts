@@ -184,6 +184,22 @@ export interface PredictiveCurve {
   points: PredictivePoint[];
 }
 
+/**
+ * Bayes-informed window in which the biomarker is expected to move.
+ * weeks_min — first week the predicted effect reaches `detection_fraction`
+ * of its asymptote; weeks_max — when it has effectively plateaued.
+ * `credible` is True iff the 95% posterior CI on θ excludes 0.
+ */
+export interface ExpectedWindow {
+  weeks_min: number;
+  weeks_max: number;
+  direction: "increase" | "decrease" | "inconclusive";
+  asymptote_pct_change: number;
+  credible: boolean;
+  detection_fraction: number;
+  plateau_fraction: number;
+}
+
 export interface PredictionResult {
   patient_id: string;
   peptide: string;
@@ -199,4 +215,6 @@ export interface PredictionResult {
   posterior: Posterior;
   posterior_predictive: PredictiveCurve;
   prior_predictive: PredictiveCurve;
+  expected_window: ExpectedWindow;
+  prior_expected_window: ExpectedWindow;
 }

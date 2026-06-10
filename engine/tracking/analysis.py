@@ -24,7 +24,7 @@ from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
 from . import bayes, service
-from .biomarker_params import expected_pct_change
+from .biomarker_params import expected_pct_change, params_for
 from .genetics import GeneticProfile, derive_prior
 
 
@@ -402,17 +402,38 @@ def predict_response(
             observations.append((w, m.value))
 
     tau = _tau_for(expected)
-    baseline = bayes.estimate_baseline(observations)
-    noise_pct = 0.10  # rough measurement noise as fraction of value
-    likelihood = (
-        bayes.effective_observation(
-            baseline=baseline,
+
+    # Baseline prior: anchor on the panel's documented physiologic baseline
+    # (BIOMARKER_PARAMS) with ~30% relative SD. If the patient has a
+    # genuine pre-treatment measurement, tighten the prior around that
+    # observed value instead. The joint fit then disentangles baseline b
+    # and θ from the measurements regardless of whether a sample was
+    # taken before treatment started.
+    panel_params = params_for(expected, biomarker_name)
+    baseline_prior_mean = panel_params.baseline if panel_params.baseline > 0 else 100.0
+    baseline_prior_sd = max(abs(baseline_prior_mean) * 0.30, 1.0)
+
+    pre_baseline_values = [y for w, y in observations if w < 1.0]
+    if pre_baseline_values:
+        observed_baseline = statistics.median(pre_baseline_values)
+        if observed_baseline > 0:
+            baseline_prior_mean = observed_baseline
+            baseline_prior_sd = max(observed_baseline * 0.08, 0.5)
+
+    fit = (
+        bayes.joint_fit_likelihood(
             observations=observations,
             tau_weeks=tau,
-            noise_pct=noise_pct,
+            baseline_prior_mean=baseline_prior_mean,
+            baseline_prior_sd=baseline_prior_sd,
+            noise_pct=panel_params.noise_pct,
         )
-        if baseline is not None else None
+        if observations else None
     )
+    if fit is not None:
+        likelihood, baseline = fit
+    else:
+        likelihood, baseline = None, bayes.estimate_baseline(observations)
 
     posterior = bayes.update(
         prior_mean=prior_mean,
@@ -455,6 +476,11 @@ def predict_response(
         if baseline is not None else bayes.PredictiveCurve(points=[])
     )
 
+    # Bayes-informed expected timeframe: when do we expect the change to
+    # show up, and when has it plateaued, given the posterior?
+    posterior_window = bayes.expected_window(posterior=posterior, tau_weeks=tau)
+    prior_window = bayes.expected_window(posterior=prior_only, tau_weeks=tau)
+
     return {
         "patient_id": patient_id,
         "peptide": peptide_name,
@@ -470,6 +496,8 @@ def predict_response(
         "posterior": posterior.to_dict(),
         "posterior_predictive": posterior_predictive.to_dict(),
         "prior_predictive": prior_predictive.to_dict(),
+        "expected_window": posterior_window.to_dict(),
+        "prior_expected_window": prior_window.to_dict(),
     }
 
 
