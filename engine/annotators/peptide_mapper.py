@@ -114,6 +114,44 @@ PEPTIDE_GENE_MAP: dict[str, dict] = {
         "category": "skin",
         "category_display": "Skin / Neuromodulation",
     },
+    "Semaglutide": {
+        "genes": {"GLP1R", "TCF7L2"},
+        "rationale": (
+            "Predict GLP-1 receptor agonist weight-loss and glycemic response. "
+            "GLP1R coding variants (e.g. Ala316Thr, rs10305420) reduce receptor "
+            "expression / cAMP coupling, and the TCF7L2 rs7903146 T allele is "
+            "associated with attenuated incretin response."
+        ),
+        "effect_type": "receptor",
+        "refs": ["[22-23]"],
+        "category": "glp1",
+        "category_display": "GLP-1 / Incretin (Weight & Metabolic)",
+    },
+    "Tirzepatide": {
+        "genes": {"GLP1R", "GIPR", "TCF7L2"},
+        "rationale": (
+            "Predict dual GIP/GLP-1 receptor agonist response. GIPR variants "
+            "(e.g. Glu354Gln, rs1800437) and GLP1R coding variants modify "
+            "incretin signaling; TCF7L2 rs7903146 further stratifies glycemic "
+            "and body-composition response."
+        ),
+        "effect_type": "receptor",
+        "refs": ["[22-24]"],
+        "category": "glp1",
+        "category_display": "GLP-1 / Incretin (Weight & Metabolic)",
+    },
+    "Liraglutide": {
+        "genes": {"GLP1R", "TCF7L2"},
+        "rationale": (
+            "Predict daily GLP-1 receptor agonist response. GLP1R loss-of-function "
+            "variants blunt cAMP coupling and the TCF7L2 rs7903146 T allele is "
+            "associated with reduced incretin-mediated insulin secretion."
+        ),
+        "effect_type": "receptor",
+        "refs": ["[22, 25]"],
+        "category": "glp1",
+        "category_display": "GLP-1 / Incretin (Weight & Metabolic)",
+    },
 }
 
 def _classify_variants(relevant_variants: list[dict]) -> dict:
