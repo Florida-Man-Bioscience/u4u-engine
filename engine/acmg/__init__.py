@@ -14,6 +14,7 @@ from .criteria import Classification, EvidenceCode, Strength, combine
 from .classifier import (
     AcmgConfig, assign_codes, classify_acmg, load_lof_mechanism_genes,
 )
+from .aggregate import summarize_acmg
 
 __all__ = [
     "Classification",
@@ -24,4 +25,5 @@ __all__ = [
     "assign_codes",
     "classify_acmg",
     "load_lof_mechanism_genes",
+    "summarize_acmg",
 ]

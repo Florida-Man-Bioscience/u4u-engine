@@ -208,6 +208,7 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
     if isinstance(results, dict):
         response["genome_build"] = results.get("genome_build")
         response["analysis_status"] = results.get("analysis_status")
+        response["acmg_summary"] = results.get("acmg_summary")
 
     if not include_results:
         response.pop("results", None)

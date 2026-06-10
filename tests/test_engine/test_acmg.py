@@ -140,3 +140,30 @@ def test_discordant_sift_polyphen_gives_neither():
          "sift_pred": "deleterious", "polyphen_pred": "benign"}
     out = classify_acmg(v)
     assert all(c["code"] not in ("PP3", "BP4") for c in out["applied_codes"])
+
+
+# ── PS1 / PM5 (codon-level, reference-gated) ────────────────────────────────
+
+_KNOWN = {("BRCA1", 1699): {"W", "Q"}}
+
+
+def test_ps1_same_aa_change():
+    v = {"genes": ["BRCA1"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "protein_pos": 1699, "alt_aa": "W"}
+    out = classify_acmg(v, AcmgConfig(known_pathogenic_aa=_KNOWN))
+    assert any(c["code"] == "PS1" for c in out["applied_codes"])
+
+
+def test_pm5_different_aa_change_same_residue():
+    v = {"genes": ["BRCA1"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "protein_pos": 1699, "alt_aa": "R"}  # different alt at a known residue
+    out = classify_acmg(v, AcmgConfig(known_pathogenic_aa=_KNOWN))
+    codes = [c["code"] for c in out["applied_codes"]]
+    assert "PM5" in codes and "PS1" not in codes
+
+
+def test_no_ps1_pm5_without_reference():
+    v = {"genes": ["BRCA1"], "consequence": "missense_variant", "gnomad_af": 0.0,
+         "protein_pos": 1699, "alt_aa": "W"}
+    out = classify_acmg(v)  # default config: no reference
+    assert all(c["code"] not in ("PS1", "PM5") for c in out["applied_codes"])

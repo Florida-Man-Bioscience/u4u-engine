@@ -87,6 +87,10 @@ class AcmgConfig:
     bs1_af: float = 0.01           # strong benign at/above this AF (below BA1)
     pm2_af: float = 0.0001         # moderate→supporting rare threshold (below this)
     lof_mechanism_genes: frozenset = field(default_factory=frozenset)
+    # Reference of known-pathogenic amino-acid changes for PS1/PM5, keyed by
+    # (GENE_UPPER, protein_pos) -> set of pathogenic alt amino acids. Empty by
+    # default, so PS1/PM5 are only applied when a real reference is supplied.
+    known_pathogenic_aa: dict = field(default_factory=dict)
 
 
 def _freq(variant: dict):
@@ -157,6 +161,12 @@ def assign_codes(variant: dict, config: AcmgConfig | None = None) -> tuple[list[
             "PM4", Strength.MODERATE,
             f"Protein length change ({consequence}). Caveat: not assessed for repeat regions."))
 
+    # ── PS1 / PM5: codon-level, only when a known-pathogenic-AA reference is
+    #    supplied (default empty → not assessed). ──────────────────────────────
+    ps1_pm5 = _ps1_pm5(variant, genes_upper, cfg)
+    if ps1_pm5:
+        applied.append(ps1_pm5)
+
     # ── PP3 / BP4: in-silico call (explicit meta-predictor, or concordant
     #    SIFT + PolyPhen). Supporting strength; conservative (requires
     #    concordance) to avoid over-calling. ────────────────────────────────
@@ -169,6 +179,35 @@ def assign_codes(variant: dict, config: AcmgConfig | None = None) -> tuple[list[
             "BP4", Strength.BENIGN_SUPPORTING, f"In-silico computational evidence: {basis}."))
 
     return applied, candidate
+
+
+def _ps1_pm5(variant: dict, genes_upper: set, cfg: AcmgConfig) -> EvidenceCode | None:
+    """
+    PS1 (same amino-acid change as a known pathogenic variant) or PM5 (a
+    different change at a residue with a known pathogenic missense), using the
+    configured ``known_pathogenic_aa`` reference. Returns the strongest
+    applicable code, or None.
+    """
+    ref = cfg.known_pathogenic_aa
+    if not ref:
+        return None
+    pos = variant.get("protein_pos")
+    alt_aa = (variant.get("alt_aa") or "").upper()
+    if pos is None or not alt_aa:
+        return None
+    for gene in genes_upper:
+        known = ref.get((gene, pos))
+        if not known:
+            continue
+        known = {a.upper() for a in known}
+        if alt_aa in known:
+            return EvidenceCode(
+                "PS1", Strength.STRONG,
+                f"Same amino-acid change ({gene} p.{pos}{alt_aa}) as a known pathogenic variant.")
+        return EvidenceCode(
+            "PM5", Strength.MODERATE,
+            f"Novel change at {gene} residue {pos}, where a different missense is known pathogenic.")
+    return None
 
 
 def _insilico_call(variant: dict) -> tuple[str | None, str]:

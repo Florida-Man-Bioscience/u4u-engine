@@ -52,13 +52,15 @@ from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
 from .deduplicator import deduplicate
 import concurrent.futures
-from .annotators.vep     import fetch_vep, select_canonical_consequence, select_insilico
+from .annotators.vep     import (
+    fetch_vep, select_canonical_consequence, select_insilico, select_protein_change,
+)
 from .annotators.clinvar import fetch_clinvar
 from .annotators.gnomad  import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
-from .acmg     import classify_acmg, AcmgConfig, load_lof_mechanism_genes
+from .acmg     import classify_acmg, AcmgConfig, load_lof_mechanism_genes, summarize_acmg
 
 # Built once: the curated LoF-mechanism gene set that lets PVS1 be counted.
 _ACMG_CONFIG = AcmgConfig(lof_mechanism_genes=load_lof_mechanism_genes())
@@ -379,9 +381,13 @@ def run_pipeline(
 
     _progress("Complete", 100)
 
+    # ── ACMG result-level summary (counts + ClinVar discordances) ───────────
+    acmg_summary = summarize_acmg(final_results)
+
     # ── V3 Result Assembly ─────────────────────────────────────────────────
     result = {
         "genome_build": genome_build,
+        "acmg_summary": acmg_summary,
         "analysis_status": {
             "expected_variants": total,
             "annotated_variants": len(final_results),
@@ -456,6 +462,12 @@ def annotate_variant(v: dict) -> dict:
         sift_pred, polyphen_pred = select_insilico(vep_data)
         result["sift_pred"]     = sift_pred
         result["polyphen_pred"] = polyphen_pred
+
+        protein_change = select_protein_change(vep_data)
+        if protein_change:
+            result["protein_pos"] = protein_change["protein_pos"]
+            result["ref_aa"]      = protein_change["ref_aa"]
+            result["alt_aa"]      = protein_change["alt_aa"]
 
         bed_genes = v.get("bed_genes", [])
         result["genes"]       = list(set(genes + bed_genes))
