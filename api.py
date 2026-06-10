@@ -43,7 +43,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, UploadFile, File
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 
@@ -200,6 +200,14 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
     response["variant_count"] = job.get("count")
     response["partial_results"] = list(job.get("partial_results") or [])
     response.pop("_persisted_partial_count", None)
+
+    # Surface genome build and analysis completeness even when full results are
+    # omitted, so a clinician/UI can see the build used and whether any variant
+    # failed annotation (an incomplete analysis must not look like a clean run).
+    results = job.get("results")
+    if isinstance(results, dict):
+        response["genome_build"] = results.get("genome_build")
+        response["analysis_status"] = results.get("analysis_status")
 
     if not include_results:
         response.pop("results", None)
@@ -409,7 +417,9 @@ def health():
 async def analyze(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    current_medications: str = "",
+    # Medications are PHI — accept them as a multipart form field, never as a
+    # URL query parameter (which would land in access logs / browser history).
+    current_medications: str = Form(""),
 ):
     """
     Upload a genome file and receive a job_id.

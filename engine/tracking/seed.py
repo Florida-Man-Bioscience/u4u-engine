@@ -235,10 +235,12 @@ def seed(
             byr += rng.randint(-3, 3)
         p = service.create_patient(
             conn,
-            label=f"P-{i + 1:03d}",
+            # "DEMO-" prefix makes synthetic data unmistakable so it can never
+            # be confused with a real patient in any list or report.
+            label=f"DEMO-{i + 1:03d}",
             sex=sex,
             birth_year=byr,
-            notes=f"Synthetic patient #{i + 1}",
+            notes=f"DEMO / synthetic patient #{i + 1} — not a real patient",
         )
         patients.append(p)
         stats["patients"] += 1

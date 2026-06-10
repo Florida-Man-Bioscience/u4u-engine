@@ -40,3 +40,11 @@ def test_fails_closed_when_no_keys_configured(monkeypatch):
     monkeypatch.setattr(api, "API_KEYS", set())
     with _client() as c:
         assert c.get("/jobs/none").status_code == 503
+
+
+def test_medications_are_not_a_query_parameter():
+    """Medications (PHI) must be a form field, never a URL query parameter."""
+    with _client() as c:
+        spec = c.get("/openapi.json").json()
+    params = spec["paths"]["/analyze"]["post"].get("parameters", [])
+    assert all(p.get("name") != "current_medications" for p in params)
