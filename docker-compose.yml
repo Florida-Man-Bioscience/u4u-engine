@@ -34,3 +34,12 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+  website:
+    # Marketing site (flmanbiosci.net) — lives in a separate repo at
+    # ../fmb-website. Clone it as a sibling of u4u-engine/ before running
+    # compose. Static site (nginx), no env, no deps on the API.
+    build:
+      context: ../fmb-website
+    ports:
+      - "8080:80"
+    restart: unless-stopped
