@@ -279,20 +279,27 @@ def _determine_dominant_isoform(
 # CLINICAL INTERPRETATION TEMPLATES
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# These describe a genotype-based expression *estimate* from an unvalidated
+# research model. They deliberately make no claim about clinical response and
+# give no dosing advice — neither is supported by validated evidence.
+_RESEARCH_CAVEAT = (
+    "Research model — not clinically validated; does not predict clinical "
+    "response or guide dosing."
+)
 _CLINICAL_TEMPLATES = {
     "HIGH": (
-        "{receptor_name} expression estimated HIGH based on genotype. "
-        "Patient likely to show enhanced response to {peptides}. "
-        "Consider starting at standard or reduced dose with close monitoring."
+        "{receptor_name} expression estimated HIGH from genotype. "
+        "Mechanistic observation about {peptides} target receptor(s). "
+        + _RESEARCH_CAVEAT
     ),
     "NORMAL": (
-        "{receptor_name} expression estimated NORMAL. "
-        "Standard dosing protocols for {peptides} are appropriate."
+        "{receptor_name} expression estimated NORMAL from genotype "
+        "for {peptides} target receptor(s). " + _RESEARCH_CAVEAT
     ),
     "LOW": (
-        "{receptor_name} expression estimated LOW based on genotype. "
-        "Patient may show reduced response to {peptides}. "
-        "Consider higher dose or alternative receptor targets."
+        "{receptor_name} expression estimated LOW from genotype. "
+        "Mechanistic observation about {peptides} target receptor(s). "
+        + _RESEARCH_CAVEAT
     ),
 }
 
