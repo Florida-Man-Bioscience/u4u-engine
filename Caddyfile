@@ -1,35 +1,50 @@
-# Single-entry reverse proxy for the whole stack.
+# Reverse proxy for the whole stack — TWO public hosts:
 #
-#   /api/*       → api      (FastAPI)
-#   /tracking*   → frontend (Next.js tracking app)
-#   /_next/*     → frontend (Next.js chunks/assets)
-#   everything   → website  (marketing site)
+#   flmanbiosci.net (+ www)       → marketing site (fmb-website)
+#   app.flmanbiosci.net           → tracking app (Next.js frontend)
+#   app.flmanbiosci.net/api/*     → FastAPI api
 #
-# SITE_ADDRESS controls how Caddy binds:
-#   dev:  SITE_ADDRESS=":80"                                 (default)
-#   prod: SITE_ADDRESS="flmanbiosci.net, www.flmanbiosci.net"
-# In production Caddy auto-provisions Let's Encrypt for the listed hosts.
+# Each "site address" is env-driven so dev and prod can share one file.
+#
+#   Dev (default):
+#       MARKETING_ADDRESS=:80     APP_ADDRESS=:81
+#       Open http://localhost  and http://localhost:81
+#
+#   Prod (in .env):
+#       MARKETING_ADDRESS="flmanbiosci.net, www.flmanbiosci.net"
+#       APP_ADDRESS="app.flmanbiosci.net"
+#       Caddy auto-provisions Let's Encrypt for both.
+#
+# NOTE: For HTTP-01 ACME to work, point Cloudflare DNS at the VPS in
+# "DNS only" (grey cloud) mode. Orange-cloud proxying terminates TLS at
+# Cloudflare and blocks Let's Encrypt.
 
-{$SITE_ADDRESS::80} {
+# ───── Marketing site (apex + www) ─────
+{$MARKETING_ADDRESS::80} {
     encode zstd gzip
 
-    # Redirect www → apex (only fires when the request actually arrives on
-    # the www host, so this is a no-op in dev where SITE_ADDRESS is ":80").
     @www host www.flmanbiosci.net
     redir @www https://flmanbiosci.net{uri} permanent
+
+    reverse_proxy website:80
+
+    log {
+        output stdout
+        format console
+    }
+}
+
+# ───── Tracking app + API ─────
+{$APP_ADDRESS::81} {
+    encode zstd gzip
 
     @api path /api/*
     handle @api {
         reverse_proxy api:8000
     }
 
-    @frontend path /tracking* /_next/*
-    handle @frontend {
-        reverse_proxy frontend:3000
-    }
-
     handle {
-        reverse_proxy website:80
+        reverse_proxy frontend:3000
     }
 
     log {

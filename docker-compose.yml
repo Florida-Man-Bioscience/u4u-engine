@@ -28,7 +28,11 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_BASE: http://localhost:8000
+        # In prod (behind the Caddy proxy at app.flmanbiosci.net) set
+        # NEXT_PUBLIC_API_BASE=/api/v1 in .env so the browser calls the
+        # same-origin /api/* path. Locally, keep it pointed at the api
+        # container's host port so direct :3000 access still works.
+        NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-http://localhost:8000}"
     ports:
       - "3000:3000"
     depends_on:
@@ -57,10 +61,12 @@ services:
     image: caddy:2-alpine
     ports:
       - "80:80"
+      - "81:81"        # tracking app in dev mode (use APP_ADDRESS for prod)
       - "443:443"
       - "443:443/udp"  # HTTP/3
     environment:
-      SITE_ADDRESS: "${SITE_ADDRESS:-:80}"
+      MARKETING_ADDRESS: "${MARKETING_ADDRESS:-:80}"
+      APP_ADDRESS:       "${APP_ADDRESS:-:81}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
