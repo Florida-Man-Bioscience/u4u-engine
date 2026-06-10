@@ -118,6 +118,39 @@ def _match_tokens(text: str) -> str | None:
     return None
 
 
+def _reject_message(detection: dict) -> str:
+    build = detection["build"]
+    return (
+        f"This file appears to use the {build} reference build "
+        f"({detection['evidence'] or detection['source']}), but the engine "
+        f"only supports {SUPPORTED_BUILD}/hg38 coordinates. Processing it as "
+        f"{SUPPORTED_BUILD} would mis-annotate every variant. Please supply a "
+        f"{SUPPORTED_BUILD}-aligned file, lift the coordinates over to "
+        f"{SUPPORTED_BUILD} before uploading, or enable liftover (ENABLE_LIFTOVER)."
+    )
+
+
+def plan_build_handling(
+    detection: dict, filename: str, liftover_available: bool = False
+) -> dict:
+    """
+    Decide how to handle a file given its detected build.
+
+    Returns a dict with ``action`` in {"proceed", "liftover", "reject"} plus the
+    detection (and a ``message`` when rejecting / a ``from_build`` when lifting).
+
+    - Non-coordinate or GRCh38/unknown coordinate files → "proceed".
+    - GRCh37 coordinate files → "liftover" when available, else "reject".
+    - Any other confirmed non-GRCh38 coordinate build → "reject".
+    """
+    build = detection["build"]
+    if not _coordinate_authoritative(filename) or build in (SUPPORTED_BUILD, "unknown"):
+        return {"action": "proceed", "detection": detection}
+    if build == "GRCh37" and liftover_available:
+        return {"action": "liftover", "from_build": "GRCh37", "detection": detection}
+    return {"action": "reject", "detection": detection, "message": _reject_message(detection)}
+
+
 def assert_supported_build(file_bytes: bytes, filename: str) -> dict:
     """
     Detect the build and reject confirmed-unsupported builds for coordinate files.
@@ -130,16 +163,7 @@ def assert_supported_build(file_bytes: bytes, filename: str) -> dict:
     is returned for transparency only.
     """
     detection = detect_build(file_bytes, filename)
-    build = detection["build"]
-
-    if _coordinate_authoritative(filename) and build not in (SUPPORTED_BUILD, "unknown"):
-        raise ValueError(
-            f"This file appears to use the {build} reference build "
-            f"({detection['evidence'] or detection['source']}), but the engine "
-            f"only supports {SUPPORTED_BUILD}/hg38 coordinates. Processing it as "
-            f"{SUPPORTED_BUILD} would mis-annotate every variant. Please supply a "
-            f"{SUPPORTED_BUILD}-aligned file, or lift the coordinates over to "
-            f"{SUPPORTED_BUILD} before uploading."
-        )
-
+    plan = plan_build_handling(detection, filename, liftover_available=False)
+    if plan["action"] == "reject":
+        raise ValueError(plan["message"])
     return detection

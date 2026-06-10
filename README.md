@@ -370,6 +370,8 @@ Open **http://localhost:3000** in your browser to access the genome analysis UI.
 | `ALLOW_INSECURE_NO_AUTH` | `0` | Dev/test only — disables auth. Never enable in production. |
 | `JOB_STORE_KEY` | _(none)_ | Fernet key to encrypt the on-disk job store. Without it, results are kept in memory only (never written as plaintext). |
 | `PGX_CONFORMAL_CALIBRATION` | `data/pgx/conformal_calibration.json` | Path to a validated PGx conformal calibration set. Without it, drug-response predictions are returned as `uncalibrated`. |
+| `ENABLE_LIFTOVER` | `0` | When `1`, lift GRCh37 coordinate files to GRCh38 instead of rejecting them (requires the optional `pyliftover` package). |
+| `LIFTOVER_CHAIN_37_TO_38` | _(none)_ | Optional local hg19→hg38 chain file for liftover (else fetched from UCSC). |
 | `NEXT_PUBLIC_API_BASE` | `https://flmanbiosci.net/api/v1` | Backend API URL for the frontend |
 
 ### Stopping

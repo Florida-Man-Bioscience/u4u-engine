@@ -602,45 +602,52 @@ def generate_bpc157_summary(prediction: dict) -> str:
 
     parts = []
 
-    # Tier-specific opening
+    # Tier-specific opening — describes pathway overlap (biological plausibility)
+    # only. BPC-157 is investigational; this is NOT a prediction of clinical
+    # benefit, and no validated genetic predictor of response exists.
     tier_text = {
         "likely_good": (
-            f"Genetic profile suggests a LIKELY GOOD candidate for BPC-157, "
-            f"with {len(pathways)} relevant pathway(s) affected."
+            f"Genetic profile shows broad overlap with BPC-157 mechanism "
+            f"pathways ({len(pathways)} pathway(s) affected). This reflects "
+            f"biological plausibility only and is NOT a prediction that BPC-157 "
+            f"will benefit this patient."
         ),
         "possible": (
-            f"Genetic profile suggests a POSSIBLE candidate for BPC-157, "
-            f"with {len(pathways)} relevant pathway(s) showing partial overlap."
+            f"Genetic profile shows partial overlap with BPC-157 mechanism "
+            f"pathways ({len(pathways)} pathway(s)). Biological plausibility "
+            f"only — not a prediction of clinical benefit."
         ),
         "uncertain": (
-            f"Genetic profile provides UNCERTAIN evidence for BPC-157 candidacy. "
-            f"Only {len(pathways)} pathway(s) showed weak overlap."
+            f"Genetic profile shows limited overlap with BPC-157 mechanism "
+            f"pathways ({len(pathways)} pathway(s)). Evidence is weak and not "
+            f"predictive of response."
         ),
         "low_confidence": (
-            "Genetic profile provides LOW CONFIDENCE for predicting BPC-157 response. "
-            "Very limited pathway overlap detected."
+            "Genetic profile shows minimal overlap with BPC-157 mechanism "
+            "pathways. Not predictive of response."
         ),
     }
     parts.append(tier_text.get(tier, tier_text["low_confidence"]))
 
-    # Use case
-    parts.append(f"Primary predicted use case: {use_case}.")
+    # Mechanism area (not a clinical indication)
+    parts.append(f"Most-overlapping mechanism area: {use_case}.")
 
-    # Modifier highlights
+    # Modifier highlights — mechanistic context only
     if factors:
         elevated = [f for f in factors if f["direction"] == "elevated"]
         impaired = [f for f in factors if f["direction"] == "impaired"]
         if elevated:
             genes = ", ".join(f["gene"] for f in elevated)
             parts.append(
-                f"Elevated activity detected in {genes} — BPC-157's "
-                f"anti-inflammatory effects may provide stronger benefit."
+                f"Elevated-activity variant(s) in {genes} fall in pathways "
+                f"BPC-157 is reported to modulate (anti-inflammatory mechanism). "
+                f"Mechanistic context only."
             )
         if impaired:
             genes = ", ".join(f["gene"] for f in impaired)
             parts.append(
-                f"Impaired function detected in {genes} — BPC-157 may "
-                f"help compensate via alternative pathway activation."
+                f"Reduced-function variant(s) in {genes} fall in pathways "
+                f"BPC-157 is reported to modulate. Mechanistic context only."
             )
 
     return " ".join(parts)

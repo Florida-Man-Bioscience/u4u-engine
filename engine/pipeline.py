@@ -45,7 +45,8 @@ Public interface
 
 from .parsers      import parse_file
 from .validators   import validate_file_bytes
-from .genome_build import assert_supported_build
+from .genome_build import detect_build, plan_build_handling
+from .liftover     import liftover_available, lift_variants_to_grch38
 from .quality_filter import apply_quality_filter, filter_stats
 from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
@@ -142,16 +143,38 @@ def run_pipeline(
     validate_file_bytes(file_bytes, filename)
 
     # ── Step 1b: Genome build gate ──────────────────────────────────────────
-    # Reject coordinate files on a confirmed non-GRCh38 build before any
-    # coordinate-based annotation can silently mis-map them. Record the
-    # detected build on the result for the audit trail.
+    # Coordinate files on a confirmed non-GRCh38 build are rejected before any
+    # coordinate-based annotation can silently mis-map them — unless liftover is
+    # explicitly enabled, in which case GRCh37 coordinates are lifted to GRCh38
+    # after parsing. The detected build is recorded on the result.
     _progress("Checking genome build", 3)
-    genome_build = assert_supported_build(file_bytes, filename)
-    log.info("Detected genome build: %s (%s)", genome_build["build"], genome_build["source"])
+    genome_build = detect_build(file_bytes, filename)
+    build_plan = plan_build_handling(
+        genome_build, filename,
+        liftover_available=liftover_available(genome_build["build"]),
+    )
+    if build_plan["action"] == "reject":
+        raise ValueError(build_plan["message"])
+    log.info("Detected genome build: %s (%s); action=%s",
+             genome_build["build"], genome_build["source"], build_plan["action"])
 
     # ── Step 2: Parse ───────────────────────────────────────────────────────
     _progress("Parsing file", 5)
     raw_variants = parse_file(file_bytes, filename)
+
+    # ── Step 2b: Liftover (only when planned) ───────────────────────────────
+    if build_plan["action"] == "liftover":
+        _progress("Lifting coordinates to GRCh38", 6)
+        raw_variants, unmapped = lift_variants_to_grch38(raw_variants)
+        genome_build = {
+            **genome_build,
+            "original_build": build_plan["from_build"],
+            "lifted_to": "GRCh38",
+            "liftover_unmapped": len(unmapped),
+        }
+        if unmapped:
+            log.warning("liftover: %d coordinate variant(s) could not be mapped to GRCh38",
+                        len(unmapped))
 
     # ── Step 3: Quality filter ──────────────────────────────────────────────
     _progress("Applying quality filter", 8)
