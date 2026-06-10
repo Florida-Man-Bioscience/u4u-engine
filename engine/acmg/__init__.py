@@ -15,6 +15,7 @@ from .classifier import (
     AcmgConfig, assign_codes, classify_acmg, load_lof_mechanism_genes,
 )
 from .aggregate import summarize_acmg
+from .signoff import apply_signoff, VALID_ACTIONS
 
 __all__ = [
     "Classification",
@@ -26,4 +27,6 @@ __all__ = [
     "classify_acmg",
     "load_lof_mechanism_genes",
     "summarize_acmg",
+    "apply_signoff",
+    "VALID_ACTIONS",
 ]

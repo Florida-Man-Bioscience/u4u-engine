@@ -250,4 +250,8 @@ def classify_acmg(variant: dict, config: AcmgConfig | None = None) -> dict:
         "requires_human_review": True,
         "method": "ACMG/AMP 2015 automated evidence assembly (subset)",
         "disclaimer": _DISCLAIMER,
+        # Sign-out lifecycle (see engine/acmg/signoff.py)
+        "status": "pending_review",
+        "final_classification": None,
+        "sign_out": None,
     }

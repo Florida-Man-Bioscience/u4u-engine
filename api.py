@@ -46,8 +46,17 @@ from datetime import datetime, timedelta, timezone
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
+from pydantic import BaseModel
 
 from engine import run_pipeline
+from engine.acmg import apply_signoff
+
+
+class AcmgSignoffRequest(BaseModel):
+    reviewer: str
+    action: str = "approve"          # "approve" | "amend"
+    final_classification: str | None = None
+    notes: str = ""
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -634,6 +643,46 @@ def get_drug(job_id: str, drug: str):
         "prediction": pred,
         "hla_warnings": hla,
     }
+
+
+@app.post("/jobs/{job_id}/variants/{variant_id}/acmg-signoff")
+def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest):
+    """
+    Record a qualified reviewer's sign-out of a variant's automated ACMG/AMP
+    classification (approve the draft, or amend it). Updates and persists the
+    job. Returns the updated `acmg` block.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if job["status"] != "done":
+            raise HTTPException(status_code=409, detail="Job not yet complete")
+
+        variants = (job.get("results") or {}).get("variants") or []
+        target = next(
+            (v for v in variants
+             if v.get("variant_id") == variant_id or v.get("rsid") == variant_id),
+            None,
+        )
+        if target is None:
+            raise HTTPException(status_code=404, detail=f"Variant {variant_id!r} not found in job")
+        if not target.get("acmg"):
+            raise HTTPException(status_code=409, detail="Variant has no ACMG classification to sign out")
+
+        try:
+            target["acmg"] = apply_signoff(
+                target["acmg"],
+                reviewer=req.reviewer,
+                action=req.action,
+                final_classification=req.final_classification,
+                notes=req.notes,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+
+        _persist_jobs_locked()
+        return target["acmg"]
 
 
 # ── Regulatory dashboard ──────────────────────────────────────────────────────
