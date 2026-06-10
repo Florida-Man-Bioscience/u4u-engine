@@ -45,6 +45,7 @@ Public interface
 
 from .parsers      import parse_file
 from .validators   import validate_file_bytes
+from .genome_build import assert_supported_build
 from .quality_filter import apply_quality_filter, filter_stats
 from .filters      import filter_variants, filter_variants_by_bed
 from .rsid_resolver import resolve_rsids
@@ -140,6 +141,14 @@ def run_pipeline(
     _progress("Validating file", 2)
     validate_file_bytes(file_bytes, filename)
 
+    # ── Step 1b: Genome build gate ──────────────────────────────────────────
+    # Reject coordinate files on a confirmed non-GRCh38 build before any
+    # coordinate-based annotation can silently mis-map them. Record the
+    # detected build on the result for the audit trail.
+    _progress("Checking genome build", 3)
+    genome_build = assert_supported_build(file_bytes, filename)
+    log.info("Detected genome build: %s (%s)", genome_build["build"], genome_build["source"])
+
     # ── Step 2: Parse ───────────────────────────────────────────────────────
     _progress("Parsing file", 5)
     raw_variants = parse_file(file_bytes, filename)
@@ -232,20 +241,40 @@ def run_pipeline(
         return combined
 
     completed = 0
+    annotation_failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_v = {executor.submit(process_variant, v): v for v in unique_variants}
         for future in concurrent.futures.as_completed(future_to_v):
+            v = future_to_v[future]
             try:
                 res = future.result()
                 final_results.append(res)
             except Exception as e:
-                # Fallback on failure, dropping variant
-                print(f"[pipeline] variant mapping failed: {e}")
-            
+                # Do NOT silently drop the variant: a dropped variant is
+                # indistinguishable from a true-negative and could be a
+                # clinically critical finding. Record it loudly so the caller
+                # can detect the incomplete analysis and block reporting.
+                vid = v.get("rsid") or (
+                    f"{v.get('chrom')}:{v.get('pos')}" if v.get("chrom") else "unknown"
+                )
+                annotation_failures.append({
+                    "variant_id": vid,
+                    "location": f"{v.get('chrom')}:{v.get('pos')}" if v.get("chrom") else None,
+                    "rsid": v.get("rsid"),
+                    "error": f"{type(e).__name__}: {e}",
+                })
+                log.error("variant annotation failed for %s: %s", vid, e)
+
             completed += 1
             if completed % max(1, total // 10) == 0 or completed == total:
                 pct = 30 + int((completed / max(total, 1)) * 55)
                 _progress(f"Annotating variants ({completed}/{total})", pct)
+
+    if annotation_failures:
+        log.error(
+            "annotation incomplete: %d of %d variant(s) failed and are NOT in results",
+            len(annotation_failures), total,
+        )
 
     # ── Step 8b: KEGG Pathway Mapping ──────────────────────────────────────
     _progress("Mapping KEGG pathways", 92)
@@ -320,6 +349,14 @@ def run_pipeline(
 
     # ── V3 Result Assembly ─────────────────────────────────────────────────
     result = {
+        "genome_build": genome_build,
+        "analysis_status": {
+            "expected_variants": total,
+            "annotated_variants": len(final_results),
+            "failed_variants": len(annotation_failures),
+            "failures": annotation_failures,
+            "complete": len(annotation_failures) == 0,
+        },
         "variants": final_results,
         "pathway_summary": {
             "pathways_hit": pathway_hits,

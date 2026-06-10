@@ -33,6 +33,7 @@ ALLOWED_ORIGINS — comma-separated CORS origins for browser clients
 """
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -62,8 +63,58 @@ FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
+# ── Authentication ─────────────────────────────────────────────────────────
+# All endpoints except /health require a valid API key (Authorization: Bearer
+# <key> or X-API-Key: <key>). The service fails CLOSED: if no keys are
+# configured it refuses protected requests, unless ALLOW_INSECURE_NO_AUTH is
+# explicitly set for local development/testing.
+_raw_keys = os.getenv("API_KEYS", os.getenv("API_KEY", "")).strip()
+API_KEYS = {k.strip() for k in _raw_keys.split(",") if k.strip()}
+ALLOW_INSECURE_NO_AUTH = os.getenv("ALLOW_INSECURE_NO_AUTH", "").lower() in ("1", "true", "yes", "on")
+
+# ── Job-store encryption ───────────────────────────────────────────────────
+# Completed job results are derived from the user's genome (variants,
+# genotypes, conditions) and are therefore sensitive. They are only persisted
+# to disk when encrypted with a configured Fernet key (JOB_STORE_KEY). With no
+# key, disk persistence is DISABLED (in-memory only) rather than writing
+# plaintext PHI to disk.
+JOB_STORE_KEY = os.getenv("JOB_STORE_KEY", "").strip()
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("u4u.api")
+
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+    _CRYPTO_AVAILABLE = True
+except Exception:  # ImportError, or a broken/incomplete crypto backend
+    _CRYPTO_AVAILABLE = False
+    InvalidToken = Exception  # type: ignore
+
+_fernet = None
+if JOB_STORE_KEY and _CRYPTO_AVAILABLE:
+    try:
+        _fernet = Fernet(JOB_STORE_KEY.encode())
+    except Exception:
+        log.error("JOB_STORE_KEY is not a valid Fernet key — disk persistence disabled.")
+        _fernet = None
+
+PERSIST_ENABLED = _fernet is not None
+if not PERSIST_ENABLED:
+    log.warning(
+        "Job-store disk persistence DISABLED (no valid JOB_STORE_KEY or cryptography "
+        "unavailable). Genomic-derived results are kept in memory only and lost on "
+        "restart. Set JOB_STORE_KEY to a Fernet key to enable encrypted persistence."
+    )
+if not API_KEYS and not ALLOW_INSECURE_NO_AUTH:
+    log.warning(
+        "No API_KEYS configured — protected endpoints will reject all requests "
+        "until keys are set (or ALLOW_INSECURE_NO_AUTH is enabled for dev)."
+    )
+
+
+def _valid_api_key(provided: str) -> bool:
+    """Constant-time membership check against the configured API keys."""
+    return any(hmac.compare_digest(provided, k) for k in API_KEYS)
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -82,6 +133,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
+
+# ── Authentication middleware ──────────────────────────────────────────────
+_AUTH_EXEMPT_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
+
+
+@app.middleware("http")
+async def _auth_middleware(request, call_next):
+    path = request.url.path
+    # Allow CORS preflight and unauthenticated liveness/docs.
+    if request.method == "OPTIONS" or path in _AUTH_EXEMPT_PATHS:
+        return await call_next(request)
+    if ALLOW_INSECURE_NO_AUTH:
+        return await call_next(request)
+    if not API_KEYS:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Authentication is not configured on this server."},
+        )
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        provided = auth[7:].strip()
+    else:
+        provided = request.headers.get("x-api-key", "").strip()
+    if not provided or not _valid_api_key(provided):
+        return JSONResponse(status_code=401, content={"detail": "Missing or invalid API key."})
+    return await call_next(request)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
 from engine.tracking.api import router as _tracking_router  # noqa: E402
@@ -139,13 +216,18 @@ def _serializable_job(job: dict) -> dict:
 
 
 def _persist_jobs_locked() -> None:
-    """Atomically mirror the in-memory job store to disk."""
+    """Atomically mirror the in-memory job store to disk, encrypted at rest."""
+    if not PERSIST_ENABLED:
+        return  # in-memory only — never write plaintext genomic-derived data
     path = Path(JOB_STORE_PATH)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(
+            {jid: _serializable_job(job) for jid, job in _jobs.items()}
+        ).encode("utf-8")
+        token = _fernet.encrypt(payload)
         tmp_path = path.with_suffix(path.suffix + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as fh:
-            json.dump({jid: _serializable_job(job) for jid, job in _jobs.items()}, fh)
+        tmp_path.write_bytes(token)
         tmp_path.replace(path)
     except Exception:
         log.exception("failed to persist job store to %s", JOB_STORE_PATH)
@@ -158,13 +240,21 @@ def _persist_jobs() -> None:
 
 def _load_jobs_from_disk() -> None:
     """Load persisted jobs, marking interrupted pending/running jobs failed."""
+    if not PERSIST_ENABLED:
+        return
     path = Path(JOB_STORE_PATH)
     if not path.exists():
         return
 
     try:
-        with path.open("r", encoding="utf-8") as fh:
-            data = json.load(fh)
+        token = path.read_bytes()
+        data = json.loads(_fernet.decrypt(token).decode("utf-8"))
+    except InvalidToken:
+        log.error(
+            "job store at %s could not be decrypted (wrong JOB_STORE_KEY?) — ignoring",
+            JOB_STORE_PATH,
+        )
+        return
     except Exception:
         log.exception("failed to read job store from %s", JOB_STORE_PATH)
         return

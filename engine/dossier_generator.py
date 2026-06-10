@@ -15,6 +15,12 @@ import html
 import json
 from datetime import datetime, timezone
 
+_INVESTIGATIONAL_DISCLAIMER = (
+    "This peptide is investigational and not FDA-approved for this use. A match "
+    "between your genetics and this peptide's target pathways is a mechanistic "
+    "observation only — it is NOT a prediction that the therapy will work for you."
+)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CSS (extracted from dossier.html design system)
@@ -254,6 +260,32 @@ def _render_peptide_dossier(rec: dict, variants: list[dict], now_str: str) -> st
 
     tier_css = _tier_class(predicted_tier)
 
+    # ── Regulatory gating of the patient-facing efficacy claim ───────────────
+    # For investigational (non-FDA-approved) peptides we must NOT present a
+    # genetic "Predicted Efficacy" as if it forecasts clinical benefit. Show a
+    # neutral, non-predictive pathway observation plus a prominent disclaimer.
+    investigational = bool(rec.get("investigational"))
+    if investigational:
+        section1_title = "Genetic Pathway Analysis"
+        section1_sub = "Investigational &middot; efficacy not established"
+        pred_card_label = "Genetic Pathway Match (not a prediction of benefit)"
+        pred_badge_text = _e(rec.get("pathway_match_label") or predicted_tier)
+        pred_badge_css = "tier-baseline"
+        disclaimer_html = (
+            f'<div class="info-card warn" style="margin-top:10px;">'
+            f'<div class="panel-label">Important — Investigational Therapy</div>'
+            f'<div style="font-size:12px;color:var(--ink-2);line-height:1.5;">'
+            f'{_e(rec.get("efficacy_disclaimer") or _INVESTIGATIONAL_DISCLAIMER)}'
+            f'</div></div>'
+        )
+    else:
+        section1_title = "Predicted Efficacy"
+        section1_sub = category_display
+        pred_card_label = "Prediction"
+        pred_badge_text = _e(predicted_tier)
+        pred_badge_css = tier_css
+        disclaimer_html = ""
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -294,18 +326,19 @@ def _render_peptide_dossier(rec: dict, variants: list[dict], now_str: str) -> st
     <section>
       <div class="section-head">
         <span class="section-num">1</span>
-        <h2 class="section-title">Predicted Efficacy</h2>
-        <span class="section-sub">{category_display}</span>
+        <h2 class="section-title">{section1_title}</h2>
+        <span class="section-sub">{section1_sub}</span>
       </div>
 
       <div class="info-card highlight" style="margin-top:14px;">
-        <div class="panel-label">Prediction</div>
+        <div class="panel-label">{pred_card_label}</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-          <span class="tier-badge {tier_css}">{_e(predicted_tier)}</span>
+          <span class="tier-badge {pred_badge_css}">{pred_badge_text}</span>
           <span style="font-size:12px;color:var(--ink-2);">Coverage: <strong>{coverage_pct}</strong></span>
         </div>
         <div style="font-size:12px;color:var(--ink-2);line-height:1.5;">{prediction_desc}</div>
       </div>
+      {disclaimer_html}
 
       <div class="info-card">
         <div class="panel-label">Rationale</div>

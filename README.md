@@ -98,7 +98,7 @@ for r in results:
 
 | Step | What happens |
 |------|-------------|
-| 1. Validate | File size ≤ 100 MB, VCF header check, UTF-8 |
+| 1. Validate | File size ≤ 100 MB, VCF header check, UTF-8, genome-build gate (rejects confirmed non-GRCh38 coordinate files) |
 | 2. Parse | VCF / 23andMe / rsID list / CSV → variant dicts |
 | 3. Quality filter | Drop hom-ref, failed calls (--/NN/DI), low GQ/DP, indels |
 | 4. Whitelist filter | Keep only ACMG81 / pharma / carrier variants (optional) |
@@ -366,6 +366,10 @@ Open **http://localhost:3000** in your browser to access the genome analysis UI.
 | `WORKERS` | `4` | Thread pool size for concurrent pipeline runs |
 | `MAX_UPLOAD_MB` | `100` | Maximum upload file size in megabytes |
 | `JOB_TTL_HOURS` | `24` | Hours to keep completed jobs in memory |
+| `API_KEYS` / `API_KEY` | _(none)_ | Comma-separated API keys. All endpoints except `/health` require one (`Authorization: Bearer <key>` or `X-API-Key`). Fails closed when unset. |
+| `ALLOW_INSECURE_NO_AUTH` | `0` | Dev/test only — disables auth. Never enable in production. |
+| `JOB_STORE_KEY` | _(none)_ | Fernet key to encrypt the on-disk job store. Without it, results are kept in memory only (never written as plaintext). |
+| `PGX_CONFORMAL_CALIBRATION` | `data/pgx/conformal_calibration.json` | Path to a validated PGx conformal calibration set. Without it, drug-response predictions are returned as `uncalibrated`. |
 | `NEXT_PUBLIC_API_BASE` | `https://flmanbiosci.net/api/v1` | Backend API URL for the frontend |
 
 ### Stopping

@@ -116,6 +116,46 @@ PEPTIDE_GENE_MAP: dict[str, dict] = {
     },
 }
 
+# ── Regulatory gating ───────────────────────────────────────────────────────
+# None of the peptides modeled here are FDA-approved for the indications in
+# question; they are investigational / off-label / compounded. A genetic
+# pathway match is a mechanistic observation, NOT evidence that the therapy
+# will benefit a patient — so patient-facing "efficacy" claims must be gated.
+# Populate FDA_APPROVED_PEPTIDES only with peptides approved for the modeled use.
+FDA_APPROVED_PEPTIDES: set[str] = set()
+
+_INVESTIGATIONAL_DISCLAIMER = (
+    "This peptide is investigational and not FDA-approved for this use. A match "
+    "between your genetics and this peptide's target pathways is a mechanistic "
+    "observation only — it is NOT a prediction that the therapy will work for "
+    "you. No validated genetic predictor of response to this peptide exists, and "
+    "human efficacy/safety evidence is limited. Discuss with a qualified clinician."
+)
+
+
+def _is_investigational(peptide_name: str) -> bool:
+    return peptide_name not in FDA_APPROVED_PEPTIDES
+
+
+def _pathway_match_label(tier: str) -> str:
+    """
+    Translate an internal efficacy tier into a neutral, non-predictive
+    'pathway match' descriptor for investigational compounds, so the
+    patient-facing output never asserts efficacy that has not been established.
+    """
+    mapping = {
+        "Strong Fit": "Target-pathway variants present (strong overlap)",
+        "Possible Fit": "Target-pathway variant(s) of uncertain significance present",
+        "Likely Reduced": "Receptor-gene variant present (may affect response)",
+        "Possibly Altered": "Receptor-gene variant of uncertain significance present",
+        "Caution": "Safety-relevant variant present — clinical screening indicated",
+        "Review Recommended": "Variant of uncertain significance in a safety-relevant gene",
+        "Review Needed": "Variant(s) present with unclear net effect",
+        "Baseline": "No relevant target-gene variants detected",
+    }
+    return mapping.get(tier, "Target-gene variant(s) present")
+
+
 def _classify_variants(relevant_variants: list[dict]) -> dict:
     """Classify relevant variants by clinical significance."""
     pathogenic = []
@@ -283,6 +323,7 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
         )
 
         panel = get_biomarker_panel(peptide_name)
+        investigational = _is_investigational(peptide_name)
         recommendations.append({
             "peptide_name": peptide_name,
             "genes_for_genotyping": sorted(target_genes),
@@ -298,6 +339,17 @@ def map_peptide_coverage(variants: list[dict]) -> dict:
             "category_display": info["category_display"],
             "relevant_variants": relevant_variants,
             "biomarker_panel": panel.to_dict() if panel else None,
+            # Regulatory gating — patient-facing efficacy claims are only
+            # permitted for FDA-approved peptides; everything else is presented
+            # as a non-predictive pathway observation with a disclaimer.
+            "investigational": investigational,
+            "regulatory_status": (
+                "Investigational — not FDA-approved for this use"
+                if investigational else "FDA-approved"
+            ),
+            "efficacy_claim_allowed": not investigational,
+            "pathway_match_label": _pathway_match_label(predicted_tier),
+            "efficacy_disclaimer": _INVESTIGATIONAL_DISCLAIMER if investigational else "",
         })
 
     # Sort: those with variants first, then alphabetically

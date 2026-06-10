@@ -150,13 +150,33 @@ def test_prs_low_when_no_risk_variants():
 
 # ── Drug predictions + conformal ────────────────────────────────────────────
 
-def test_drug_predictions_have_conformal_sets():
+def test_drug_predictions_uncalibrated_without_real_calibration():
+    """With no real calibration set, no confidence guarantee may be claimed."""
     variants = [_v("rs4244285", "A", "hom"), _v("rs2395029", "G", "het")]
     star = call_star_alleles_from_variants(variants)
     hla = call_hla_from_variants(variants)
     prs = calculate_pgx_prs(variants)
     raw = predict_drug_response(star, hla, prs)
-    calibrated = calibrate_conformal_set(raw, confidence=0.9)
+    out = calibrate_conformal_set(raw, confidence=0.9)
+    for p in out:
+        assert p.confidence_level is None
+        assert p.prediction_set == ["uncalibrated"]
+
+
+def test_drug_predictions_calibrated_with_real_calibration():
+    """Given an explicit real calibration set, emit a confidence-bearing set."""
+    variants = [_v("rs4244285", "A", "hom"), _v("rs2395029", "G", "het")]
+    star = call_star_alleles_from_variants(variants)
+    hla = call_hla_from_variants(variants)
+    prs = calculate_pgx_prs(variants)
+    raw = predict_drug_response(star, hla, prs)
+    cal = {
+        "respond":     [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50],
+        "non_respond": [0.08, 0.13, 0.18, 0.23, 0.28, 0.33, 0.38, 0.43, 0.48, 0.55],
+    }
+    calibrated = calibrate_conformal_set(
+        raw, confidence=0.9, calibration=cal, calibration_is_real=True,
+    )
     for p in calibrated:
         assert p.confidence_level == 0.9
         assert p.prediction_set
