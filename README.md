@@ -140,6 +140,11 @@ tier               str        "critical" | "high" | "medium" | "low"
 tier_basis         str        "clinvar" (tier backed by a ClinVar classification)
                               | "heuristic_priority" (internal prioritization only,
                               NOT a clinical determination)
+acmg               dict       ACMG/AMP 2015 evidence assembly (subset):
+                              {classification, applied_codes, candidate_codes,
+                               clinvar_comparison, requires_human_review,
+                               method, disclaimer}. NOT a final clinical
+                              classification — requires qualified human sign-out.
 reasons            list[str]  scoring factors
 frequency_derived_label str|None  additive frequency context (never overwrites clinvar)
 carrier_note       str|None   set for heterozygous variants in recessive genes

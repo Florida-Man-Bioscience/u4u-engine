@@ -1,0 +1,102 @@
+"""
+Tests for the ACMG/AMP evidence-combining rules and the evidence classifier.
+"""
+from engine.acmg import (
+    AcmgConfig, Classification, EvidenceCode, Strength, classify_acmg, combine,
+)
+
+
+def _p(strength):  # pathogenic code at a given strength
+    return EvidenceCode("X", strength, "test")
+
+
+def _b(strength):
+    return EvidenceCode("X", strength, "test")
+
+
+# ── Combining rules ─────────────────────────────────────────────────────────
+
+def test_pathogenic_pvs1_plus_strong():
+    codes = [_p(Strength.VERY_STRONG), _p(Strength.STRONG)]
+    assert combine(codes) == Classification.PATHOGENIC
+
+
+def test_pathogenic_two_strong():
+    assert combine([_p(Strength.STRONG), _p(Strength.STRONG)]) == Classification.PATHOGENIC
+
+
+def test_likely_pathogenic_pvs1_plus_pm():
+    codes = [_p(Strength.VERY_STRONG), _p(Strength.MODERATE)]
+    assert combine(codes) == Classification.LIKELY_PATHOGENIC
+
+
+def test_likely_pathogenic_three_moderate():
+    codes = [_p(Strength.MODERATE)] * 3
+    assert combine(codes) == Classification.LIKELY_PATHOGENIC
+
+
+def test_benign_standalone():
+    assert combine([_b(Strength.STAND_ALONE)]) == Classification.BENIGN
+
+
+def test_benign_two_strong():
+    assert combine([_b(Strength.BENIGN_STRONG), _b(Strength.BENIGN_STRONG)]) == Classification.BENIGN
+
+
+def test_likely_benign_two_supporting():
+    codes = [_b(Strength.BENIGN_SUPPORTING), _b(Strength.BENIGN_SUPPORTING)]
+    assert combine(codes) == Classification.LIKELY_BENIGN
+
+
+def test_contradictory_is_vus():
+    # PVS1+PS (pathogenic) AND BA1 (benign) → conflict → VUS
+    codes = [_p(Strength.VERY_STRONG), _p(Strength.STRONG), _b(Strength.STAND_ALONE)]
+    assert combine(codes) == Classification.UNCERTAIN
+
+
+def test_insufficient_is_vus():
+    assert combine([_p(Strength.SUPPORTING)]) == Classification.UNCERTAIN
+    assert combine([]) == Classification.UNCERTAIN
+
+
+# ── Classifier (evidence assignment) ────────────────────────────────────────
+
+def test_common_variant_is_benign_ba1():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_popmax": 0.2}
+    out = classify_acmg(v)
+    assert out["classification"] == "Benign"
+    assert any(c["code"] == "BA1" for c in out["applied_codes"])
+    assert out["requires_human_review"] is True
+
+
+def test_null_variant_pvs1_only_counted_with_lof_gene():
+    # absent in gnomAD (PM2_supporting) + in-silico deleterious (PP3)
+    v = {"genes": ["BRCA1"], "consequence": "stop_gained", "gnomad_af": 0.0,
+         "insilico_pred": "deleterious"}
+    # Without a LoF gene set, PVS1 is a candidate (not counted) → not pathogenic
+    out = classify_acmg(v)
+    assert all(c["code"] != "PVS1" for c in out["applied_codes"])
+    assert any(c["code"] == "PVS1" for c in out["candidate_codes"])
+    assert out["classification"] == "Uncertain significance"
+
+    # With BRCA1 in the LoF set: PVS1 (very strong) + 2 supporting (PM2, PP3)
+    # → Pathogenic per the 2015 combining rules.
+    cfg = AcmgConfig(lof_mechanism_genes=frozenset({"BRCA1"}))
+    out2 = classify_acmg(v, cfg)
+    assert any(c["code"] == "PVS1" for c in out2["applied_codes"])
+    assert out2["classification"] == "Pathogenic"
+
+
+def test_pm2_not_applied_without_frequency_data():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_af": None}
+    out = classify_acmg(v)
+    assert all(c["code"] != "PM2_Supporting" for c in out["applied_codes"])
+    assert any(c["code"] == "PM2_Supporting" for c in out["candidate_codes"])
+
+
+def test_clinvar_not_used_as_code_but_reported():
+    v = {"genes": ["X"], "consequence": "missense_variant", "gnomad_af": 0.3,
+         "clinvar_raw": "Pathogenic"}
+    out = classify_acmg(v)
+    assert out["clinvar_comparison"] == "Pathogenic"
+    assert all("PP5" not in c["code"] and "BP6" not in c["code"] for c in out["applied_codes"])

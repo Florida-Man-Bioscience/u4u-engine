@@ -58,6 +58,7 @@ from .annotators.gnomad  import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
+from .acmg     import classify_acmg
 
 # V3 annotators
 from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
@@ -258,7 +259,11 @@ def run_pipeline(
             "zygosity_plain":    summary.zygosity_plain,
             "tier_basis":        summary.tier_basis,
         })
-        
+
+        # Transparent ACMG/AMP evidence assembly (subset; requires human
+        # sign-out). Kept separate from the heuristic priority score/tier.
+        combined["acmg"] = classify_acmg(combined)
+
         if partial_results is not None:
             partial_results.append(combined)
             
