@@ -127,10 +127,46 @@ def _valid_api_key(provided: str) -> bool:
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Startup + shutdown hooks. Replaces the deprecated
+    ``@app.on_event("startup")`` pattern."""
+    _load_jobs_from_disk()
+    # Seed the initial admin user from env vars if the users table is
+    # empty. Seed-only-on-empty: subsequent env changes do not rotate
+    # credentials. See engine/auth/service.bootstrap_admin for rationale.
+    try:
+        from engine.auth import db as _auth_db, service as _auth_service
+        seeded = _auth_service.bootstrap_admin(_auth_db.get_conn())
+        if seeded is not None:
+            log.info("auth: bootstrapped admin user '%s' from env", seeded.username)
+    except Exception:
+        log.exception("auth: bootstrap failed")
+
+    cleanup_task = asyncio.create_task(_cleanup_old_jobs())
+    purge_task = asyncio.create_task(_purge_expired_sessions_loop())
+    try:
+        yield
+    finally:
+        # Tear down background tasks cleanly on shutdown so tests and
+        # graceful restarts don't leak "Task was destroyed but it is
+        # pending" warnings.
+        for task in (cleanup_task, purge_task):
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+
 app      = FastAPI(
     title="U4U Engine API",
     version="2.0.0",
     description="Genomic variant annotation and interpretation pipeline.",
+    lifespan=_lifespan,
 )
 
 # ── CORS — allow configured browser clients to reach the API ───────────────
@@ -446,24 +482,6 @@ async def _cleanup_old_jobs():
                 _persist_jobs_locked()
         if expired:
             log.info("cleanup: removed %d expired jobs", len(expired))
-
-
-@app.on_event("startup")
-async def _startup():
-    _load_jobs_from_disk()
-    # Seed the initial admin user from env vars if the users table is
-    # empty. Seed-only-on-empty: subsequent env changes do not rotate
-    # credentials. See engine/auth/service.bootstrap_admin for the
-    # rationale.
-    try:
-        from engine.auth import db as _auth_db, service as _auth_service
-        seeded = _auth_service.bootstrap_admin(_auth_db.get_conn())
-        if seeded is not None:
-            log.info("auth: bootstrapped admin user '%s' from env", seeded.username)
-    except Exception:
-        log.exception("auth: bootstrap failed")
-    asyncio.create_task(_cleanup_old_jobs())
-    asyncio.create_task(_purge_expired_sessions_loop())
 
 
 async def _purge_expired_sessions_loop() -> None:
