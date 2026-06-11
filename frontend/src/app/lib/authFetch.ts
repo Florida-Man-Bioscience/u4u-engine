@@ -21,6 +21,11 @@ export const LOGIN_PATH = "/login";
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || "https://app.flmanbiosci.net/api/v1";
 
+// Build-time escape hatch — when NEXT_PUBLIC_AUTH_DISABLED=1 is passed in,
+// 401 responses do NOT clear the token or bounce to /login. Used together
+// with the backend's ALLOW_INSECURE_NO_AUTH=1 so demo deploys are open.
+const AUTH_DISABLED = process.env.NEXT_PUBLIC_AUTH_DISABLED === "1";
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(TOKEN_KEY);
@@ -42,6 +47,7 @@ export function clearStoredToken(): void {
  * second call is a no-op because the browser is already navigating.
  */
 function redirectToLogin() {
+  if (AUTH_DISABLED) return;
   if (typeof window === "undefined") return;
   if (window.location.pathname.startsWith(LOGIN_PATH)) return;
   const next = encodeURIComponent(
