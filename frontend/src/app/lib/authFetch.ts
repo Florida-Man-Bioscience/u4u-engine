@@ -19,7 +19,7 @@ export const TOKEN_KEY = "u4u_token";
 export const LOGIN_PATH = "/login";
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE || "https://app.flmanbiosci.net/api/v1";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;

@@ -24,9 +24,11 @@ from .service import (  # noqa: F401
     Session,
     User,
     authenticate,
+    change_password,
     create_session,
     create_user,
     get_session_user,
     purge_expired_sessions,
+    revoke_all_sessions_for_user,
     revoke_session,
 )

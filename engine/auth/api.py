@@ -55,6 +55,11 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
+
+
 @router.post("/login")
 def login(body: LoginIn, request: Request) -> dict[str, Any]:
     """Exchange username+password for an opaque session token.
@@ -106,6 +111,42 @@ def logout(request: Request) -> dict[str, Any]:
     token = _bearer_token(request)
     revoked = service.revoke_session(_conn(), token) if token else False
     return {"revoked": revoked}
+
+
+@router.post("/password")
+def change_password_endpoint(body: ChangePasswordIn, request: Request) -> dict[str, Any]:
+    """Change the calling user's password.
+
+    Requires session-token auth (not API key — there is no user behind
+    an API key). On success, every existing session for the user is
+    revoked and a fresh token is minted and returned so the caller
+    stays signed in seamlessly.
+    """
+    user = getattr(request.state, "auth_user", None)
+    if user is None:
+        raise HTTPException(
+            status_code=403,
+            detail="password change requires a logged-in user (not an API key)",
+        )
+    try:
+        service.change_password(
+            _conn(),
+            user_id=user.id,
+            current_password=body.current_password,
+            new_password=body.new_password,
+        )
+    except service.AuthError:
+        log.info("auth: change_password rejected for user=%s (bad current pw)", user.username)
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    new_session = service.create_session(_conn(), user_id=user.id)
+    log.info("auth: password changed for user=%s", user.username)
+    return {
+        "token": new_session.token,
+        "expires_at": new_session.expires_at,
+        "user": user.to_dict(),
+    }
 
 
 @router.get("/me")

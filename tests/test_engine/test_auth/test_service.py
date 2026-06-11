@@ -111,6 +111,49 @@ def test_bootstrap_admin_skips_when_env_unset(monkeypatch, conn):
     assert auth_service.bootstrap_admin(conn) is None
 
 
+def test_change_password_requires_correct_current(conn):
+    user = auth_service.create_user(conn, username="alice", password="hunter2")
+    with pytest.raises(auth_service.AuthError):
+        auth_service.change_password(
+            conn, user_id=user.id,
+            current_password="wrong", new_password="newpassword123",
+        )
+    # Old password still works.
+    auth_service.authenticate(conn, username="alice", password="hunter2")
+
+
+def test_change_password_rejects_too_short(conn):
+    user = auth_service.create_user(conn, username="alice", password="hunter2")
+    with pytest.raises(ValueError):
+        auth_service.change_password(
+            conn, user_id=user.id,
+            current_password="hunter2", new_password="short",
+        )
+
+
+def test_change_password_rejects_same_password(conn):
+    user = auth_service.create_user(conn, username="alice", password="hunter2long")
+    with pytest.raises(ValueError):
+        auth_service.change_password(
+            conn, user_id=user.id,
+            current_password="hunter2long", new_password="hunter2long",
+        )
+
+
+def test_change_password_revokes_all_existing_sessions(conn):
+    user = auth_service.create_user(conn, username="alice", password="hunter2")
+    s1 = auth_service.create_session(conn, user_id=user.id)
+    s2 = auth_service.create_session(conn, user_id=user.id)
+    auth_service.change_password(
+        conn, user_id=user.id,
+        current_password="hunter2", new_password="newpassword123",
+    )
+    assert auth_service.get_session_user(conn, s1.token) is None
+    assert auth_service.get_session_user(conn, s2.token) is None
+    # New password authenticates.
+    auth_service.authenticate(conn, username="alice", password="newpassword123")
+
+
 def test_authenticate_timing_does_not_short_circuit_on_unknown_user(conn):
     """Unknown usernames should still incur a verify_password call so the
     timing channel doesn't leak account existence. Best-effort sanity check."""

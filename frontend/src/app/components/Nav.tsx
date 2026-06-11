@@ -48,16 +48,24 @@ export function Nav() {
           </Link>
           {!loading &&
             (user ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void logout();
-                }}
-                className="text-zinc-400 hover:text-white transition-colors"
-                title={`Signed in as ${user.username}`}
-              >
-                Sign out
-              </button>
+              <>
+                <Link
+                  href="/account"
+                  className="text-zinc-400 hover:text-white transition-colors"
+                  title={`Signed in as ${user.username}`}
+                >
+                  Account
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void logout();
+                  }}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
             ) : (
               <Link
                 href="/login"

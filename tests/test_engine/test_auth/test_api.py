@@ -177,6 +177,64 @@ def test_login_rate_limit_returns_429(monkeypatch, auth_conn, client):
     assert r.headers.get("Retry-After")
 
 
+def test_change_password_with_session_token(monkeypatch, auth_conn, client):
+    monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
+    monkeypatch.setattr(api, "API_KEYS", set())
+    auth_service.create_user(auth_conn, username="alice", password="hunter2")
+    token = client.post(
+        "/auth/login", json={"username": "alice", "password": "hunter2"},
+    ).json()["token"]
+
+    r = client.post(
+        "/auth/password",
+        json={"current_password": "hunter2", "new_password": "newpassword123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200
+    new_token = r.json()["token"]
+    assert new_token and new_token != token
+
+    # Old token is revoked …
+    assert client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 401
+    # … the new token works.
+    r_me = client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {new_token}"},
+    )
+    assert r_me.status_code == 200
+    assert r_me.json()["user"]["username"] == "alice"
+
+
+def test_change_password_with_api_key_is_forbidden(monkeypatch, auth_conn, client):
+    """A service-to-service caller has no user context, so password
+    change must be refused (and not interpreted against an arbitrary user)."""
+    monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
+    monkeypatch.setattr(api, "API_KEYS", {"service-secret"})
+    auth_service.create_user(auth_conn, username="alice", password="hunter2")
+    r = client.post(
+        "/auth/password",
+        json={"current_password": "hunter2", "new_password": "newpassword123"},
+        headers={"X-API-Key": "service-secret"},
+    )
+    assert r.status_code == 403
+
+
+def test_change_password_rejects_wrong_current(monkeypatch, auth_conn, client):
+    monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
+    monkeypatch.setattr(api, "API_KEYS", set())
+    auth_service.create_user(auth_conn, username="alice", password="hunter2")
+    token = client.post(
+        "/auth/login", json={"username": "alice", "password": "hunter2"},
+    ).json()["token"]
+    r = client.post(
+        "/auth/password",
+        json={"current_password": "wrong", "new_password": "newpassword123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 401
+
+
 def test_login_records_attempts_per_ip_via_xff(monkeypatch, auth_conn, client):
     """X-Forwarded-For (set by Caddy) is the rate-limit key when present —
     so two different real-client IPs behind the proxy get independent

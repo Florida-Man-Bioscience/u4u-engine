@@ -181,6 +181,49 @@ def revoke_session(conn: sqlite3.Connection, token: str) -> bool:
     return cur.rowcount > 0
 
 
+def revoke_all_sessions_for_user(conn: sqlite3.Connection, user_id: str) -> int:
+    """Drop every active session for a user. Used after a password
+    change so existing tokens — including any an attacker may have stolen
+    while the old password was valid — cannot continue to authenticate."""
+    cur = conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    conn.commit()
+    return cur.rowcount
+
+
+def change_password(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    current_password: str,
+    new_password: str,
+) -> None:
+    """Change a user's password after verifying the current one. All
+    existing sessions for the user are revoked so the change takes effect
+    everywhere immediately — the caller is responsible for issuing a
+    fresh session token if they want to stay logged in.
+
+    Raises ``AuthError`` if the current password doesn't match.
+    Raises ``ValueError`` if the new password fails basic length checks.
+    """
+    if len(new_password) < 8:
+        raise ValueError("new password must be at least 8 characters")
+    if new_password == current_password:
+        raise ValueError("new password must differ from current password")
+    row = conn.execute(
+        "SELECT password_hash FROM users WHERE id = ?", (user_id,),
+    ).fetchone()
+    if row is None:
+        raise AuthError("user not found")
+    if not _verify_password(current_password, row["password_hash"]):
+        raise AuthError("invalid credentials")
+    new_hash = _hash_password(new_password)
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id),
+    )
+    conn.commit()
+    revoke_all_sessions_for_user(conn, user_id)
+
+
 def purge_expired_sessions(conn: sqlite3.Connection) -> int:
     now = datetime.now(timezone.utc).isoformat()
     cur = conn.execute("DELETE FROM sessions WHERE expires_at < ?", (now,))

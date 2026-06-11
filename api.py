@@ -463,6 +463,29 @@ async def _startup():
     except Exception:
         log.exception("auth: bootstrap failed")
     asyncio.create_task(_cleanup_old_jobs())
+    asyncio.create_task(_purge_expired_sessions_loop())
+
+
+async def _purge_expired_sessions_loop() -> None:
+    """Hourly housekeeping for the sessions table.
+
+    Expired tokens are also dropped on read by ``get_session_user``, but
+    that only catches sessions someone actually tries to use again. A
+    token that was issued and then the user closed the tab on stays in
+    the table forever without this loop. Hourly is plenty — the table
+    is tiny and SQLite handles a few-second blocking sweep easily.
+    """
+    from engine.auth import db as _auth_db, service as _auth_service
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            n = _auth_service.purge_expired_sessions(_auth_db.get_conn())
+            if n:
+                log.info("auth: purged %d expired sessions", n)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("auth: session purge failed")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
