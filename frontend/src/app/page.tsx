@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeFile } from "./lib/api";
+import { useAuth } from "./lib/auth";
 import versionData from "../../version.json";
 
 const ACCEPTED = ".vcf,.txt,.csv";
@@ -42,6 +43,7 @@ const PEPTIDE_HIGHLIGHTS = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -90,6 +92,16 @@ export default function LandingPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
+    // Genome upload is gated. If the user isn't signed in, bounce them
+    // through /login BEFORE the XHR fires so we don't waste a 100MB
+    // upload only to 401 at the server. ``next=/`` brings them back.
+    // Honoured the same NEXT_PUBLIC_AUTH_DISABLED escape hatch as
+    // RequireAuth so demo builds aren't gated either.
+    const authDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "1";
+    if (!authDisabled && !authLoading && !user) {
+      router.push(`/login?next=${encodeURIComponent("/")}`);
+      return;
+    }
     setError(null);
     setSubmitting(true);
     setUploadLoaded(0);
@@ -444,7 +456,9 @@ export default function LandingPage() {
                   : uploadFraction !== null
                     ? `Uploading ${Math.round(uploadFraction * 100)}%`
                     : "Uploading…"
-                : "Analyze Variants"}
+                : !authLoading && !user
+                  ? "Sign in to analyze"
+                  : "Analyze Variants"}
             </button>
           </form>
 

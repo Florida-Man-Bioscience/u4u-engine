@@ -38,8 +38,12 @@
 {$APP_ADDRESS::81} {
     encode zstd gzip
 
-    @api path /api/*
-    handle @api {
+    # API: strip the /api/v1 prefix before proxying to FastAPI. The
+    # backend's routes live at /auth/*, /tracking/*, /jobs/*, etc — not
+    # under /api/v1 — so without ``handle_path`` (which matches AND
+    # strips the prefix), every request would 404. Authorization and
+    # other client headers pass through untouched.
+    handle_path /api/v1/* {
         reverse_proxy api:8000
     }
 
