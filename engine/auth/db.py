@@ -21,6 +21,13 @@ _DEFAULT_PATH = Path(os.getenv("DATA_DIR", "data")) / "auth.db"
 
 _lock = threading.Lock()
 _initialized: set[str] = set()
+# Cache one connection per (resolved) path. The auth DB sits on the hot
+# path of every protected API request, so opening a fresh connection per
+# request would be wasteful (and would leak: middleware never closes
+# them). SQLite + WAL + check_same_thread=False is safe to share across
+# FastAPI's worker threads — concurrent reads run in parallel; writes
+# serialize internally.
+_connections: dict[str, sqlite3.Connection] = {}
 
 
 def _ensure_schema(conn: sqlite3.Connection, key: str) -> None:
@@ -34,21 +41,45 @@ def _ensure_schema(conn: sqlite3.Connection, key: str) -> None:
 
 
 def get_conn(path: str | os.PathLike | None = None) -> sqlite3.Connection:
-    """Open a SQLite connection with FK enforcement and Row factory."""
+    """Return the cached SQLite connection for the resolved auth DB path,
+    opening it on first use. Subsequent calls reuse the same connection.
+
+    Tests can still inject their own DB by monkeypatching ``get_conn`` or
+    by calling ``set_connection_for_test``."""
     p = Path(path) if path else (
         Path(os.getenv("AUTH_DB_PATH")) if os.getenv("AUTH_DB_PATH") else _DEFAULT_PATH
     )
-    if str(p) != ":memory:":
+    key = str(p)
+    with _lock:
+        cached = _connections.get(key)
+        if cached is not None:
+            return cached
+    if key != ":memory:":
         p.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(p), check_same_thread=False)
+    conn = sqlite3.connect(key, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
-    _ensure_schema(conn, str(p))
+    _ensure_schema(conn, key)
+    with _lock:
+        # Another thread may have raced us; honour whatever got installed
+        # first to keep a single conn per path.
+        existing = _connections.get(key)
+        if existing is not None:
+            conn.close()
+            return existing
+        _connections[key] = conn
     return conn
 
 
 def reset_initialized() -> None:
-    """Test helper — force schema re-init on next get_conn."""
+    """Test helper — close any cached connections and force schema
+    re-init on the next ``get_conn`` call."""
     with _lock:
+        for c in _connections.values():
+            try:
+                c.close()
+            except Exception:
+                pass
+        _connections.clear()
         _initialized.clear()

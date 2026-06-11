@@ -15,6 +15,16 @@ import api  # noqa: E402
 from engine.auth import api as auth_api  # noqa: E402
 from engine.auth import db as auth_db  # noqa: E402
 from engine.auth import service as auth_service  # noqa: E402
+from engine.auth.rate_limit import login_limiter  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """Each test starts with a fresh rate-limit budget — otherwise tests
+    that fire many login attempts would poison each other."""
+    login_limiter.reset()
+    yield
+    login_limiter.reset()
 
 
 @pytest.fixture
@@ -142,3 +152,56 @@ def test_fails_with_401_when_users_exist_but_no_credentials(
     monkeypatch.setattr(api, "API_KEYS", set())
     auth_service.create_user(auth_conn, username="alice", password="hunter2")
     assert client.get("/jobs/none").status_code == 401
+
+
+def test_login_rate_limit_returns_429(monkeypatch, auth_conn, client):
+    """After the per-IP budget is exhausted, /auth/login returns 429 with
+    a Retry-After header — even with valid credentials, because we don't
+    want to let an attacker burn through the limit and then succeed on
+    the first correct guess."""
+    monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
+    monkeypatch.setattr(api, "API_KEYS", set())
+    # Tight budget so the test runs quickly.
+    monkeypatch.setattr(login_limiter, "max_attempts", 3)
+    monkeypatch.setattr(login_limiter, "window_seconds", 60.0)
+    auth_service.create_user(auth_conn, username="alice", password="hunter2")
+    for _ in range(3):
+        r = client.post(
+            "/auth/login", json={"username": "alice", "password": "wrong"},
+        )
+        assert r.status_code == 401
+    r = client.post(
+        "/auth/login", json={"username": "alice", "password": "hunter2"},
+    )
+    assert r.status_code == 429
+    assert r.headers.get("Retry-After")
+
+
+def test_login_records_attempts_per_ip_via_xff(monkeypatch, auth_conn, client):
+    """X-Forwarded-For (set by Caddy) is the rate-limit key when present —
+    so two different real-client IPs behind the proxy get independent
+    budgets."""
+    monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
+    monkeypatch.setattr(api, "API_KEYS", set())
+    monkeypatch.setattr(login_limiter, "max_attempts", 2)
+    auth_service.create_user(auth_conn, username="alice", password="hunter2")
+    for _ in range(2):
+        client.post(
+            "/auth/login",
+            json={"username": "alice", "password": "wrong"},
+            headers={"X-Forwarded-For": "10.0.0.1"},
+        )
+    # IP 10.0.0.1 is now blocked …
+    r1 = client.post(
+        "/auth/login",
+        json={"username": "alice", "password": "hunter2"},
+        headers={"X-Forwarded-For": "10.0.0.1"},
+    )
+    assert r1.status_code == 429
+    # … but 10.0.0.2 still has full budget.
+    r2 = client.post(
+        "/auth/login",
+        json={"username": "alice", "password": "hunter2"},
+        headers={"X-Forwarded-For": "10.0.0.2"},
+    )
+    assert r2.status_code == 200

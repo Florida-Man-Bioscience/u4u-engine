@@ -17,6 +17,7 @@ out of ``request.state.auth_user`` set by the middleware.
 """
 from __future__ import annotations
 
+import logging
 import sqlite3
 from typing import Any
 
@@ -25,6 +26,10 @@ from pydantic import BaseModel, Field
 
 from . import service
 from .db import get_conn
+from .rate_limit import login_limiter
+
+
+log = logging.getLogger("u4u.auth")
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -51,17 +56,38 @@ class LoginIn(BaseModel):
 
 
 @router.post("/login")
-def login(body: LoginIn) -> dict[str, Any]:
+def login(body: LoginIn, request: Request) -> dict[str, Any]:
     """Exchange username+password for an opaque session token.
 
-    Returns 401 on bad credentials. The middleware in ``api.py`` exempts
-    this endpoint so unauthenticated clients can reach it.
+    Returns 401 on bad credentials, 429 when the per-IP rate limit has
+    been exceeded. The middleware in ``api.py`` exempts this endpoint so
+    unauthenticated clients can reach it.
     """
+    key = _client_key(request)
+    if not login_limiter.check(key):
+        retry_after = login_limiter.retry_after_seconds(key)
+        log.warning("auth: login rate limit exceeded for %s", key)
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Try again later.",
+            headers={"Retry-After": str(int(retry_after) + 1)},
+        )
+
+    # Record every attempt — including successful ones — so a brute-forcer
+    # who happens to get a correct answer mid-window doesn't reset the
+    # budget for their next batch of attempts.
     try:
-        user = service.authenticate(_conn(), username=body.username, password=body.password)
+        user = service.authenticate(
+            _conn(), username=body.username, password=body.password,
+        )
     except service.AuthError:
+        login_limiter.record(key)
+        log.info("auth: failed login for username=%r from %s", body.username, key)
         raise HTTPException(status_code=401, detail="invalid credentials")
+
+    login_limiter.record(key)
     session = service.create_session(_conn(), user_id=user.id)
+    log.info("auth: login success user=%s from %s", user.username, key)
     return {
         "token": session.token,
         "expires_at": session.expires_at,
@@ -101,3 +127,22 @@ def _bearer_token(request: Request) -> str:
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
     return ""
+
+
+def _client_key(request: Request) -> str:
+    """Return the rate-limit key for a request.
+
+    Honours the first entry of ``X-Forwarded-For`` when present (Caddy in
+    front of the API populates it). Falls back to the direct socket peer.
+    The header is unauthenticated input, but the only way to abuse it is
+    to spread your own attempts across spoofed prefixes — which doesn't
+    let you bypass another user's quota, it just gives YOU more budget,
+    which a real attacker already has via a botnet anyway. The point of
+    this limiter is to slow casual brute-forcers, not to defeat a
+    well-resourced one.
+    """
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    client = request.client
+    return client.host if client else "unknown"
