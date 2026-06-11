@@ -19,7 +19,9 @@ WORKDIR /build
 COPY engine/ engine/
 RUN pip install --no-cache-dir --prefix=/install "engine/[vcf]"
 
-# Install FastAPI, uvicorn, Celery, and Redis on top of the engine install
+# Install FastAPI, uvicorn, Celery, Redis, and auth deps on top of the engine
+# install. bcrypt is required by /auth/login (password hashing); without it
+# the auth router fails to import and every protected request 500s.
 RUN pip install --no-cache-dir --prefix=/install \
     "fastapi>=0.110" \
     "uvicorn[standard]>=0.29" \
@@ -29,7 +31,8 @@ RUN pip install --no-cache-dir --prefix=/install \
     "reportlab>=4.1" \
     "sqlalchemy[asyncio]>=2.0" \
     "asyncpg>=0.29" \
-    "pydantic>=2.6"
+    "pydantic>=2.6" \
+    "bcrypt>=4.0"
 
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────

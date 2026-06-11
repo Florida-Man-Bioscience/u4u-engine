@@ -9,26 +9,11 @@ import type {
   ResponderPrior,
   Treatment,
 } from "./types";
+import { API_BASE, authFetch, getToken } from "../../lib/authFetch";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
-
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    let detail: string | undefined;
-    try {
-      detail = (await res.json())?.detail;
-    } catch {
-      // ignore
-    }
-    throw new Error(detail || `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
+// All tracking calls share the centralised authFetch wrapper so the
+// bearer token + 401 redirect behaviour is identical across modules.
+const req = authFetch;
 
 // ── Patients ──────────────────────────────────────────────────────────────
 
@@ -87,12 +72,25 @@ export const createMeasurement = (body: {
   });
 
 export async function uploadMeasurementCsv(file: File) {
+  // Multipart upload — bypass authFetch's default JSON headers but still
+  // attach the bearer token manually.
   const form = new FormData();
   form.append("file", file);
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}/tracking/measurements/csv`, {
     method: "POST",
     body: form,
+    headers,
   });
+  if (res.status === 401) {
+    // Mirror authFetch's redirect semantics.
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired — please sign in again.");
+  }
   if (!res.ok) {
     let detail: unknown;
     try {

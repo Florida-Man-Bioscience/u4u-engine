@@ -1,0 +1,103 @@
+"""
+engine/auth/api.py
+==================
+FastAPI router for username/password auth.
+
+Endpoints
+---------
+- POST /auth/login   — {username, password} → {token, expires_at, user}
+- POST /auth/logout  — invalidate the caller's session token (requires auth)
+- GET  /auth/me      — return the current user (requires auth)
+
+``/auth/login`` is intentionally exempted from the global auth middleware
+in ``api.py`` so a fresh client can obtain a token. ``/auth/logout`` and
+``/auth/me`` are NOT exempted — they require a valid session token (or
+API key) like any other protected endpoint, and read the calling user
+out of ``request.state.auth_user`` set by the middleware.
+"""
+from __future__ import annotations
+
+import sqlite3
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
+
+from . import service
+from .db import get_conn
+
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+# Test-injection hook, mirrors the pattern in engine/tracking/api.py.
+_override_conn: sqlite3.Connection | None = None
+
+
+def _conn() -> sqlite3.Connection:
+    if _override_conn is not None:
+        return _override_conn
+    return get_conn()
+
+
+def set_test_conn(conn: sqlite3.Connection | None) -> None:
+    global _override_conn
+    _override_conn = conn
+
+
+class LoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=1, max_length=256)
+
+
+@router.post("/login")
+def login(body: LoginIn) -> dict[str, Any]:
+    """Exchange username+password for an opaque session token.
+
+    Returns 401 on bad credentials. The middleware in ``api.py`` exempts
+    this endpoint so unauthenticated clients can reach it.
+    """
+    try:
+        user = service.authenticate(_conn(), username=body.username, password=body.password)
+    except service.AuthError:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    session = service.create_session(_conn(), user_id=user.id)
+    return {
+        "token": session.token,
+        "expires_at": session.expires_at,
+        "user": user.to_dict(),
+    }
+
+
+@router.post("/logout")
+def logout(request: Request) -> dict[str, Any]:
+    """Invalidate the bearer token used to make this call.
+
+    Idempotent: returns ``{"revoked": false}`` if the token wasn't a
+    session token (e.g. when calling with an API key) or had already
+    been revoked.
+    """
+    token = _bearer_token(request)
+    revoked = service.revoke_session(_conn(), token) if token else False
+    return {"revoked": revoked}
+
+
+@router.get("/me")
+def me(request: Request) -> dict[str, Any]:
+    """Return the calling user when authenticated via session token.
+
+    With an API key (service-to-service), no user is associated, so we
+    return a sentinel payload rather than 404 — useful for clients that
+    just want to test their credentials.
+    """
+    user = getattr(request.state, "auth_user", None)
+    if user is None:
+        return {"user": None, "via": "api_key"}
+    return {"user": user.to_dict(), "via": "session"}
+
+
+def _bearer_token(request: Request) -> str:
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""

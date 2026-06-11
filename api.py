@@ -144,7 +144,11 @@ app.add_middleware(
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 # ── Authentication middleware ──────────────────────────────────────────────
-_AUTH_EXEMPT_PATHS = {"/health", "/", "/docs", "/redoc", "/openapi.json"}
+# /auth/login is exempt so a fresh client can obtain a session token; every
+# other /auth/* endpoint still requires authentication.
+_AUTH_EXEMPT_PATHS = {
+    "/health", "/", "/docs", "/redoc", "/openapi.json", "/auth/login",
+}
 
 
 @app.middleware("http")
@@ -155,19 +159,61 @@ async def _auth_middleware(request, call_next):
         return await call_next(request)
     if ALLOW_INSECURE_NO_AUTH:
         return await call_next(request)
-    if not API_KEYS:
+
+    # Two parallel auth paths:
+    #   1. ``API_KEYS`` — service-to-service shared secrets (Bearer or
+    #      X-API-Key), checked first because it's a cheap constant-time
+    #      compare with no DB hit.
+    #   2. Session tokens minted by /auth/login — checked when the API
+    #      key path doesn't match, so end-user browsers can call the API
+    #      after logging in.
+    # The server fails closed only if neither mechanism is configured.
+    from engine.auth import db as _auth_db, service as _auth_service  # local import to avoid cycles
+
+    auth_header = request.headers.get("authorization", "")
+    bearer = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    api_key_header = request.headers.get("x-api-key", "").strip()
+    provided = bearer or api_key_header
+
+    if API_KEYS and provided and _valid_api_key(provided):
+        request.state.auth_user = None  # service-to-service caller
+        return await call_next(request)
+
+    if bearer:
+        try:
+            conn = _auth_db.get_conn()
+            session_user = _auth_service.get_session_user(conn, bearer)
+        except Exception:
+            log.exception("auth: session lookup failed")
+            session_user = None
+        if session_user is not None:
+            request.state.auth_user = session_user
+            return await call_next(request)
+
+    # Neither path matched.
+    if not API_KEYS and not _has_any_user():
         return JSONResponse(
             status_code=503,
             content={"detail": "Authentication is not configured on this server."},
         )
-    auth = request.headers.get("authorization", "")
-    if auth.lower().startswith("bearer "):
-        provided = auth[7:].strip()
-    else:
-        provided = request.headers.get("x-api-key", "").strip()
-    if not provided or not _valid_api_key(provided):
-        return JSONResponse(status_code=401, content={"detail": "Missing or invalid API key."})
-    return await call_next(request)
+    return JSONResponse(
+        status_code=401, content={"detail": "Missing or invalid credentials."},
+    )
+
+
+def _has_any_user() -> bool:
+    """Return True if at least one user account exists. Used to decide
+    503 vs 401: a freshly-deployed server with no users and no API keys
+    can't accept any login, so 503 is the truthful response."""
+    try:
+        from engine.auth import db as _auth_db, service as _auth_service
+        return _auth_service.count_users(_auth_db.get_conn()) > 0
+    except Exception:
+        return False
+
+# ── Auth router (username/password login → opaque session token) ────────────
+from engine.auth.api import router as _auth_router  # noqa: E402
+app.include_router(_auth_router)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
 from engine.tracking.api import router as _tracking_router  # noqa: E402
@@ -405,6 +451,17 @@ async def _cleanup_old_jobs():
 @app.on_event("startup")
 async def _startup():
     _load_jobs_from_disk()
+    # Seed the initial admin user from env vars if the users table is
+    # empty. Seed-only-on-empty: subsequent env changes do not rotate
+    # credentials. See engine/auth/service.bootstrap_admin for the
+    # rationale.
+    try:
+        from engine.auth import db as _auth_db, service as _auth_service
+        seeded = _auth_service.bootstrap_admin(_auth_db.get_conn())
+        if seeded is not None:
+            log.info("auth: bootstrapped admin user '%s' from env", seeded.username)
+    except Exception:
+        log.exception("auth: bootstrap failed")
     asyncio.create_task(_cleanup_old_jobs())
 
 

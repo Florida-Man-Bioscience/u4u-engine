@@ -21,6 +21,9 @@
             requests
             tenacity
 
+            # Auth
+            bcrypt
+
             # Utilities
             urllib3
           ]))

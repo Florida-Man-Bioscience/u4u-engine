@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Nav } from "./components/Nav";
+import { AuthProvider } from "./lib/auth";
 
 export const metadata: Metadata = {
   title: "PeptOdyssey — Precision Peptide Genomics",
@@ -16,8 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen bg-[#f5f4f0]">
-        <Nav />
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <AuthProvider>
+          <Nav />
+          <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );

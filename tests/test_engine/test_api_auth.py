@@ -38,6 +38,11 @@ def test_protected_endpoint_requires_valid_key(monkeypatch):
 def test_fails_closed_when_no_keys_configured(monkeypatch):
     monkeypatch.setattr(api, "ALLOW_INSECURE_NO_AUTH", False)
     monkeypatch.setattr(api, "API_KEYS", set())
+    # The new middleware also returns 401 (not 503) once any user exists in
+    # the auth DB — a real account means the server *can* authenticate, just
+    # not this specific request. Force the "nothing configured" path so
+    # this test isn't sensitive to a stale data/auth.db on the host.
+    monkeypatch.setattr(api, "_has_any_user", lambda: False)
     with _client() as c:
         assert c.get("/jobs/none").status_code == 503
 

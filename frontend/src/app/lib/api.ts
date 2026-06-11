@@ -6,24 +6,13 @@ import type {
   RegulatoryPeptidesPayload,
   RegulatoryEventsPayload,
 } from "./types";
+import { authFetch, openAuthXhr } from "./authFetch";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://flmanbiosci.net/api/v1";
-
+// Thin wrapper kept for the export surface — all real work happens in
+// authFetch, which attaches the bearer token and redirects to /login on
+// 401. Other modules can switch to authFetch directly when convenient.
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, options);
-
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try {
-      const body = await res.json();
-      message = body?.detail ?? body?.message ?? message;
-    } catch {
-      // ignore JSON parse errors
-    }
-    throw new Error(message);
-  }
-
-  return res.json() as Promise<T>;
+  return authFetch<T>(path, options);
 }
 
 export interface UploadProgress {
@@ -65,8 +54,10 @@ export function analyzeFile(
     const form = new FormData();
     form.append("file", file);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_BASE}/analyze${qs}`);
+    // openAuthXhr() attaches the bearer token and wires the 401 →
+    // clear+redirect-to-/login behaviour so file uploads share the same
+    // auth surface as regular fetch calls.
+    const xhr = openAuthXhr("POST", `/analyze${qs}`);
 
     xhr.upload.onprogress = (e) => {
       if (!opts.onProgress) return;
