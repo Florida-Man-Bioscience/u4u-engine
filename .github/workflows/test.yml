@@ -25,7 +25,12 @@ jobs:
         run: pip install -e ./engine
 
       - name: Install test deps
-        run: pip install pytest responses
+        # The auth/API/tracking tests import the web + auth stack at collection
+        # time. bcrypt in particular is a hard dependency of engine.auth
+        # (imported eagerly from its __init__), so without it pytest errors out
+        # during collection rather than running the suite. These are all pure
+        # wheels (no system libs) and mirror the runtime image's deps.
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography
 
       - name: Run tests
         run: pytest tests/ -v

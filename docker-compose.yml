@@ -19,6 +19,16 @@ services:
       # start. Idempotent: skipped on restart if patients already exist.
       # Unset (or remove this line) to keep tracking empty in production.
       SEED_DEMO_DATA: "1"
+      # Auth runs OPEN by default so the engine deploys as a self-contained
+      # demo with a plain `docker compose up --build` (the frontend image
+      # also ships with its auth UI disabled — see NEXT_PUBLIC_AUTH_DISABLED
+      # below). Genome/results endpoints are unauthenticated in this mode —
+      # safe for local/dev/demo, NOT for a public PHI deployment.
+      # To enable real auth, set in .env:
+      #   ALLOW_INSECURE_NO_AUTH=0
+      #   NEXT_PUBLIC_AUTH_DISABLED=0
+      #   AUTH_BOOTSTRAP_USERNAME=... AUTH_BOOTSTRAP_PASSWORD=...   (or API_KEYS=...)
+      ALLOW_INSECURE_NO_AUTH: "${ALLOW_INSECURE_NO_AUTH:-1}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
@@ -33,15 +43,25 @@ services:
         # same-origin /api/* path. Locally, keep it pointed at the api
         # container's host port so direct :3000 access still works.
         NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-http://localhost:8000}"
+        # Keep the browser auth UI disabled by default to match the API's
+        # open-demo mode (ALLOW_INSECURE_NO_AUTH above). Set to "0" in .env
+        # — together with the backend auth vars — to turn on the login flow.
+        NEXT_PUBLIC_AUTH_DISABLED: "${NEXT_PUBLIC_AUTH_DISABLED:-1}"
     ports:
       - "3000:3000"
     depends_on:
       - api
     restart: unless-stopped
   website:
-    # Marketing site (flmanbiosci.net) — lives in a separate repo at
-    # ../fmb-website. Clone it as a sibling of u4u-engine/ before running
-    # compose. Static site (nginx), no env, no deps on the API.
+    # Marketing site (flmanbiosci.net) — lives in a SEPARATE repo at
+    # ../fmb-website and is NOT part of the PeptOdyssey engine deployment.
+    # It is gated behind the "marketing" compose profile so the engine
+    # stack (api + frontend + proxy) builds and starts on its own with a
+    # plain `docker compose up --build`, without requiring the sibling
+    # repo to be cloned. To run the marketing site too, clone
+    # ../fmb-website and start with:
+    #     docker compose --profile marketing up --build
+    profiles: ["marketing"]
     build:
       context: ../fmb-website
     ports:
@@ -71,10 +91,15 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    # Only the engine services are required. The marketing `website` is
+    # opt-in via the "marketing" profile, so it must NOT be a hard
+    # dependency here — otherwise compose refuses to start the proxy when
+    # the profile is inactive. Caddy resolves the `website` upstream
+    # lazily per-request, so the marketing host simply returns 502 when
+    # the site isn't running; the app host is unaffected.
     depends_on:
       - api
       - frontend
-      - website
     restart: unless-stopped
 
 volumes:
