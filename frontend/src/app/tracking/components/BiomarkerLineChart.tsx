@@ -36,7 +36,7 @@ export function BiomarkerLineChart({
   height = 260,
 }: Props) {
   const useWeeks = Boolean(treatmentStartIso);
-  const data = measurements
+  const dataAll = measurements
     .map((m) => {
       if (useWeeks && treatmentStartIso) {
         const w = toWeeks(treatmentStartIso, m.measured_at);
@@ -47,16 +47,24 @@ export function BiomarkerLineChart({
     })
     .filter((d): d is { x: number; value: number } => d !== null)
     .sort((a, b) => a.x - b.x);
+  // In weeks mode, drop pre-treatment points (x < 0) from the plot so
+  // the X axis can hard-clip at 0. In date mode the raw timestamp is
+  // always positive so nothing to filter.
+  const data = useWeeks ? dataAll.filter((d) => d.x >= 0) : dataAll;
+  const preTreatmentCount =
+    useWeeks ? dataAll.length - data.length : 0;
 
   if (data.length === 0) {
     return (
       <div className="rounded border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-        No measurements recorded yet.
+        {preTreatmentCount > 0
+          ? `${preTreatmentCount} pre-treatment measurement${preTreatmentCount === 1 ? "" : "s"} only — nothing to plot post-treatment yet.`
+          : "No measurements recorded yet."}
       </div>
     );
   }
 
-  const xMin = data[0].x;
+  const xMin = useWeeks ? 0 : data[0].x;
   const xMax = data[data.length - 1].x;
   const expectedBand =
     useWeeks &&
@@ -65,6 +73,7 @@ export function BiomarkerLineChart({
       expected.timeframe_weeks_max !== null);
 
   return (
+    <div className="space-y-2">
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -72,11 +81,23 @@ export function BiomarkerLineChart({
           dataKey="x"
           type="number"
           domain={[xMin, xMax]}
+          allowDataOverflow
           tickFormatter={(v) =>
             useWeeks ? `${v}w` : new Date(v).toLocaleDateString()
           }
           stroke="#64748b"
           fontSize={11}
+          label={
+            useWeeks
+              ? {
+                  value: "weeks since treatment start",
+                  position: "insideBottom",
+                  offset: -2,
+                  fontSize: 11,
+                  fill: "#64748b",
+                }
+              : undefined
+          }
         />
         <YAxis stroke="#64748b" fontSize={11} domain={["auto", "auto"]} />
         <Tooltip
@@ -118,5 +139,12 @@ export function BiomarkerLineChart({
         <Legend wrapperStyle={{ fontSize: 11 }} />
       </LineChart>
     </ResponsiveContainer>
+      {preTreatmentCount > 0 && (
+        <p className="px-1 text-xs leading-snug text-slate-500">
+          {preTreatmentCount} pre-treatment baseline measurement
+          {preTreatmentCount === 1 ? "" : "s"} not shown on the chart.
+        </p>
+      )}
+    </div>
   );
 }

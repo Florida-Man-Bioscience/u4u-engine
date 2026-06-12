@@ -46,13 +46,21 @@ export function PosteriorChart({
     );
   }
 
-  const scatter = measurements
+  const scatterAll = measurements
     .map((m) => {
       const w = toWeeks(treatmentStartIso, m.measured_at);
       return w === null ? null : { x: w, observed: m.value };
     })
     .filter((d): d is { x: number; observed: number } => d !== null)
     .sort((a, b) => a.x - b.x);
+  // X axis is "weeks since treatment start" — negative values would be
+  // pre-treatment baseline measurements. They still feed the Bayesian
+  // fit upstream of this chart, but plotting them would force Recharts
+  // to extend the visible axis below 0 (allowDataOverflow defaults to
+  // false), producing meaningless "-2w / -1w" ticks. Drop them from the
+  // plot and surface the count in the caption instead.
+  const preTreatmentCount = scatterAll.filter((p) => p.x < 0).length;
+  const scatter = scatterAll.filter((p) => p.x >= 0);
 
   const band =
     prediction?.posterior_predictive.points.map((p) => ({
@@ -160,6 +168,7 @@ export function PosteriorChart({
           dataKey="x"
           type="number"
           domain={[0, Math.ceil(xMax)]}
+          allowDataOverflow
           tickFormatter={(v) => `${v}w`}
           stroke="#64748b"
           fontSize={11}
@@ -358,6 +367,13 @@ export function PosteriorChart({
       </ComposedChart>
     </ResponsiveContainer>
       <div className="space-y-1 px-1 text-xs leading-snug text-slate-600">
+        {preTreatmentCount > 0 && (
+          <p className="text-slate-500">
+            {preTreatmentCount} pre-treatment baseline measurement
+            {preTreatmentCount === 1 ? "" : "s"} not shown on the chart
+            (still applied to the Bayesian fit).
+          </p>
+        )}
         {band.length > 0 && (
           <p className="flex items-start gap-2">
             <span
