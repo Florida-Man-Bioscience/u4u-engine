@@ -1,74 +1,53 @@
-# Reverse proxy for the whole stack — TWO public hosts:
+# Reverse proxy for the engine stack — ONE public host:
 #
-#   flmanbiosci.net (+ www)       → marketing site (fmb-website)
-#   app.flmanbiosci.net           → tracking app (Next.js frontend)
-#   app.flmanbiosci.net/api/*     → FastAPI api
+#   flmanbiosci.net (+ www → apex redirect)  → tracking app (Next.js frontend)
+#   flmanbiosci.net/api/v1/*                 → FastAPI api
 #
-# Each "site address" is env-driven so dev and prod can share one file.
-#
-#   Dev (default):
-#       MARKETING_ADDRESS=:80     APP_ADDRESS=:81
-#       Open http://localhost  and http://localhost:81
-#
-#   Prod (in .env):
-#       MARKETING_ADDRESS="flmanbiosci.net, www.flmanbiosci.net"
-#       APP_ADDRESS="app.flmanbiosci.net"
-#       Caddy auto-provisions Let's Encrypt for both.
+# Dev (default):   SITE_ADDRESS=:80    (open http://localhost)
+# Prod (.env):     SITE_ADDRESS="flmanbiosci.net, www.flmanbiosci.net"
+#                  Caddy auto-provisions Let's Encrypt for both.
 #
 # NOTE: For HTTP-01 ACME to work, point Cloudflare DNS at the VPS in
 # "DNS only" (grey cloud) mode. Orange-cloud proxying terminates TLS at
 # Cloudflare and blocks Let's Encrypt.
 
-# ───── Marketing site (apex + www) ─────
-{$MARKETING_ADDRESS::80} {
-    encode zstd gzip
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
 
-    @www host www.flmanbiosci.net
-    redir @www https://flmanbiosci.net{uri} permanent
+	@www host www.flmanbiosci.net
+	redir @www https://flmanbiosci.net{uri} permanent
 
-    reverse_proxy website:80
+	# Security headers — applied to every response from this host.
+	# frame-ancestors blocks clickjacking, which matters here because the
+	# /login page would otherwise be embeddable in a hostile iframe and
+	# used as a credential-phishing overlay. The other headers are
+	# defence-in-depth for a token-in-localStorage SPA.
+	header {
+		Content-Security-Policy "frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Tell upstream proxies the response varies on Authorization so
+		# they don't cache an authenticated response and serve it to
+		# the next, anonymous client.
+		Vary "Authorization"
+	}
 
-    log {
-        output stdout
-        format console
-    }
-}
+	# API: strip the /api/v1 prefix before proxying to FastAPI. The
+	# backend's routes live at /auth/*, /tracking/*, /jobs/*, etc — not
+	# under /api/v1 — so without ``handle_path`` (which matches AND
+	# strips the prefix), every request would 404. Authorization and
+	# other client headers pass through untouched.
+	handle_path /api/v1/* {
+		reverse_proxy api:8000
+	}
 
-# ───── Tracking app + API ─────
-{$APP_ADDRESS::81} {
-    encode zstd gzip
+	handle {
+		reverse_proxy frontend:3000
+	}
 
-    # Security headers — applied to every response from this host.
-    # frame-ancestors blocks clickjacking, which matters here because the
-    # /login page would otherwise be embeddable in a hostile iframe and
-    # used as a credential-phishing overlay. The other headers are
-    # defence-in-depth for a token-in-localStorage SPA.
-    header {
-        Content-Security-Policy "frame-ancestors 'none'"
-        X-Frame-Options "DENY"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        # Tell upstream proxies the response varies on Authorization so
-        # they don't cache an authenticated response and serve it to
-        # the next, anonymous client.
-        Vary "Authorization"
-    }
-
-    # API: strip the /api/v1 prefix before proxying to FastAPI. The
-    # backend's routes live at /auth/*, /tracking/*, /jobs/*, etc — not
-    # under /api/v1 — so without ``handle_path`` (which matches AND
-    # strips the prefix), every request would 404. Authorization and
-    # other client headers pass through untouched.
-    handle_path /api/v1/* {
-        reverse_proxy api:8000
-    }
-
-    handle {
-        reverse_proxy frontend:3000
-    }
-
-    log {
-        output stdout
-        format console
-    }
+	log {
+		output stdout
+		format console
+	}
 }

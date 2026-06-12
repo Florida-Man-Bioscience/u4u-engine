@@ -38,7 +38,7 @@ services:
     build:
       context: ./frontend
       args:
-        # In prod (behind the Caddy proxy at app.flmanbiosci.net) set
+        # In prod (behind the Caddy proxy at flmanbiosci.net) set
         # NEXT_PUBLIC_API_BASE=/api/v1 in .env so the browser calls the
         # same-origin /api/* path. Locally, keep it pointed at the api
         # container's host port so direct :3000 access still works.
@@ -68,10 +68,9 @@ services:
       - "8080:80"
     restart: unless-stopped
   proxy:
-    # Caddy reverse proxy in front of the whole stack.
-    #   http://localhost/           → website (marketing)
-    #   http://localhost/tracking   → frontend (Next.js)
-    #   http://localhost/api/...    → api (FastAPI)
+    # Caddy reverse proxy in front of the engine stack.
+    #   http://localhost/            → frontend (Next.js)
+    #   http://localhost/api/v1/...  → api (FastAPI)
     # The individual services' host port mappings above are kept so you
     # can still hit each one directly during debugging.
     #
@@ -81,22 +80,14 @@ services:
     image: caddy:2-alpine
     ports:
       - "80:80"
-      - "81:81"        # tracking app in dev mode (use APP_ADDRESS for prod)
       - "443:443"
       - "443:443/udp"  # HTTP/3
     environment:
-      MARKETING_ADDRESS: "${MARKETING_ADDRESS:-:80}"
-      APP_ADDRESS:       "${APP_ADDRESS:-:81}"
+      SITE_ADDRESS: "${SITE_ADDRESS:-:80}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    # Only the engine services are required. The marketing `website` is
-    # opt-in via the "marketing" profile, so it must NOT be a hard
-    # dependency here — otherwise compose refuses to start the proxy when
-    # the profile is inactive. Caddy resolves the `website` upstream
-    # lazily per-request, so the marketing host simply returns 502 when
-    # the site isn't running; the app host is unaffected.
     depends_on:
       - api
       - frontend
