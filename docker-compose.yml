@@ -44,11 +44,17 @@ services:
     build:
       context: ./frontend
       args:
-        # In prod (behind an external reverse proxy at flmanbiosci.net) set
-        # NEXT_PUBLIC_API_BASE=/api/v1 in .env so the browser calls the
-        # same-origin /api/* path. Locally, keep it pointed at the api
-        # container's host port so direct :3000 access still works.
-        NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-http://localhost:8000}"
+        # The app is served behind the Caddy proxy, which routes
+        # /api/v1/* to the api container on the SAME origin as the
+        # frontend. So the browser bundle must call the relative
+        # "/api/v1" path — not the api container's host port. Baking in
+        # http://localhost:8000 here would make the visitor's browser try
+        # to reach port 8000 on THEIR OWN machine (and trip CORS), which
+        # surfaces as "Load failed" on every request.
+        #
+        # Only override this when hitting the frontend directly on :3000
+        # and bypassing the proxy (dev): set NEXT_PUBLIC_API_BASE in .env.
+        NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-/api/v1}"
         # Keep the browser auth UI disabled by default to match the API's
         # open-demo mode (ALLOW_INSECURE_NO_AUTH above). Set to "0" in .env
         # — together with the backend auth vars — to turn on the login flow.
