@@ -409,6 +409,16 @@ def joint_fit_likelihood(
     # zero uncertainty even with a perfect fit.
     floor = (noise_pct / max(math.sqrt(n), 1.0)) ** 2
     sd_theta = math.sqrt(max(var_theta, floor, 1e-9))
+    # Bayesian-linear-regression with unknown σ has Student-t marginals,
+    # not Normal — with small n the χ² tails on σ² translate into fatter
+    # θ tails. The conjugate update downstream treats σ_θ as a Normal
+    # standard deviation; scaling by t_0.975(df) / z_0.975 makes the
+    # 95% interval that *would* be drawn at ±1.96·σ_θ instead match the
+    # honest t-interval. df = n − 2 because we fit two parameters
+    # (baseline and slope). Without this correction the calibration
+    # backtest under-covers θ at ~88% when n=5 and noise is low.
+    df = max(n - 2, 1)
+    sd_theta *= _t_inflation_factor(df)
 
     likelihood = Likelihood(
         mean_pct_change=theta_hat,
@@ -416,10 +426,54 @@ def joint_fit_likelihood(
         n_observations=n,
         baseline=b_hat,
     )
-    # Floor σ_b so a vanishing fit (or rounding to 0) doesn't claim
-    # zero baseline uncertainty when the data is sparse.
-    sd_baseline = math.sqrt(max(var_b, (0.02 * b_hat) ** 2))
+    # σ_b is taken straight from the joint posterior — no artificial
+    # floor. When the data identifies b precisely (e.g. a pre-baseline
+    # measurement at w≈0 pins it), the posterior σ_b is small and the
+    # predictive band correctly narrows. An earlier 2%-of-baseline floor
+    # caused the predictive band to over-cover (100% vs. nominal 95%)
+    # in the calibration backtest.
+    sd_baseline = math.sqrt(max(var_b, 1e-12))
     return JointFit(likelihood=likelihood, baseline=b_hat, baseline_sd=sd_baseline)
+
+
+# Student-t 0.975 quantile divided by Normal 0.975 quantile (≈1.96),
+# tabulated for small df. Above df=30 the ratio is within 4% of 1.0;
+# we return 1.0 there.
+_T_INFLATION_TABLE: dict[int, float] = {
+    1:  12.71  / _Z95,
+    2:   4.303 / _Z95,
+    3:   3.182 / _Z95,
+    4:   2.776 / _Z95,
+    5:   2.571 / _Z95,
+    6:   2.447 / _Z95,
+    7:   2.365 / _Z95,
+    8:   2.306 / _Z95,
+    9:   2.262 / _Z95,
+    10:  2.228 / _Z95,
+    12:  2.179 / _Z95,
+    15:  2.131 / _Z95,
+    20:  2.086 / _Z95,
+    25:  2.060 / _Z95,
+    30:  2.042 / _Z95,
+}
+
+
+def _t_inflation_factor(df: int) -> float:
+    """Return t_0.975(df) / Z_0.975, capped to ≥1.0 for very large df."""
+    if df >= 30:
+        return 1.0
+    if df in _T_INFLATION_TABLE:
+        return _T_INFLATION_TABLE[df]
+    # Linear interpolation between nearest tabulated points.
+    keys = sorted(_T_INFLATION_TABLE.keys())
+    for i in range(len(keys) - 1):
+        lo, hi = keys[i], keys[i + 1]
+        if lo < df < hi:
+            t_lo = _T_INFLATION_TABLE[lo]
+            t_hi = _T_INFLATION_TABLE[hi]
+            frac = (df - lo) / (hi - lo)
+            return t_lo + frac * (t_hi - t_lo)
+    return 1.0
 
 
 # ── Bayes-informed expected timeframe ───────────────────────────────────────

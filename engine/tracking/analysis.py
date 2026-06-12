@@ -442,6 +442,16 @@ def predict_response(
         # falls back to the old behaviour.
         baseline_sd = 0.0
 
+    # When a pre-treatment measurement directly pins b, propagating its
+    # joint-fit σ_b through ``predictive_curve`` ends up double-counting
+    # uncertainty already absorbed by σ_θ (via the delta-method in
+    # joint_fit_likelihood). The calibration backtest flagged this as
+    # 100% predictive-band coverage. Treat baseline as observed when we
+    # have pre-treatment samples; only carry σ_b forward when the fit
+    # had to infer baseline from post-treatment data alone.
+    if pre_baseline_values:
+        baseline_sd = 0.0
+
     posterior = bayes.update(
         prior_mean=prior_mean,
         prior_sd=prior_sd,
