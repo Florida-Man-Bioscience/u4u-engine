@@ -135,6 +135,21 @@ export function BayesianChartGuide() {
           before measurements. Comparing them to the solid posterior window
           shows how the data shifted the timing.
         </KeyItem>
+
+        <KeyItem
+          swatch={
+            <span
+              className="block h-3 w-6 rounded-sm"
+              style={{ backgroundColor: "#0f172a", opacity: 0.07 }}
+              aria-hidden
+            />
+          }
+        >
+          <strong>Projection region</strong> — weeks past the last measurement
+          (dashed vertical line marks the boundary). The model&apos;s prediction
+          extends here under the assumption the patient stays on the current
+          dose; nothing in this region is fitted to data.
+        </KeyItem>
       </div>
     </details>
   );

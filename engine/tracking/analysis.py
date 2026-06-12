@@ -490,12 +490,23 @@ def predict_response(
     )
 
     # ── Predictive trajectories ──
+    #
+    # Project past the last observation so the user sees where the
+    # marker is heading at the current dose, not just the fitted region.
+    # The horizon is the largest of:
+    #   - 52 weeks (one year — typical clinical follow-up window)
+    #   - 3·τ (~95% of asymptotic approach; lets the user see the plateau)
+    #   - last_observed_week + 16 (so projection always extends materially
+    #     past the most recent measurement)
+    # The grid stays dense early (when a(w) is changing fast) and sparse
+    # late (where the curve has plateaued and extra points add nothing).
     max_w = max((w for w, _ in observations), default=0.0)
-    cap = max(max_w + 8.0, (expected.timeframe_weeks_max or 12.0) if expected else 12.0)
+    cap = max(52.0, 3.0 * tau, max_w + 16.0)
     week_grid = [
         round(x, 2)
         for x in (
-            0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0, 26.0, 36.0, 52.0
+            0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0, 26.0,
+            36.0, 52.0, 78.0, 104.0,
         )
         if x <= cap
     ]
@@ -543,6 +554,10 @@ def predict_response(
         "tau_weeks": tau,
         "baseline": baseline,
         "n_measurements": len(observations),
+        # Last week with an observed measurement. Frontend uses this to
+        # visually distinguish the fitted region (≤ last_observed_week)
+        # from the forward projection. None when no measurements exist.
+        "last_observed_week": max_w if observations else None,
         "prior": prior.to_dict() if prior else None,
         "population_prior": (
             population_prior.to_dict() if population_prior else None

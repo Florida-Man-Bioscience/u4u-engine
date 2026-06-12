@@ -227,6 +227,9 @@ export interface PredictionResult {
   tau_weeks: number;
   baseline: number | null;
   n_measurements: number;
+  /** Last week with an observed measurement. Past this point the chart
+   *  is showing forward projection rather than fitted predictions. */
+  last_observed_week: number | null;
   prior: GeneticPrior | null;
   population_prior: PopulationPrior | null;
   likelihood: Likelihood | null;

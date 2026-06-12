@@ -107,6 +107,50 @@ export function PosteriorChart({
           labelFormatter={(v) => `${v} weeks`}
         />
         {(() => {
+          // Projection region — weeks past the last observed measurement.
+          // Rendered first so it sits behind everything; a light grey
+          // wash and a dashed vertical boundary mark "forward projection"
+          // so the user can distinguish it from the fitted region.
+          const lastObserved = prediction?.last_observed_week ?? null;
+          if (
+            lastObserved === null ||
+            lastObserved === undefined ||
+            lastObserved >= xMax
+          ) {
+            return null;
+          }
+          return (
+            <>
+              <ReferenceArea
+                x1={lastObserved}
+                x2={xMax}
+                fill="#0f172a"
+                fillOpacity={0.04}
+                stroke="none"
+                label={{
+                  value: "projection →",
+                  position: "insideTopRight",
+                  fill: "#64748b",
+                  fontSize: 10,
+                }}
+              />
+              <ReferenceLine
+                x={lastObserved}
+                stroke="#64748b"
+                strokeDasharray="2 4"
+                strokeWidth={1}
+                label={{
+                  value: "last measurement",
+                  position: "insideTop",
+                  fill: "#64748b",
+                  fontSize: 10,
+                  offset: 10,
+                }}
+              />
+            </>
+          );
+        })()}
+        {(() => {
           // Bayes-informed window from the posterior, with a dashed
           // outline of the prior-only window so the user can see how the
           // measurements shifted the expected timeframe. Falls back to

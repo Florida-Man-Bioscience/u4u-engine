@@ -210,6 +210,7 @@ export default function PatientDetail({
           const prediction = predictions[name] ?? null;
           const post = prediction?.posterior;
           const prior = prediction?.prior;
+          const cohort = prediction?.population_prior ?? null;
           return (
             <div key={name} className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="mb-2 flex items-baseline justify-between">
@@ -248,6 +249,27 @@ export default function PatientDetail({
                     </div>
                   </div>
                 </div>
+              )}
+              {cohort && prediction && (
+                <p className="mb-2 rounded border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs text-teal-900">
+                  <span className="font-medium">Cohort prior</span> —{" "}
+                  {cohort.n_donors} similar patient{cohort.n_donors === 1 ? "" : "s"}
+                  {" "}on {prediction.peptide}:{" "}
+                  <span className="font-mono">
+                    {(cohort.mean_pct_change * 100).toFixed(1)}% ± {(cohort.sd_pct_change * 100).toFixed(1)}%
+                  </span>
+                  {prior ? (
+                    <>
+                      {" "}(shifted genetic prior from{" "}
+                      <span className="font-mono">
+                        {(prior.mean_pct_change * 100).toFixed(1)}%
+                      </span>
+                      ).
+                    </>
+                  ) : (
+                    "."
+                  )}
+                </p>
               )}
               {start ? (
                 <PosteriorChart
