@@ -200,6 +200,23 @@ export interface ExpectedWindow {
   plateau_fraction: number;
 }
 
+/**
+ * Empirical-Bayes population prior derived from a leave-one-out cohort
+ * of patients on the same (peptide, biomarker). When fewer than the
+ * minimum number of donors contribute, or the cohort's spread is fully
+ * explained by individual fit noise, this is null and the genetic prior
+ * is used unchanged.
+ */
+export interface PopulationPrior {
+  peptide: string;
+  biomarker: string;
+  n_donors: number;
+  mean_pct_change: number;
+  sd_pct_change: number;
+  raw_total_sd: number;
+  mean_within_sd: number;
+}
+
 export interface PredictionResult {
   patient_id: string;
   peptide: string;
@@ -211,6 +228,7 @@ export interface PredictionResult {
   baseline: number | null;
   n_measurements: number;
   prior: GeneticPrior | null;
+  population_prior: PopulationPrior | null;
   likelihood: Likelihood | null;
   posterior: Posterior;
   posterior_predictive: PredictiveCurve;

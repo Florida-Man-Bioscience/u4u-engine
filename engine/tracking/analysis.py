@@ -23,7 +23,7 @@ from typing import Any
 from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
-from . import bayes, service
+from . import bayes, pooling, service
 from .biomarker_params import expected_pct_change, params_for
 from .genetics import GeneticProfile, derive_prior
 
@@ -420,6 +420,37 @@ def predict_response(
             baseline_prior_mean = observed_baseline
             baseline_prior_sd = max(observed_baseline * 0.08, 0.5)
 
+    # Empirical-Bayes pooling: refine the genetic prior with cohort-derived
+    # evidence of how other patients on this (peptide, biomarker) actually
+    # respond. The donor pool excludes this patient (leave-one-out), so the
+    # combined prior is honest about what we know *before* seeing the
+    # patient's own data. With < pooling.MIN_DONORS donors or a degenerate
+    # cohort, ``estimate_population_prior`` returns None and ``combine_priors``
+    # is a no-op.
+    donors = pooling.collect_donor_fits(
+        conn,
+        peptide_name=peptide_name,
+        biomarker_name=biomarker_name,
+        tau_weeks=tau,
+        baseline_prior_mean=(
+            panel_params.baseline if panel_params.baseline > 0 else 100.0
+        ),
+        baseline_prior_sd=max(
+            abs(panel_params.baseline if panel_params.baseline > 0 else 100.0) * 0.30,
+            1.0,
+        ),
+        noise_pct=panel_params.noise_pct,
+        exclude_patient_id=patient_id,
+    )
+    population_prior = pooling.estimate_population_prior(
+        donors, peptide=peptide_name, biomarker=biomarker_name,
+    )
+    prior_mean, prior_sd = pooling.combine_priors(
+        genetic_mean=prior_mean,
+        genetic_sd=prior_sd,
+        population=population_prior,
+    )
+
     fit = (
         bayes.joint_fit_likelihood(
             observations=observations,
@@ -513,6 +544,9 @@ def predict_response(
         "baseline": baseline,
         "n_measurements": len(observations),
         "prior": prior.to_dict() if prior else None,
+        "population_prior": (
+            population_prior.to_dict() if population_prior else None
+        ),
         "likelihood": likelihood.to_dict() if likelihood else None,
         "posterior": posterior.to_dict(),
         "posterior_predictive": posterior_predictive.to_dict(),
