@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { AddMeasurementForm } from "../../components/AddMeasurementForm";
 import { AddTreatmentForm } from "../../components/AddTreatmentForm";
+import { BayesianChartGuide } from "../../components/BayesianChartGuide";
 import { BiomarkerLineChart } from "../../components/BiomarkerLineChart";
 import { GeneticsCard } from "../../components/GeneticsCard";
 import { PosteriorChart } from "../../components/PosteriorChart";
@@ -199,6 +200,7 @@ export default function PatientDetail({
         <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
           Longitudinal charts ({grouped.length})
         </h2>
+        {grouped.length > 0 && <BayesianChartGuide />}
         {grouped.length === 0 && (
           <p className="text-sm text-slate-500">No measurements yet.</p>
         )}
