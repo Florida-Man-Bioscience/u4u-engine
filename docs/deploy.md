@@ -98,6 +98,48 @@ curl -I https://app.flmanbiosci.net/     # tracking app
 curl -I https://app.flmanbiosci.net/api/v1/health
 ```
 
+## 6a. Authentication model
+
+The API has two parallel auth mechanisms; either grants access to every
+protected endpoint.
+
+**Session tokens** (intended for human users via the web UI):
+- `AUTH_BOOTSTRAP_USERNAME` + `AUTH_BOOTSTRAP_PASSWORD` seed a single
+  admin account the first time the API starts against an empty
+  `data/auth.db`. **Editing these env vars later does NOT rotate the
+  password** — by design, so anyone with deploy access can't silently
+  take over a live account.
+- The user signs in at `https://app.flmanbiosci.net/login`, the frontend
+  stores the returned bearer token in `localStorage`, and every API
+  call afterwards attaches it as `Authorization: Bearer …`.
+- Tokens last 7 days (override with `AUTH_SESSION_TTL_DAYS`).
+- `/auth/login` is rate-limited at 10 attempts per 5 minutes per IP
+  (via `X-Forwarded-For` from Caddy). Hitting the limit returns 429
+  with a `Retry-After` header.
+- To change the password, the operator signs in and visits
+  `https://app.flmanbiosci.net/account`. The change revokes every
+  active session for the user; the page automatically swaps in the
+  freshly-minted token so the operator stays signed in.
+- Lost password recovery: stop the api container, delete
+  `data/auth.db`, restart. The bootstrap will re-seed using the
+  current env values. Any active sessions are lost.
+
+**API keys** (intended for service-to-service calls):
+- `API_KEYS=k1,k2,…` accepts either header form:
+  `Authorization: Bearer k1` or `X-API-Key: k1`.
+- API-key callers have no user context — `/auth/me` returns the
+  `via: "api_key"` sentinel and `/auth/password` refuses them with 403.
+
+**Fail-closed semantics:**
+- With neither `API_KEYS` set nor any users in the DB, protected
+  endpoints return **503** ("Authentication is not configured on this
+  server"). This is the truthful response: there is no way to
+  authenticate, so the server can't accept anyone.
+- With users (or keys) present but no/bad credentials on the request,
+  endpoints return **401**.
+- For local development only, `ALLOW_INSECURE_NO_AUTH=1` skips the
+  middleware. Never set this in production.
+
 ## 7. Updates
 
 Pull and rebuild the changed service:
