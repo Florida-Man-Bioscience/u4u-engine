@@ -4,6 +4,12 @@
 #   docker compose up --build
 #   curl http://localhost:8000/health
 #   curl -X POST http://localhost:8000/analyze -F "file=@your_file.vcf"
+#
+# This file does NOT include a reverse proxy. The production deploy is
+# expected to run its own TLS-terminating proxy (Caddy, nginx, Cloudflare
+# Tunnel, etc.) in front of these containers — it must route
+# /api/v1/* (prefix-stripped) to api:8000 and everything else to
+# frontend:3000.
 
 services:
   api:
@@ -58,56 +64,3 @@ services:
     depends_on:
       - api
     restart: unless-stopped
-  website:
-    # Marketing site (flmanbiosci.net) — lives in a SEPARATE repo at
-    # ../fmb-website and is NOT part of the PeptOdyssey engine deployment.
-    # It is gated behind the "marketing" compose profile so the engine
-    # stack (api + frontend + proxy) builds and starts on its own with a
-    # plain `docker compose up --build`, without requiring the sibling
-    # repo to be cloned. To run the marketing site too, clone
-    # ../fmb-website and start with:
-    #     docker compose --profile marketing up --build
-    profiles: ["marketing"]
-    build:
-      context: ../fmb-website
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-  proxy:
-    # Caddy reverse proxy in front of the whole stack.
-    #   http://localhost/           → website (marketing)
-    #   http://localhost/tracking   → frontend (Next.js)
-    #   http://localhost/api/...    → api (FastAPI)
-    # The individual services' host port mappings above are kept so you
-    # can still hit each one directly during debugging.
-    #
-    # For production set SITE_ADDRESS in .env (e.g.
-    #   SITE_ADDRESS=flmanbiosci.net, www.flmanbiosci.net
-    # ) and Caddy will auto-provision Let's Encrypt certs on port 443.
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "81:81"        # tracking app in dev mode (use APP_ADDRESS for prod)
-      - "443:443"
-      - "443:443/udp"  # HTTP/3
-    environment:
-      MARKETING_ADDRESS: "${MARKETING_ADDRESS:-:80}"
-      APP_ADDRESS:       "${APP_ADDRESS:-:81}"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    # Only the engine services are required. The marketing `website` is
-    # opt-in via the "marketing" profile, so it must NOT be a hard
-    # dependency here — otherwise compose refuses to start the proxy when
-    # the profile is inactive. Caddy resolves the `website` upstream
-    # lazily per-request, so the marketing host simply returns 502 when
-    # the site isn't running; the app host is unaffected.
-    depends_on:
-      - api
-      - frontend
-    restart: unless-stopped
-
-volumes:
-  caddy_data:
-  caddy_config:

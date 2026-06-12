@@ -101,6 +101,21 @@ class PredictiveCurve:
 
 
 @dataclass(frozen=True)
+class JointFit:
+    """Return shape of :func:`joint_fit_likelihood`.
+
+    ``likelihood`` is the marginal likelihood on θ for the conjugate
+    update. ``baseline`` and ``baseline_sd`` are the posterior mean and
+    SD of ``b`` — exposed so :func:`predictive_curve` can carry baseline
+    uncertainty into the credible bands when no pre-treatment sample was
+    available.
+    """
+    likelihood: "Likelihood"
+    baseline: float
+    baseline_sd: float
+
+
+@dataclass(frozen=True)
 class ExpectedWindow:
     """Bayes-informed window in which the biomarker is expected to change.
 
@@ -227,14 +242,33 @@ def predictive_curve(
     posterior: Posterior,
     tau_weeks: float,
     week_grid: Sequence[float],
+    baseline_sd: float = 0.0,
 ) -> PredictiveCurve:
-    """Project the posterior on θ forward through the approach curve, producing
-    a mean trajectory in value-space with a 95% credible band."""
+    """Project the posterior on θ forward through the approach curve,
+    producing a mean trajectory in value-space with a 95% credible band.
+
+    When ``baseline_sd > 0`` the band also incorporates baseline
+    uncertainty — appropriate when the baseline was estimated from the
+    measurements themselves rather than measured pre-treatment. The
+    decomposition treats baseline and θ as independent (a conservative
+    overstatement of uncertainty post-update) and propagates::
+
+        V(w) = b · (1 + θ · a(w))
+        Var(V) ≈ σ_b² · (1 + μ_θ · a)² + b² · a² · σ_θ²
+
+    With ``baseline_sd = 0`` (the default and pre-existing behaviour),
+    the band shrinks to ±1.96 · |b| · a(w) · σ_θ — the old formula.
+    """
     pts: list[PredictivePoint] = []
+    sigma_b2 = baseline_sd ** 2
     for w in week_grid:
         a = approach(w, tau_weeks)
         mean_val = baseline * (1.0 + posterior.mean_pct_change * a)
-        delta = _Z95 * abs(baseline) * a * posterior.sd_pct_change
+        var_v = (
+            sigma_b2 * (1.0 + posterior.mean_pct_change * a) ** 2
+            + (baseline ** 2) * (a ** 2) * (posterior.sd_pct_change ** 2)
+        )
+        delta = _Z95 * math.sqrt(max(var_v, 0.0))
         pts.append(PredictivePoint(
             weeks_since_start=w,
             mean=mean_val,
@@ -267,7 +301,7 @@ def joint_fit_likelihood(
     baseline_prior_sd: float,
     noise_pct: float = 0.10,
     min_weeks: float = 0.0,
-) -> tuple[Likelihood, float] | None:
+) -> JointFit | None:
     """Jointly estimate baseline ``b`` and θ from raw measurements.
 
     Model
@@ -382,7 +416,10 @@ def joint_fit_likelihood(
         n_observations=n,
         baseline=b_hat,
     )
-    return likelihood, b_hat
+    # Floor σ_b so a vanishing fit (or rounding to 0) doesn't claim
+    # zero baseline uncertainty when the data is sparse.
+    sd_baseline = math.sqrt(max(var_b, (0.02 * b_hat) ** 2))
+    return JointFit(likelihood=likelihood, baseline=b_hat, baseline_sd=sd_baseline)
 
 
 # ── Bayes-informed expected timeframe ───────────────────────────────────────

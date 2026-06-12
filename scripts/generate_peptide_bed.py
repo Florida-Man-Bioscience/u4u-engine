@@ -13,7 +13,8 @@ TARGET_GENES = [
     "TERT",                       # Longevity
     "TLR2", "TLR4", "TLR9",       # Immune
     "IRF4",                       # Skin
-    "SNAP25", "SV2C"              # Neuromodulation
+    "SNAP25", "SV2C",             # Neuromodulation
+    "GLP1R", "GIPR", "TCF7L2"     # GLP-1 / incretin (Semaglutide, Tirzepatide, Liraglutide)
 ]
 # Not resolving mtDNA m.1382A>C (MT-RNR1) via Ensembl directly for now, 
 # as mitochondrial variants are often handled differently in generic pipelines.

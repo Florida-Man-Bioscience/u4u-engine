@@ -18,8 +18,7 @@
 export const TOKEN_KEY = "u4u_token";
 export const LOGIN_PATH = "/login";
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "https://app.flmanbiosci.net/api/v1";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api/v1";
 
 // Build-time escape hatch — when NEXT_PUBLIC_AUTH_DISABLED=1 is passed in,
 // 401 responses do NOT clear the token or bounce to /login. Used together
