@@ -431,9 +431,16 @@ def predict_response(
         if observations else None
     )
     if fit is not None:
-        likelihood, baseline = fit
+        likelihood = fit.likelihood
+        baseline = fit.baseline
+        baseline_sd = fit.baseline_sd
     else:
-        likelihood, baseline = None, bayes.estimate_baseline(observations)
+        likelihood = None
+        baseline = bayes.estimate_baseline(observations)
+        # No fit → baseline came from a single measurement (or panel
+        # fallback); treat it as deterministic so the predictive curve
+        # falls back to the old behaviour.
+        baseline_sd = 0.0
 
     posterior = bayes.update(
         prior_mean=prior_mean,
@@ -460,11 +467,14 @@ def predict_response(
             posterior=posterior,
             tau_weeks=tau,
             week_grid=week_grid,
+            baseline_sd=baseline_sd,
         )
         if baseline is not None else bayes.PredictiveCurve(points=[])
     )
 
-    # Prior-only predictive: posterior == prior (no likelihood)
+    # Prior-only predictive: posterior == prior (no likelihood). Carry
+    # the prior's own baseline uncertainty (the panel-prior SD) so the
+    # dashed prior curve doesn't claim more precision than the data did.
     prior_only = bayes.update(prior_mean=prior_mean, prior_sd=prior_sd, likelihood=None)
     prior_predictive = (
         bayes.predictive_curve(
@@ -472,6 +482,7 @@ def predict_response(
             posterior=prior_only,
             tau_weeks=tau,
             week_grid=week_grid,
+            baseline_sd=baseline_prior_sd if observations else 0.0,
         )
         if baseline is not None else bayes.PredictiveCurve(points=[])
     )

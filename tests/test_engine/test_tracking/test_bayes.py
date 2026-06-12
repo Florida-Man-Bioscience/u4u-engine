@@ -114,9 +114,12 @@ def test_joint_fit_recovers_theta_without_pre_baseline():
         noise_pct=0.06,
     )
     assert fit is not None
-    lik, baseline_hat = fit
+    lik, baseline_hat = fit.likelihood, fit.baseline
     assert abs(lik.mean_pct_change - theta_true) < 0.10
     assert abs(baseline_hat - baseline_true) / baseline_true < 0.15
+    # Joint fit should expose a positive baseline SD (we estimated b
+    # rather than observed it directly).
+    assert fit.baseline_sd > 0
 
 
 def test_joint_fit_uses_pre_baseline_measurement():
@@ -137,7 +140,7 @@ def test_joint_fit_uses_pre_baseline_measurement():
         noise_pct=0.06,
     )
     assert fit is not None
-    lik, baseline_hat = fit
+    lik, baseline_hat = fit.likelihood, fit.baseline
     assert abs(lik.mean_pct_change - theta_true) < 0.03
     assert abs(baseline_hat - baseline_true) < 2.0
 
@@ -164,7 +167,7 @@ def test_joint_fit_handles_noisy_data_without_pre_baseline():
         noise_pct=0.05,
     )
     assert fit is not None
-    lik, _ = fit
+    lik = fit.likelihood
     assert 0.30 <= lik.mean_pct_change <= 0.70, (
         f"θ̂={lik.mean_pct_change:.3f}, want ~0.50"
     )
@@ -248,3 +251,27 @@ def test_predictive_curve_grows_with_approach():
     widths = [p.hi_95 - p.lo_95 for p in curve.points]
     assert widths[0] == 0  # a(0)=0 → band width zero
     assert widths[-1] > 0
+
+
+def test_predictive_curve_widens_when_baseline_is_uncertain():
+    """When the joint fit estimated baseline (vs. observed it directly),
+    its uncertainty should propagate into the predictive band — at week
+    0 the band reflects baseline-only uncertainty (previously zero)."""
+    post = update(prior_mean=0.3, prior_sd=0.05, likelihood=None)
+    tight = predictive_curve(
+        baseline=100.0, posterior=post, tau_weeks=4.0,
+        week_grid=[0.0, 4.0, 24.0],
+        baseline_sd=0.0,
+    )
+    loose = predictive_curve(
+        baseline=100.0, posterior=post, tau_weeks=4.0,
+        week_grid=[0.0, 4.0, 24.0],
+        baseline_sd=10.0,
+    )
+    # Old behaviour: a(0)=0 → exactly zero width at week 0.
+    assert tight.points[0].hi_95 - tight.points[0].lo_95 == 0
+    # New behaviour: baseline uncertainty alone produces width > 0 at w=0.
+    assert loose.points[0].hi_95 - loose.points[0].lo_95 > 0
+    # And the band is wider than the deterministic version everywhere.
+    for tw, lw in zip(tight.points, loose.points):
+        assert (lw.hi_95 - lw.lo_95) >= (tw.hi_95 - tw.lo_95) - 1e-9
