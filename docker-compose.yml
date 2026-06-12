@@ -25,16 +25,6 @@ services:
       # start. Idempotent: skipped on restart if patients already exist.
       # Unset (or remove this line) to keep tracking empty in production.
       SEED_DEMO_DATA: "1"
-      # Auth runs OPEN by default so the engine deploys as a self-contained
-      # demo with a plain `docker compose up --build` (the frontend image
-      # also ships with its auth UI disabled — see NEXT_PUBLIC_AUTH_DISABLED
-      # below). Genome/results endpoints are unauthenticated in this mode —
-      # safe for local/dev/demo, NOT for a public PHI deployment.
-      # To enable real auth, set in .env:
-      #   ALLOW_INSECURE_NO_AUTH=0
-      #   NEXT_PUBLIC_AUTH_DISABLED=0
-      #   AUTH_BOOTSTRAP_USERNAME=... AUTH_BOOTSTRAP_PASSWORD=...   (or API_KEYS=...)
-      ALLOW_INSECURE_NO_AUTH: "${ALLOW_INSECURE_NO_AUTH:-1}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
@@ -44,21 +34,18 @@ services:
     build:
       context: ./frontend
       args:
-        # The app is served behind the Caddy proxy, which routes
+        # The app is served behind an external reverse proxy that routes
         # /api/v1/* to the api container on the SAME origin as the
-        # frontend. So the browser bundle must call the relative
-        # "/api/v1" path — not the api container's host port. Baking in
-        # http://localhost:8000 here would make the visitor's browser try
-        # to reach port 8000 on THEIR OWN machine (and trip CORS), which
-        # surfaces as "Load failed" on every request.
+        # frontend, so the browser bundle must call the relative
+        # "/api/v1" path. Baking in http://localhost:8000 here would
+        # make the visitor's browser try to reach port 8000 on THEIR
+        # OWN machine (and trip CORS), surfacing as "Load failed" on
+        # every request.
         #
-        # Only override this when hitting the frontend directly on :3000
-        # and bypassing the proxy (dev): set NEXT_PUBLIC_API_BASE in .env.
+        # When hitting the frontend directly on :3000 in local dev
+        # (bypassing any proxy), set NEXT_PUBLIC_API_BASE=http://localhost:8000
+        # in .env to point the bundle at the api container's host port.
         NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-/api/v1}"
-        # Keep the browser auth UI disabled by default to match the API's
-        # open-demo mode (ALLOW_INSECURE_NO_AUTH above). Set to "0" in .env
-        # — together with the backend auth vars — to turn on the login flow.
-        NEXT_PUBLIC_AUTH_DISABLED: "${NEXT_PUBLIC_AUTH_DISABLED:-1}"
     ports:
       - "3000:3000"
     depends_on:

@@ -25,12 +25,6 @@ COPY . .
 ARG NEXT_PUBLIC_API_BASE=/api/v1
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 
-# Temporary demo escape hatch: set to "1" to short-circuit RequireAuth and
-# the 401-redirect-to-/login behaviour in the browser bundle. Pair with
-# ALLOW_INSECURE_NO_AUTH=1 on the backend. Flip back to "0" to re-enable.
-ARG NEXT_PUBLIC_AUTH_DISABLED=1
-ENV NEXT_PUBLIC_AUTH_DISABLED=$NEXT_PUBLIC_AUTH_DISABLED
-
 RUN npm run build
 
 # Production image, copy all the files and run next

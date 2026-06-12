@@ -8,9 +8,6 @@ import type {
 } from "./types";
 import { authFetch, openAuthXhr } from "./authFetch";
 
-// Thin wrapper kept for the export surface — all real work happens in
-// authFetch, which attaches the bearer token and redirects to /login on
-// 401. Other modules can switch to authFetch directly when convenient.
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return authFetch<T>(path, options);
 }
@@ -54,9 +51,6 @@ export function analyzeFile(
     const form = new FormData();
     form.append("file", file);
 
-    // openAuthXhr() attaches the bearer token and wires the 401 →
-    // clear+redirect-to-/login behaviour so file uploads share the same
-    // auth surface as regular fetch calls.
     const xhr = openAuthXhr("POST", `/analyze${qs}`);
 
     xhr.upload.onprogress = (e) => {

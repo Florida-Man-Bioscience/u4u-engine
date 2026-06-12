@@ -374,8 +374,6 @@ Open **http://localhost:3000** in your browser to access the genome analysis UI.
 | `WORKERS` | `4` | Thread pool size for concurrent pipeline runs |
 | `MAX_UPLOAD_MB` | `100` | Maximum upload file size in megabytes |
 | `JOB_TTL_HOURS` | `24` | Hours to keep completed jobs in memory |
-| `API_KEYS` / `API_KEY` | _(none)_ | Comma-separated API keys. All endpoints except `/health` require one (`Authorization: Bearer <key>` or `X-API-Key`). Fails closed when unset. |
-| `ALLOW_INSECURE_NO_AUTH` | `0` | Dev/test only — disables auth. Never enable in production. |
 | `JOB_STORE_KEY` | _(none)_ | Fernet key to encrypt the on-disk job store. Without it, results are kept in memory only (never written as plaintext). |
 | `PGX_CONFORMAL_CALIBRATION` | `data/pgx/conformal_calibration.json` | Path to a validated PGx conformal calibration set. Without it, drug-response predictions are returned as `uncalibrated`. |
 | `ENABLE_LIFTOVER` | `0` | When `1`, lift GRCh37 coordinate files to GRCh38 instead of rejecting them (requires the optional `pyliftover` package). |

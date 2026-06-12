@@ -33,7 +33,6 @@ ALLOWED_ORIGINS — comma-separated CORS origins for browser clients
 """
 
 import asyncio
-import hmac
 import json
 import logging
 import os
@@ -72,15 +71,6 @@ FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-# ── Authentication ─────────────────────────────────────────────────────────
-# All endpoints except /health require a valid API key (Authorization: Bearer
-# <key> or X-API-Key: <key>). The service fails CLOSED: if no keys are
-# configured it refuses protected requests, unless ALLOW_INSECURE_NO_AUTH is
-# explicitly set for local development/testing.
-_raw_keys = os.getenv("API_KEYS", os.getenv("API_KEY", "")).strip()
-API_KEYS = {k.strip() for k in _raw_keys.split(",") if k.strip()}
-ALLOW_INSECURE_NO_AUTH = os.getenv("ALLOW_INSECURE_NO_AUTH", "").lower() in ("1", "true", "yes", "on")
-
 # ── Job-store encryption ───────────────────────────────────────────────────
 # Completed job results are derived from the user's genome (variants,
 # genotypes, conditions) and are therefore sensitive. They are only persisted
@@ -114,17 +104,6 @@ if not PERSIST_ENABLED:
         "unavailable). Genomic-derived results are kept in memory only and lost on "
         "restart. Set JOB_STORE_KEY to a Fernet key to enable encrypted persistence."
     )
-if not API_KEYS and not ALLOW_INSECURE_NO_AUTH:
-    log.warning(
-        "No API_KEYS configured — protected endpoints will reject all requests "
-        "until keys are set (or ALLOW_INSECURE_NO_AUTH is enabled for dev)."
-    )
-
-
-def _valid_api_key(provided: str) -> bool:
-    """Constant-time membership check against the configured API keys."""
-    return any(hmac.compare_digest(provided, k) for k in API_KEYS)
-
 # ── App ───────────────────────────────────────────────────────────────────────
 
 from contextlib import asynccontextmanager
@@ -135,31 +114,18 @@ async def _lifespan(app: FastAPI):
     """Startup + shutdown hooks. Replaces the deprecated
     ``@app.on_event("startup")`` pattern."""
     _load_jobs_from_disk()
-    # Seed the initial admin user from env vars if the users table is
-    # empty. Seed-only-on-empty: subsequent env changes do not rotate
-    # credentials. See engine/auth/service.bootstrap_admin for rationale.
-    try:
-        from engine.auth import db as _auth_db, service as _auth_service
-        seeded = _auth_service.bootstrap_admin(_auth_db.get_conn())
-        if seeded is not None:
-            log.info("auth: bootstrapped admin user '%s' from env", seeded.username)
-    except Exception:
-        log.exception("auth: bootstrap failed")
-
     cleanup_task = asyncio.create_task(_cleanup_old_jobs())
-    purge_task = asyncio.create_task(_purge_expired_sessions_loop())
     try:
         yield
     finally:
         # Tear down background tasks cleanly on shutdown so tests and
         # graceful restarts don't leak "Task was destroyed but it is
         # pending" warnings.
-        for task in (cleanup_task, purge_task):
-            task.cancel()
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 app      = FastAPI(
@@ -178,78 +144,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
-
-# ── Authentication middleware ──────────────────────────────────────────────
-# /auth/login is exempt so a fresh client can obtain a session token; every
-# other /auth/* endpoint still requires authentication.
-_AUTH_EXEMPT_PATHS = {
-    "/health", "/", "/docs", "/redoc", "/openapi.json", "/auth/login",
-}
-
-
-@app.middleware("http")
-async def _auth_middleware(request, call_next):
-    path = request.url.path
-    # Allow CORS preflight and unauthenticated liveness/docs.
-    if request.method == "OPTIONS" or path in _AUTH_EXEMPT_PATHS:
-        return await call_next(request)
-    if ALLOW_INSECURE_NO_AUTH:
-        return await call_next(request)
-
-    # Two parallel auth paths:
-    #   1. ``API_KEYS`` — service-to-service shared secrets (Bearer or
-    #      X-API-Key), checked first because it's a cheap constant-time
-    #      compare with no DB hit.
-    #   2. Session tokens minted by /auth/login — checked when the API
-    #      key path doesn't match, so end-user browsers can call the API
-    #      after logging in.
-    # The server fails closed only if neither mechanism is configured.
-    from engine.auth import db as _auth_db, service as _auth_service  # local import to avoid cycles
-
-    auth_header = request.headers.get("authorization", "")
-    bearer = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
-    api_key_header = request.headers.get("x-api-key", "").strip()
-    provided = bearer or api_key_header
-
-    if API_KEYS and provided and _valid_api_key(provided):
-        request.state.auth_user = None  # service-to-service caller
-        return await call_next(request)
-
-    if bearer:
-        try:
-            conn = _auth_db.get_conn()
-            session_user = _auth_service.get_session_user(conn, bearer)
-        except Exception:
-            log.exception("auth: session lookup failed")
-            session_user = None
-        if session_user is not None:
-            request.state.auth_user = session_user
-            return await call_next(request)
-
-    # Neither path matched.
-    if not API_KEYS and not _has_any_user():
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "Authentication is not configured on this server."},
-        )
-    return JSONResponse(
-        status_code=401, content={"detail": "Missing or invalid credentials."},
-    )
-
-
-def _has_any_user() -> bool:
-    """Return True if at least one user account exists. Used to decide
-    503 vs 401: a freshly-deployed server with no users and no API keys
-    can't accept any login, so 503 is the truthful response."""
-    try:
-        from engine.auth import db as _auth_db, service as _auth_service
-        return _auth_service.count_users(_auth_db.get_conn()) > 0
-    except Exception:
-        return False
-
-# ── Auth router (username/password login → opaque session token) ────────────
-from engine.auth.api import router as _auth_router  # noqa: E402
-app.include_router(_auth_router)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
 from engine.tracking.api import router as _tracking_router  # noqa: E402
@@ -482,28 +376,6 @@ async def _cleanup_old_jobs():
                 _persist_jobs_locked()
         if expired:
             log.info("cleanup: removed %d expired jobs", len(expired))
-
-
-async def _purge_expired_sessions_loop() -> None:
-    """Hourly housekeeping for the sessions table.
-
-    Expired tokens are also dropped on read by ``get_session_user``, but
-    that only catches sessions someone actually tries to use again. A
-    token that was issued and then the user closed the tab on stays in
-    the table forever without this loop. Hourly is plenty — the table
-    is tiny and SQLite handles a few-second blocking sweep easily.
-    """
-    from engine.auth import db as _auth_db, service as _auth_service
-    while True:
-        try:
-            await asyncio.sleep(3600)
-            n = _auth_service.purge_expired_sessions(_auth_db.get_conn())
-            if n:
-                log.info("auth: purged %d expired sessions", n)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            log.exception("auth: session purge failed")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────

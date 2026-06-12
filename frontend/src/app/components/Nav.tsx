@@ -1,10 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useAuth } from "../lib/auth";
 
 export function Nav() {
-  const { user, logout, loading } = useAuth();
   return (
     <header className="bg-[#0d1117] border-b border-[#1a6b4a]/30">
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
@@ -46,34 +42,6 @@ export function Nav() {
           >
             New Analysis
           </Link>
-          {!loading &&
-            (user ? (
-              <>
-                <Link
-                  href="/account"
-                  className="text-zinc-400 hover:text-white transition-colors"
-                  title={`Signed in as ${user.username}`}
-                >
-                  Account
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void logout();
-                  }}
-                  className="text-zinc-400 hover:text-white transition-colors"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="text-zinc-400 hover:text-white transition-colors"
-              >
-                Sign in
-              </Link>
-            ))}
         </nav>
       </div>
     </header>
