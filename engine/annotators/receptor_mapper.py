@@ -109,6 +109,26 @@ RECEPTOR_REGISTRY: dict[str, dict] = {
             "rs3765467": {"direction": "down", "magnitude": "moderate", "isoform_shift": None},
         },
     },
+    "GIPR": {
+        "full_name": "GIP Receptor",
+        "pathway": "Incretin Signaling",
+        "peptide_relevance": [
+            "Tirzepatide (dual GLP-1/GIP)",
+            "GIP receptor co-agonists",
+        ],
+        "isoforms": [
+            {
+                "name": "GIPR-FL",
+                "description": "Full-length membrane receptor",
+                "function": "Incretin signaling; insulin secretion; adipose nutrient handling",
+                "default_expression": "NORMAL",
+            },
+        ],
+        "expression_modifiers": {
+            "rs1800437": {"direction": "down", "magnitude": "moderate", "isoform_shift": None},
+            "rs10423928": {"direction": "down", "magnitude": "mild", "isoform_shift": None},
+        },
+    },
     "MC4R": {
         "full_name": "Melanocortin-4 Receptor",
         "pathway": "Melanocortin Signaling",

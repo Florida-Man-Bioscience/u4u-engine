@@ -3,17 +3,17 @@
   "last_curated": "2026-06-08",
   "categories": {
     "cat1": {
-      "label": "Category 1 — Legal for 503A Compounding",
+      "label": "Category 1 \u2014 Legal for 503A Compounding",
       "color": "green",
       "description": "On the FDA's 503A Bulks List; eligible for compounding by 503A pharmacies."
     },
     "cat2": {
-      "label": "Category 2 — Active Enforcement Prohibition",
+      "label": "Category 2 \u2014 Active Enforcement Prohibition",
       "color": "red",
       "description": "FDA has identified significant safety risks; compounding is prohibited and enforcement is active."
     },
     "removed_from_cat2": {
-      "label": "Removed from Category 2 — Awaiting PCAC Review",
+      "label": "Removed from Category 2 \u2014 Awaiting PCAC Review",
       "color": "purple",
       "description": "Removed from Category 2 in April 2026 (Federal Register Doc. 2026-07361). Legal status is unsettled until FDA places them on or off the 503A Bulks List."
     },
@@ -26,21 +26,45 @@
       "label": "Unscheduled by FDA",
       "color": "gray",
       "description": "Not currently on the 503A Bulks List or Category 2. Status is research-use or cosmetic; not a sterile-compounded medspa peptide."
+    },
+    "fda_approved": {
+      "label": "FDA-Approved Drug",
+      "color": "blue",
+      "description": "Approved by the FDA as a finished drug product. Not a 503A bulk substance; compounding is generally limited to documented shortages."
     }
   },
   "peptides": [
     {
       "slug": "bpc-157",
       "name": "BPC-157",
-      "aliases": ["Body Protection Compound 157", "PL 14736"],
+      "aliases": [
+        "Body Protection Compound 157",
+        "PL 14736"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Tendon and ligament repair", "Gut barrier restoration", "Post-surgical recovery"],
+      "medspa_uses": [
+        "Tendon and ligament repair",
+        "Gut barrier restoration",
+        "Post-surgical recovery"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2 alongside 18 other peptides."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-23", "status": "pcac_review", "note": "PCAC Day 1 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2 alongside 18 other peptides."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-23",
+          "status": "pcac_review",
+          "note": "PCAC Day 1 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "BPC-157",
       "openfda_search_term": "BPC-157",
@@ -49,15 +73,34 @@
     {
       "slug": "tb-500",
       "name": "TB-500",
-      "aliases": ["Thymosin Beta-4", "TB4"],
+      "aliases": [
+        "Thymosin Beta-4",
+        "TB4"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Soft-tissue and ligament repair", "Wound healing", "Anti-inflammatory recovery"],
+      "medspa_uses": [
+        "Soft-tissue and ligament repair",
+        "Wound healing",
+        "Anti-inflammatory recovery"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-23", "status": "pcac_review", "note": "PCAC Day 1 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-23",
+          "status": "pcac_review",
+          "note": "PCAC Day 1 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "Thymosin Beta-4",
       "openfda_search_term": "thymosin beta-4",
@@ -66,15 +109,33 @@
     {
       "slug": "kpv",
       "name": "KPV",
-      "aliases": ["Lys-Pro-Val", "alpha-MSH(11-13)"],
+      "aliases": [
+        "Lys-Pro-Val",
+        "alpha-MSH(11-13)"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Gut inflammation modulation", "Topical wound and skin recovery"],
+      "medspa_uses": [
+        "Gut inflammation modulation",
+        "Topical wound and skin recovery"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-23", "status": "pcac_review", "note": "PCAC Day 1 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-23",
+          "status": "pcac_review",
+          "note": "PCAC Day 1 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "KPV peptide",
       "openfda_search_term": "KPV",
@@ -83,15 +144,33 @@
     {
       "slug": "mots-c",
       "name": "MOTS-c",
-      "aliases": ["Mitochondrial Open Reading Frame of the 12S rRNA Type-c", "MOTS-C"],
+      "aliases": [
+        "Mitochondrial Open Reading Frame of the 12S rRNA Type-c",
+        "MOTS-C"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Metabolic / insulin sensitization", "Mitochondrial function support"],
+      "medspa_uses": [
+        "Metabolic / insulin sensitization",
+        "Mitochondrial function support"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-23", "status": "pcac_review", "note": "PCAC Day 1 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-23",
+          "status": "pcac_review",
+          "note": "PCAC Day 1 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "MOTS-c",
       "openfda_search_term": "MOTS-c",
@@ -100,17 +179,35 @@
     {
       "slug": "semax",
       "name": "Semax",
-      "aliases": ["Met-Glu-His-Phe-Pro-Gly-Pro", "ACTH(4-7) PGP"],
+      "aliases": [
+        "Met-Glu-His-Phe-Pro-Gly-Pro",
+        "ACTH(4-7) PGP"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [
         "Russia (Roszdravnadzor): Ischemic stroke and cognitive disorders (intranasal)"
       ],
-      "medspa_uses": ["Cognitive support (off-label)", "Nootropic"],
+      "medspa_uses": [
+        "Cognitive support (off-label)",
+        "Nootropic"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-24", "status": "pcac_review", "note": "PCAC Day 2 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-24",
+          "status": "pcac_review",
+          "note": "PCAC Day 2 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "Semax",
       "openfda_search_term": "Semax",
@@ -119,15 +216,34 @@
     {
       "slug": "epitalon",
       "name": "Epitalon",
-      "aliases": ["Epithalon", "Epithalamin", "AEDG"],
+      "aliases": [
+        "Epithalon",
+        "Epithalamin",
+        "AEDG"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Longevity / telomerase activation (research use)", "Sleep / pineal modulation"],
+      "medspa_uses": [
+        "Longevity / telomerase activation (research use)",
+        "Sleep / pineal modulation"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-24", "status": "pcac_review", "note": "PCAC Day 2 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-24",
+          "status": "pcac_review",
+          "note": "PCAC Day 2 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "Epitalon",
       "openfda_search_term": "Epitalon",
@@ -136,15 +252,33 @@
     {
       "slug": "emideltide",
       "name": "Emideltide",
-      "aliases": ["DSIP", "Delta Sleep-Inducing Peptide"],
+      "aliases": [
+        "DSIP",
+        "Delta Sleep-Inducing Peptide"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "july_2026",
       "approved_indications": [],
-      "medspa_uses": ["Sleep architecture support", "Stress-response modulation"],
+      "medspa_uses": [
+        "Sleep architecture support",
+        "Stress-response modulation"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."},
-        {"date": "2026-07-24", "status": "pcac_review", "note": "PCAC Day 2 review scheduled."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 in Federal Register Doc. 2026-07361."
+        },
+        {
+          "date": "2026-07-24",
+          "status": "pcac_review",
+          "note": "PCAC Day 2 review scheduled."
+        }
       ],
       "clinicaltrials_search_term": "DSIP delta sleep",
       "openfda_search_term": "DSIP",
@@ -153,16 +287,32 @@
     {
       "slug": "ghk-cu-topical",
       "name": "GHK-Cu (non-injectable)",
-      "aliases": ["Copper Tripeptide-1", "GHK-Copper", "Prezatide Copper Acetate"],
+      "aliases": [
+        "Copper Tripeptide-1",
+        "GHK-Copper",
+        "Prezatide Copper Acetate"
+      ],
       "category": "cat1",
       "pcac_wave": null,
       "approved_indications": [
         "FDA (historical, withdrawn): Wound healing (as Iamin Gel / Prezatide Copper Acetate, NDA 19-942)"
       ],
-      "medspa_uses": ["Topical skin repair", "Hair growth (topical)", "Wound healing"],
+      "medspa_uses": [
+        "Topical skin repair",
+        "Hair growth (topical)",
+        "Wound healing"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2 in original 2023 list."},
-        {"date": "2026-05-05", "status": "cat1", "note": "Non-injectable GHK-Cu re-added to Category 1 (legal for 503A topical compounding)."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2 in original 2023 list."
+        },
+        {
+          "date": "2026-05-05",
+          "status": "cat1",
+          "note": "Non-injectable GHK-Cu re-added to Category 1 (legal for 503A topical compounding)."
+        }
       ],
       "clinicaltrials_search_term": "GHK-Cu copper tripeptide",
       "openfda_search_term": "copper tripeptide",
@@ -171,14 +321,27 @@
     {
       "slug": "ghk-cu-injectable",
       "name": "GHK-Cu (injectable)",
-      "aliases": ["Copper Tripeptide-1 (injectable)", "Prezatide Copper Acetate (injectable)"],
+      "aliases": [
+        "Copper Tripeptide-1 (injectable)",
+        "Prezatide Copper Acetate (injectable)"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
       "approved_indications": [],
-      "medspa_uses": ["Systemic tissue repair (off-label injectable)"],
+      "medspa_uses": [
+        "Systemic tissue repair (off-label injectable)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2; injectable form remains under PCAC review."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2; injectable form remains under PCAC review."
+        }
       ],
       "clinicaltrials_search_term": "GHK-Cu injectable",
       "openfda_search_term": "copper tripeptide injectable",
@@ -187,14 +350,29 @@
     {
       "slug": "ll-37",
       "name": "Cathelicidin (LL-37)",
-      "aliases": ["LL-37", "Cathelicidin Antimicrobial Peptide", "CAMP"],
+      "aliases": [
+        "LL-37",
+        "Cathelicidin Antimicrobial Peptide",
+        "CAMP"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
       "approved_indications": [],
-      "medspa_uses": ["Antimicrobial / chronic infection adjunct", "Wound healing"],
+      "medspa_uses": [
+        "Antimicrobial / chronic infection adjunct",
+        "Wound healing"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 pending PCAC review in early 2027."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 pending PCAC review in early 2027."
+        }
       ],
       "clinicaltrials_search_term": "LL-37 cathelicidin",
       "openfda_search_term": "LL-37",
@@ -203,14 +381,28 @@
     {
       "slug": "dihexa",
       "name": "Dihexa Acetate",
-      "aliases": ["N-hexanoic-Tyr-Ile-(6) aminohexanoic amide", "PNB-0408"],
+      "aliases": [
+        "N-hexanoic-Tyr-Ile-(6) aminohexanoic amide",
+        "PNB-0408"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
       "approved_indications": [],
-      "medspa_uses": ["Cognitive enhancement (off-label nootropic)", "Synaptogenesis"],
+      "medspa_uses": [
+        "Cognitive enhancement (off-label nootropic)",
+        "Synaptogenesis"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 pending PCAC review in early 2027."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 pending PCAC review in early 2027."
+        }
       ],
       "clinicaltrials_search_term": "Dihexa",
       "openfda_search_term": "Dihexa",
@@ -219,16 +411,30 @@
     {
       "slug": "melanotan-ii",
       "name": "Melanotan II",
-      "aliases": ["MT-II", "MT2"],
+      "aliases": [
+        "MT-II",
+        "MT2"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
       "approved_indications": [
         "Related analog only: Afamelanotide (Scenesse) is FDA-approved for erythropoietic protoporphyria; Melanotan II itself is not approved"
       ],
-      "medspa_uses": ["Tanning response (off-label)", "Libido modulation"],
+      "medspa_uses": [
+        "Tanning response (off-label)",
+        "Libido modulation"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 pending PCAC review in early 2027."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 pending PCAC review in early 2027."
+        }
       ],
       "clinicaltrials_search_term": "Melanotan II",
       "openfda_search_term": "Melanotan",
@@ -237,14 +443,27 @@
     {
       "slug": "peg-mgf",
       "name": "PEG-MGF",
-      "aliases": ["Pegylated Mechano Growth Factor", "PEGylated IGF-1Ec"],
+      "aliases": [
+        "Pegylated Mechano Growth Factor",
+        "PEGylated IGF-1Ec"
+      ],
       "category": "removed_from_cat2",
       "pcac_wave": "early_2027",
       "approved_indications": [],
-      "medspa_uses": ["Muscle repair and hypertrophy (off-label)"],
+      "medspa_uses": [
+        "Muscle repair and hypertrophy (off-label)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "removed_from_cat2", "note": "Removed from Category 2 pending PCAC review in early 2027."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "removed_from_cat2",
+          "note": "Removed from Category 2 pending PCAC review in early 2027."
+        }
       ],
       "clinicaltrials_search_term": "mechano growth factor",
       "openfda_search_term": "mechano growth factor",
@@ -253,14 +472,27 @@
     {
       "slug": "kisspeptin-10",
       "name": "Kisspeptin-10",
-      "aliases": ["KP-10", "Metastin(45-54)"],
+      "aliases": [
+        "KP-10",
+        "Metastin(45-54)"
+      ],
       "category": "cat2",
       "pcac_wave": null,
       "approved_indications": [],
-      "medspa_uses": ["Reproductive / HPG axis modulation (research)"],
+      "medspa_uses": [
+        "Reproductive / HPG axis modulation (research)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "cat2", "note": "Retained on Category 2 — active enforcement prohibition."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "cat2",
+          "note": "Retained on Category 2 \u2014 active enforcement prohibition."
+        }
       ],
       "clinicaltrials_search_term": "Kisspeptin",
       "openfda_search_term": "Kisspeptin",
@@ -269,16 +501,29 @@
     {
       "slug": "ghrp-2",
       "name": "GHRP-2",
-      "aliases": ["Growth Hormone-Releasing Peptide-2", "Pralmorelin"],
+      "aliases": [
+        "Growth Hormone-Releasing Peptide-2",
+        "Pralmorelin"
+      ],
       "category": "cat2",
       "pcac_wave": null,
       "approved_indications": [
         "Japan PMDA: Diagnostic agent for adult growth hormone deficiency (as Pralmorelin / GHRP Kaken)"
       ],
-      "medspa_uses": ["GH secretagogue (off-label)"],
+      "medspa_uses": [
+        "GH secretagogue (off-label)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "cat2", "note": "Retained on Category 2 — active enforcement prohibition."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "cat2",
+          "note": "Retained on Category 2 \u2014 active enforcement prohibition."
+        }
       ],
       "clinicaltrials_search_term": "GHRP-2 pralmorelin",
       "openfda_search_term": "Pralmorelin",
@@ -287,14 +532,27 @@
     {
       "slug": "ibutamoren",
       "name": "Ibutamoren Mesylate",
-      "aliases": ["MK-677", "MK-0677"],
+      "aliases": [
+        "MK-677",
+        "MK-0677"
+      ],
       "category": "cat2",
       "pcac_wave": null,
       "approved_indications": [],
-      "medspa_uses": ["Oral GH secretagogue (off-label)"],
+      "medspa_uses": [
+        "Oral GH secretagogue (off-label)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "cat2", "note": "Retained on Category 2 — active enforcement prohibition."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "cat2",
+          "note": "Retained on Category 2 \u2014 active enforcement prohibition."
+        }
       ],
       "clinicaltrials_search_term": "Ibutamoren MK-677",
       "openfda_search_term": "Ibutamoren",
@@ -303,14 +561,26 @@
     {
       "slug": "ipamorelin",
       "name": "Ipamorelin Acetate",
-      "aliases": ["Ipamorelin"],
+      "aliases": [
+        "Ipamorelin"
+      ],
       "category": "cat2",
       "pcac_wave": null,
       "approved_indications": [],
-      "medspa_uses": ["GH secretagogue (off-label, commonly stacked with CJC-1295)"],
+      "medspa_uses": [
+        "GH secretagogue (off-label, commonly stacked with CJC-1295)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "cat2", "note": "Placed on Category 2."},
-        {"date": "2026-04-22", "status": "cat2", "note": "Retained on Category 2 — active enforcement prohibition."}
+        {
+          "date": "2023-09-29",
+          "status": "cat2",
+          "note": "Placed on Category 2."
+        },
+        {
+          "date": "2026-04-22",
+          "status": "cat2",
+          "note": "Retained on Category 2 \u2014 active enforcement prohibition."
+        }
       ],
       "clinicaltrials_search_term": "Ipamorelin",
       "openfda_search_term": "Ipamorelin",
@@ -319,13 +589,22 @@
     {
       "slug": "cjc-1295",
       "name": "CJC-1295",
-      "aliases": ["CJC-1295 DAC", "Modified GRF (1-29)"],
+      "aliases": [
+        "CJC-1295 DAC",
+        "Modified GRF (1-29)"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [],
-      "medspa_uses": ["Long-acting GHRH analog (off-label, commonly stacked with Ipamorelin)"],
+      "medspa_uses": [
+        "Long-acting GHRH analog (off-label, commonly stacked with Ipamorelin)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list; remains research-use only."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Not on the original Category 2 list; remains research-use only."
+        }
       ],
       "clinicaltrials_search_term": "CJC-1295",
       "openfda_search_term": "CJC-1295",
@@ -334,13 +613,22 @@
     {
       "slug": "aod-9604",
       "name": "AOD-9604",
-      "aliases": ["Anti-Obesity Drug 9604", "hGH 177-191"],
+      "aliases": [
+        "Anti-Obesity Drug 9604",
+        "hGH 177-191"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [],
-      "medspa_uses": ["Lipolytic / weight management (off-label)"],
+      "medspa_uses": [
+        "Lipolytic / weight management (off-label)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list; research-use only."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Not on the original Category 2 list; research-use only."
+        }
       ],
       "clinicaltrials_search_term": "AOD-9604",
       "openfda_search_term": "AOD-9604",
@@ -349,16 +637,27 @@
     {
       "slug": "thymosin-alpha-1",
       "name": "Thymosin Alpha-1",
-      "aliases": ["Tα1", "Thymalfasin", "ZADAXIN"],
+      "aliases": [
+        "T\u03b11",
+        "Thymalfasin",
+        "ZADAXIN"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [
         "China NMPA, Italy AIFA, and ~30 other countries: Chronic hepatitis B (adjuvant, as Thymalfasin / ZADAXIN)",
         "Several jurisdictions: Chronic hepatitis C adjuvant; immune support in cancer chemotherapy"
       ],
-      "medspa_uses": ["Immune modulation (off-label)", "Adjunct in viral infection support"],
+      "medspa_uses": [
+        "Immune modulation (off-label)",
+        "Adjunct in viral infection support"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Not on the original Category 2 list. Approved as Thymalfasin/ZADAXIN in some jurisdictions; not FDA-approved in the US."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Not on the original Category 2 list. Approved as Thymalfasin/ZADAXIN in some jurisdictions; not FDA-approved in the US."
+        }
       ],
       "clinicaltrials_search_term": "Thymosin Alpha-1 thymalfasin",
       "openfda_search_term": "Thymalfasin",
@@ -367,15 +666,25 @@
     {
       "slug": "matrixyl",
       "name": "Matrixyl",
-      "aliases": ["Palmitoyl Pentapeptide-4", "Pal-KTTKS"],
+      "aliases": [
+        "Palmitoyl Pentapeptide-4",
+        "Pal-KTTKS"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [
         "Cosmetic ingredient (no drug approval required): Used in topical skincare products globally"
       ],
-      "medspa_uses": ["Topical anti-aging cosmetic", "Collagen stimulation (topical)"],
+      "medspa_uses": [
+        "Topical anti-aging cosmetic",
+        "Collagen stimulation (topical)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."
+        }
       ],
       "clinicaltrials_search_term": "Palmitoyl Pentapeptide-4",
       "openfda_search_term": "palmitoyl pentapeptide",
@@ -384,15 +693,25 @@
     {
       "slug": "argireline",
       "name": "Argireline",
-      "aliases": ["Acetyl Hexapeptide-3", "Acetyl Hexapeptide-8"],
+      "aliases": [
+        "Acetyl Hexapeptide-3",
+        "Acetyl Hexapeptide-8"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [
         "Cosmetic ingredient (no drug approval required): Used in topical anti-wrinkle products globally"
       ],
-      "medspa_uses": ["Topical anti-wrinkle cosmetic", "SNARE-complex neuromodulation (topical)"],
+      "medspa_uses": [
+        "Topical anti-wrinkle cosmetic",
+        "SNARE-complex neuromodulation (topical)"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."
+        }
       ],
       "clinicaltrials_search_term": "Acetyl Hexapeptide-8 Argireline",
       "openfda_search_term": "acetyl hexapeptide",
@@ -401,19 +720,116 @@
     {
       "slug": "snap-8",
       "name": "SNAP-8",
-      "aliases": ["Acetyl Octapeptide-3"],
+      "aliases": [
+        "Acetyl Octapeptide-3"
+      ],
       "category": "unscheduled",
       "pcac_wave": null,
       "approved_indications": [
         "Cosmetic ingredient (no drug approval required): Used in topical anti-wrinkle products globally"
       ],
-      "medspa_uses": ["Topical anti-wrinkle cosmetic"],
+      "medspa_uses": [
+        "Topical anti-wrinkle cosmetic"
+      ],
       "history": [
-        {"date": "2023-09-29", "status": "unscheduled", "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."}
+        {
+          "date": "2023-09-29",
+          "status": "unscheduled",
+          "note": "Cosmetic-grade topical peptide; not subject to 503A compounding regulations."
+        }
       ],
       "clinicaltrials_search_term": "Acetyl Octapeptide-3 SNAP-8",
       "openfda_search_term": "acetyl octapeptide",
       "federal_register_search_term": "SNAP-8"
+    },
+    {
+      "slug": "semaglutide",
+      "name": "Semaglutide",
+      "aliases": [
+        "Ozempic",
+        "Wegovy",
+        "Rybelsus"
+      ],
+      "category": "fda_approved",
+      "pcac_wave": null,
+      "approved_indications": [
+        "Type 2 diabetes mellitus (Ozempic/Rybelsus)",
+        "Chronic weight management (Wegovy)",
+        "Cardiovascular risk reduction"
+      ],
+      "medspa_uses": [
+        "Weight management",
+        "Metabolic / glycemic optimization (off-label)"
+      ],
+      "history": [
+        {
+          "date": "2021-06-04",
+          "status": "fda_approved",
+          "note": "FDA approval of Wegovy (semaglutide 2.4 mg) for chronic weight management."
+        }
+      ],
+      "clinicaltrials_search_term": "Semaglutide",
+      "openfda_search_term": "Semaglutide",
+      "federal_register_search_term": "Semaglutide"
+    },
+    {
+      "slug": "tirzepatide",
+      "name": "Tirzepatide",
+      "aliases": [
+        "Mounjaro",
+        "Zepbound",
+        "LY3298176"
+      ],
+      "category": "fda_approved",
+      "pcac_wave": null,
+      "approved_indications": [
+        "Type 2 diabetes mellitus (Mounjaro)",
+        "Chronic weight management (Zepbound)",
+        "Obstructive sleep apnea in obesity (Zepbound)"
+      ],
+      "medspa_uses": [
+        "Weight management",
+        "Metabolic / glycemic optimization (off-label)"
+      ],
+      "history": [
+        {
+          "date": "2022-05-13",
+          "status": "fda_approved",
+          "note": "FDA approval of Mounjaro (tirzepatide) for type 2 diabetes; Zepbound approved for obesity in 2023."
+        }
+      ],
+      "clinicaltrials_search_term": "Tirzepatide",
+      "openfda_search_term": "Tirzepatide",
+      "federal_register_search_term": "Tirzepatide"
+    },
+    {
+      "slug": "liraglutide",
+      "name": "Liraglutide",
+      "aliases": [
+        "Saxenda",
+        "Victoza",
+        "NN2211"
+      ],
+      "category": "fda_approved",
+      "pcac_wave": null,
+      "approved_indications": [
+        "Type 2 diabetes mellitus (Victoza)",
+        "Chronic weight management (Saxenda)"
+      ],
+      "medspa_uses": [
+        "Weight management",
+        "Metabolic / glycemic optimization (off-label)"
+      ],
+      "history": [
+        {
+          "date": "2014-12-23",
+          "status": "fda_approved",
+          "note": "FDA approval of Saxenda (liraglutide 3.0 mg) for chronic weight management; Victoza approved for T2D in 2010."
+        }
+      ],
+      "clinicaltrials_search_term": "Liraglutide",
+      "openfda_search_term": "Liraglutide",
+      "federal_register_search_term": "Liraglutide"
     }
   ]
 }

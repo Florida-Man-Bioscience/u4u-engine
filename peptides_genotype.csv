@@ -9,6 +9,9 @@ Thymosin Alpha-1,"TLR2, TLR4, TLR9",Predict immunomodulatory response via TLR-de
 Matrixyl,"COL1A1 (Sp1 site), IRF4",Predict collagen synthesis upregulation capacity,"[2-3, 18]",,Multifunctionality and Possible Medical Application of the BPC 157 Peptide-Literature and Patent Review.
 Argireline,SNAP25 (rs6104571),Predict SNARE-complex modulation efficacy (parallels BoNT-A pharmacogenomics),[19-20],,"Pharmaceuticals. 2025. Józwiak M, Bauer M, Kamysz W, Kleczkowska P.Review"
 SNAP-8,"SNAP25, SV2C (rs31244)",Predict neuromodulatory efficacy and duration,"[19, 21]",,4
+Semaglutide,"GLP1R (rs10305420), TCF7L2 (rs7903146)",Predict GLP-1 receptor agonist weight-loss and glycemic response; GLP1R/TCF7L2 variants attenuate incretin response,[22-23],,
+Tirzepatide,"GLP1R, GIPR (rs1800437), TCF7L2 (rs7903146)",Predict dual GIP/GLP-1 receptor agonist glycemic and body-composition response,[22-24],,
+Liraglutide,"GLP1R, TCF7L2 (rs7903146)",Predict daily GLP-1 receptor agonist response; LoF GLP1R variants blunt cAMP coupling,"[22, 25]",,
 ,,,,,GHK Peptide as a Natural Modulator of Multiple Cellular Pathways in Skin Regeneration.
 ,,,,,"BioMed Research International. 2014. Pickart L, Vasquez-Soltero JM, Margolina A.Review"
 ,,,,,5

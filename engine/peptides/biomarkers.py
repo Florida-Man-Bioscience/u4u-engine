@@ -480,6 +480,72 @@ PEPTIDE_BIOMARKERS: dict[str, BiomarkerPanel] = {
         ),
         doi="10.1053/j.gastro.2007.10.026",
     ),
+    "Semaglutide": BiomarkerPanel(
+        peptide="Semaglutide",
+        off_label_uses=(
+            "Weight management / obesity",
+            "Type 2 diabetes glycemic control",
+            "Cardiometabolic risk reduction",
+        ),
+        efficacy_markers=(
+            "Body weight / BMI", "Waist circumference", "HbA1c",
+            "Fasting glucose / insulin", "HOMA-IR", "Lipid panel",
+        ),
+        safety_markers=(
+            "Lipase / amylase (pancreatitis)", "ALT / AST", "Heart rate",
+            "Resting gallbladder ultrasound (if symptomatic)",
+            "Thyroid exam (MTC/MEN2 contraindication screen)",
+        ),
+        citation_apa=(
+            "Wilding, J. P. H., Batterham, R. L., Calanna, S., et al. (2021). "
+            "Once-weekly semaglutide in adults with overweight or obesity. New "
+            "England Journal of Medicine, 384(11), 989–1002."
+        ),
+        doi="10.1056/NEJMoa2032183",
+    ),
+    "Tirzepatide": BiomarkerPanel(
+        peptide="Tirzepatide",
+        off_label_uses=(
+            "Weight management / obesity",
+            "Type 2 diabetes glycemic control",
+            "Obstructive sleep apnea adjunct",
+        ),
+        efficacy_markers=(
+            "Body weight / BMI", "Waist circumference", "HbA1c",
+            "Fasting glucose / insulin", "HOMA-IR", "Lipid panel",
+        ),
+        safety_markers=(
+            "Lipase / amylase (pancreatitis)", "ALT / AST", "Heart rate",
+            "Thyroid exam (MTC/MEN2 contraindication screen)",
+        ),
+        citation_apa=(
+            "Jastreboff, A. M., Aronne, L. J., Ahmad, N. N., et al. (2022). "
+            "Tirzepatide once weekly for the treatment of obesity. New England "
+            "Journal of Medicine, 387(3), 205–216."
+        ),
+        doi="10.1056/NEJMoa2206038",
+    ),
+    "Liraglutide": BiomarkerPanel(
+        peptide="Liraglutide",
+        off_label_uses=(
+            "Weight management / obesity",
+            "Type 2 diabetes glycemic control",
+        ),
+        efficacy_markers=(
+            "Body weight / BMI", "Waist circumference", "HbA1c",
+            "Fasting glucose / insulin", "HOMA-IR",
+        ),
+        safety_markers=(
+            "Lipase / amylase (pancreatitis)", "ALT / AST", "Heart rate",
+            "Thyroid exam (MTC/MEN2 contraindication screen)",
+        ),
+        citation_apa=(
+            "Pi-Sunyer, X., Astrup, A., Fujioka, K., et al. (2015). A "
+            "randomized, controlled trial of 3.0 mg of liraglutide in weight "
+            "management. New England Journal of Medicine, 373(1), 11–22."
+        ),
+        doi="10.1056/NEJMoa1411892",
+    ),
 }
 
 
@@ -516,6 +582,10 @@ ALIASES: dict[str, str] = {
     "Melanotan II": "Melanotan II",
     "LL-37": "LL-37",
     "KPV": "KPV",
+    # GLP-1 / incretin class (peptide_mapper keys → canonical biomarker keys)
+    "Semaglutide": "Semaglutide",
+    "Tirzepatide": "Tirzepatide",
+    "Liraglutide": "Liraglutide",
 }
 
 

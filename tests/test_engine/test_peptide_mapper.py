@@ -39,8 +39,8 @@ def _make_variant(genes, rsid=None, consequence="missense_variant"):
 
 class TestPeptideGeneMapData:
 
-    def test_has_eleven_peptides(self):
-        assert len(PEPTIDE_GENE_MAP) == 11
+    def test_has_fourteen_peptides(self):
+        assert len(PEPTIDE_GENE_MAP) == 14
 
     def test_all_peptides_have_required_fields(self):
         for key, entry in PEPTIDE_GENE_MAP.items():
@@ -66,6 +66,9 @@ class TestPeptideGeneMapData:
             "Matrixyl",
             "Argireline",
             "SNAP-8",
+            "Semaglutide",
+            "Tirzepatide",
+            "Liraglutide",
         ]
         for name in expected:
             assert name in PEPTIDE_GENE_MAP, f"Missing peptide: {name}"
@@ -79,7 +82,7 @@ class TestMapPeptideCoverage:
 
     def test_empty_variants_returns_all_peptides_uncovered(self):
         result = map_peptide_coverage([])
-        assert len(result["recommendations"]) == 11
+        assert len(result["recommendations"]) == 14
         assert result["peptides_with_coverage"] == 0
         for rec in result["recommendations"]:
             assert rec["coverage"] == 0
@@ -138,6 +141,32 @@ class TestMapPeptideCoverage:
             if r["peptide_name"] == "BPC-157 + TB-500"
         )
         assert bpc["coverage"] == 1.0
+
+    def test_glp1r_covers_glp1_agonists(self):
+        """GLP1R variant should surface the GLP-1 agonist peptides."""
+        variants = [_make_variant("GLP1R", rsid="rs10305420")]
+        result = map_peptide_coverage(variants)
+
+        covered = {
+            r["peptide_name"] for r in result["recommendations"]
+            if r["coverage"] > 0
+        }
+        assert {"Semaglutide", "Tirzepatide", "Liraglutide"}.issubset(covered)
+
+    def test_tirzepatide_full_coverage_requires_three_genes(self):
+        """Tirzepatide needs GLP1R, GIPR, and TCF7L2 for full coverage."""
+        variants = [
+            _make_variant("GLP1R"),
+            _make_variant("GIPR"),
+            _make_variant("TCF7L2"),
+        ]
+        result = map_peptide_coverage(variants)
+        tirz = next(
+            r for r in result["recommendations"]
+            if r["peptide_name"] == "Tirzepatide"
+        )
+        assert tirz["coverage"] == 1.0
+        assert tirz["category"] == "glp1"
 
     def test_case_insensitive_gene_matching(self):
         """Gene matching should be case-insensitive."""
