@@ -1,27 +1,29 @@
-# Deploying the engine on a VPS
+# Deploying the engine
 
-This guide walks through deploying the Florida Man Bioscience tracking
-stack (tracking app + API + reverse proxy) on a single Linux VPS.
+This guide covers deploying the Florida Man Bioscience tracking stack
+(tracking app + API) as two Docker containers. A TLS-terminating
+reverse proxy in front of them is **out of scope for this repo** — it's
+managed separately on the VPS (Caddy, nginx, Cloudflare Tunnel, etc.).
 
-URL layout produced by this setup:
+The deploy contract the external proxy must satisfy:
 
-| URL                                       | Service                            |
-|-------------------------------------------|------------------------------------|
-| `https://flmanbiosci.net/`                | tracking app (Next.js frontend)    |
-| `https://www.flmanbiosci.net/`            | 301 → `https://flmanbiosci.net/`   |
-| `https://flmanbiosci.net/api/v1/...`      | FastAPI                            |
+| Public URL                                 | Container          |
+|--------------------------------------------|--------------------|
+| `https://flmanbiosci.net/`                 | `frontend:3000`    |
+| `https://flmanbiosci.net/api/v1/<path>`    | `api:8000/<path>`  |
 
-TLS is auto-managed by Caddy via Let's Encrypt.
+That is: route `/api/v1/*` to the api container with the `/api/v1`
+prefix stripped (because the backend routes live at `/auth/*`,
+`/tracking/*`, `/jobs/*` — not under `/api/v1`). Everything else goes
+to the frontend.
 
 ---
 
 ## 1. Provision a VPS
 
-Any 2 GB / 1 vCPU box is plenty at our current scale (Hetzner CX22 ~€4/mo,
-DigitalOcean basic $6/mo, Linode Nanode $5/mo, etc.). Ubuntu 24.04 LTS is the
-easiest baseline.
-
-Open firewall ports `22`, `80`, `443` to the public internet.
+Any 2 GB / 1 vCPU box is plenty at our current scale. Ubuntu 24.04 LTS
+is the easiest baseline. Open whatever ports your external proxy
+needs (typically `22`, `80`, `443`).
 
 ## 2. Install Docker
 
@@ -55,42 +57,36 @@ AUTH_BOOTSTRAP_USERNAME=<admin user>
 AUTH_BOOTSTRAP_PASSWORD=<initial admin password>
 JOB_STORE_KEY=<output of python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'>
 
-SITE_ADDRESS=flmanbiosci.net, www.flmanbiosci.net
+# Same-origin path: the external proxy at flmanbiosci.net forwards
+# /api/v1/* to the api container.
 NEXT_PUBLIC_API_BASE=/api/v1
 ```
 
-## 5. Point Cloudflare DNS at the box
-
-In the Cloudflare dashboard for `flmanbiosci.net`:
-
-| Type | Name | Value         | Proxy status |
-|------|------|---------------|--------------|
-| A    | `@`  | `<vps.ip>`    | **DNS only** |
-| A    | `www`| `<vps.ip>`    | **DNS only** |
-
-`DNS only` (grey cloud) is required so Caddy can complete the HTTP-01 ACME
-challenge directly. Once Let's Encrypt has issued certs you can switch
-Cloudflare back to proxied mode if you want CF in front, but then you must
-also install a Cloudflare Origin Certificate on the VPS (Caddy can serve it
-from the `tls` directive) — or use the DNS-01 challenge with a Cloudflare API
-token (requires a Caddy build that includes the Cloudflare DNS module).
-
-## 6. Bring it up
+## 5. Bring it up
 
 ```sh
 cd /opt/fmb/u4u-engine
 docker compose up -d --build
-docker compose logs -f proxy   # watch Caddy fetch certs
 ```
 
-Verify:
+The api binds host port `8000` and the frontend binds `3000` — that's
+what the external proxy talks to.
+
+Verify the containers are healthy:
 
 ```sh
-curl -I https://flmanbiosci.net/                       # tracking app
-curl -I https://flmanbiosci.net/api/v1/health          # api
+curl -I http://localhost:8000/health      # api on the box
+curl -I http://localhost:3000/            # frontend on the box
 ```
 
-## 6a. Authentication model
+The proxy team then verifies public reachability:
+
+```sh
+curl -I https://flmanbiosci.net/                    # → frontend:3000
+curl -I https://flmanbiosci.net/api/v1/health       # → api:8000/health
+```
+
+## 5a. Authentication model
 
 The API has two parallel auth mechanisms; either grants access to every
 protected endpoint.
@@ -106,11 +102,11 @@ protected endpoint.
   call afterwards attaches it as `Authorization: Bearer …`.
 - Tokens last 7 days (override with `AUTH_SESSION_TTL_DAYS`).
 - `/auth/login` is rate-limited at 10 attempts per 5 minutes per IP
-  (via `X-Forwarded-For` from Caddy). Hitting the limit returns 429
-  with a `Retry-After` header.
+  (via `X-Forwarded-For` from the proxy). Hitting the limit returns
+  429 with a `Retry-After` header.
 - To change the password, the operator signs in and visits
-  `https://flmanbiosci.net/account`. The change revokes every
-  active session for the user; the page automatically swaps in the
+  `https://flmanbiosci.net/account`. The change revokes every active
+  session for the user; the page automatically swaps in the
   freshly-minted token so the operator stays signed in.
 - Lost password recovery: stop the api container, delete
   `data/auth.db`, restart. The bootstrap will re-seed using the
@@ -132,31 +128,28 @@ protected endpoint.
 - For local development only, `ALLOW_INSECURE_NO_AUTH=1` skips the
   middleware. Never set this in production.
 
-## 7. Updates
+## 6. Updates
 
-Pull and rebuild the changed service:
+Pull and rebuild:
 
 ```sh
 cd /opt/fmb/u4u-engine && git pull
 docker compose up -d --build
 ```
 
-For zero-downtime rollouts later, swap to a CI/CD push from the GHA
-workflow.
-
 ---
 
 ## Local development
 
-The same compose file works locally with no env changes:
+The compose file works locally with no env changes:
 
 ```sh
 docker compose up --build
-# http://localhost                  → tracking app (via Caddy)
-# http://localhost/api/v1/health    → api (via Caddy)
-# http://localhost:8000             → api (direct, bypassing proxy)
-# http://localhost:3000             → frontend (direct, bypassing proxy)
+# http://localhost:3000           → frontend
+# http://localhost:8000           → api
+# http://localhost:8000/health    → liveness check
 ```
 
-The direct port mappings are preserved so you can hit any service without
-going through Caddy when debugging.
+The frontend builds with `NEXT_PUBLIC_API_BASE=http://localhost:8000`
+by default (the compose-level fallback), so direct `:3000` access
+works without any proxy in the picture.
