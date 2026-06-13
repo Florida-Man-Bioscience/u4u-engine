@@ -164,6 +164,15 @@ export interface VariantCarried {
   evidence: VariantEvidenceCitation | null;
 }
 
+export interface EngineRecommendation {
+  peptide_name: string;
+  category: string | null;
+  predicted_tier: string | null;
+  prediction_description: string | null;
+  has_pharmgkb_evidence: boolean;
+  has_patient_signal: boolean;
+}
+
 export interface PatientFromJobResponse {
   patient: {
     id: string;
@@ -178,6 +187,7 @@ export interface PatientFromJobResponse {
   peptides_with_evidence: string[];
   peptides_with_patient_signal: string[];
   variants_carried: VariantCarried[];
+  engine_recommendations: EngineRecommendation[];
 }
 
 /**

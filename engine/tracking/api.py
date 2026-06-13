@@ -347,6 +347,46 @@ def create_patient_from_job(
         for v in profile.variants
         if v.dosage > 0
     ]
+
+    # Top engine peptide recommendations — used by the onboarding flow
+    # to suggest which peptide(s) the patient should consider trialling
+    # first. We do NOT use these to shift the Bayesian prior (the user
+    # picked "PharmGKB-only" for that); they're a navigation aid only.
+    raw_recs = (
+        (job_results.get("peptide_recommendations") or {}).get("recommendations")
+        or []
+    )
+    _TIER_ORDER = {
+        "Strong Fit": 0,
+        "Possible Fit": 1,
+        "Baseline": 2,
+        "Possibly Altered": 3,
+        "Review Recommended": 4,
+        "Review Needed": 4,
+        "Likely Reduced": 5,
+        "Altered / Reduced": 5,
+        "Caution": 6,
+    }
+    engine_recs = sorted(
+        (
+            {
+                "peptide_name": rec.get("peptide_name"),
+                "category": rec.get("category"),
+                "predicted_tier": rec.get("predicted_tier"),
+                "prediction_description": rec.get("prediction_description"),
+                "has_pharmgkb_evidence": rec.get("peptide_name") in PEPTIDES_WITH_EVIDENCE,
+                "has_patient_signal": rec.get("peptide_name") in covered_with_signal,
+            }
+            for rec in raw_recs
+            if rec.get("peptide_name")
+        ),
+        key=lambda r: (
+            _TIER_ORDER.get(r["predicted_tier"] or "", 7),
+            0 if r["has_patient_signal"] else 1,
+            r["peptide_name"] or "",
+        ),
+    )
+
     return {
         "patient": patient.to_dict(),
         "profile": profile.to_dict(),
@@ -354,6 +394,7 @@ def create_patient_from_job(
         "peptides_with_evidence": sorted(PEPTIDES_WITH_EVIDENCE),
         "peptides_with_patient_signal": covered_with_signal,
         "variants_carried": evidence,
+        "engine_recommendations": engine_recs,
     }
 
 

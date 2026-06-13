@@ -60,6 +60,11 @@ export default function ResultsPage() {
     try {
       const res = await createPatientFromJob(jobId);
       setProfileResult(res);
+      // Drop the user straight into the onboarding wizard with the
+      // job id preserved so the page can show engine recommendations.
+      router.push(
+        `/tracking/patients/${res.patient.id}/onboard?from_job=${jobId}`,
+      );
     } catch (err) {
       setProfileError(
         err instanceof Error ? err.message : "Failed to create profile.",
@@ -67,7 +72,7 @@ export default function ResultsPage() {
     } finally {
       setCreatingProfile(false);
     }
-  }, [jobId]);
+  }, [jobId, router]);
 
   useEffect(() => {
     getJobStatus(jobId)

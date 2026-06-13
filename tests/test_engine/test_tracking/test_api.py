@@ -123,6 +123,19 @@ def test_create_patient_from_job_carries_real_priors(client):
                 {"rsid": "rs99999999", "alt": "C", "zygosity": "het",
                  "genes": ["UNKNOWN"]},
             ],
+            "peptide_recommendations": {
+                "recommendations": [
+                    {"peptide_name": "BPC-157", "category": "regenerative",
+                     "predicted_tier": "Likely Reduced",
+                     "prediction_description": "Reduced pathway activity."},
+                    {"peptide_name": "Semaglutide", "category": "glp1",
+                     "predicted_tier": "Strong Fit",
+                     "prediction_description": "Strong T2D risk profile."},
+                    {"peptide_name": "MOTS-c", "category": "metabolic",
+                     "predicted_tier": "Possible Fit",
+                     "prediction_description": "Possible metabolic match."},
+                ]
+            },
         },
     }
     try:
@@ -149,6 +162,19 @@ def test_create_patient_from_job_carries_real_priors(client):
         gen = client.get(f"/tracking/patients/{body['patient']['id']}/genetics")
         assert gen.status_code == 200
         assert gen.json()["source"] == f"job:{job_id}"
+
+        # Engine recommendations should come back ranked: Strong Fit
+        # first, Possible Fit next, Likely Reduced last. Semaglutide
+        # (Strong Fit AND has patient signal) must lead.
+        recs = body["engine_recommendations"]
+        assert [r["peptide_name"] for r in recs] == [
+            "Semaglutide", "MOTS-c", "BPC-157",
+        ]
+        sema = recs[0]
+        assert sema["has_pharmgkb_evidence"] is True
+        assert sema["has_patient_signal"] is True
+        bpc = recs[2]
+        assert bpc["has_pharmgkb_evidence"] is False
     finally:
         root_api._jobs.pop(job_id, None)
 
