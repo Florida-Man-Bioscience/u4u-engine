@@ -166,6 +166,37 @@ _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 
 
+def get_completed_job_results(job_id: str) -> dict | None:
+    """Return the ``results`` dict for a completed job, or None.
+
+    Public accessor used by the tracking module (engine/tracking/api.py)
+    to derive a real-data ``GeneticProfile`` from a finished /analyze
+    run without taking a circular import on this file. Returns None for
+    pending/running/failed jobs and for unknown ids; the caller decides
+    whether that's a 404 or a 409.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job.get("status") != "done":
+            return None
+        results = job.get("results")
+        return dict(results) if isinstance(results, dict) else None
+
+
+def get_job_filename(job_id: str) -> str | None:
+    """Return the original upload filename for a job, or None.
+
+    Lets the tracking endpoint label an auto-created patient with the
+    source file ("Patient from chr1.vcf.gz") instead of an opaque uuid.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        fname = job.get("filename")
+        return fname if isinstance(fname, str) and fname else None
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 

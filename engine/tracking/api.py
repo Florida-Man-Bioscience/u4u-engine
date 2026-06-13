@@ -24,6 +24,8 @@ from .genetics import (
     derive_responder_prior,
     generate_synthetic_profile,
 )
+from .pharmgkb_catalog import PEPTIDES_WITH_EVIDENCE
+from .profile_from_job import build_profile_from_job_results, evidence_payload
 
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -82,6 +84,19 @@ class MeasurementIn(BaseModel):
 
 class BulkMeasurementsIn(BaseModel):
     measurements: list[MeasurementIn]
+
+
+class PatientFromJobIn(BaseModel):
+    """Optional payload for ``POST /tracking/patients/from-job/{job_id}``.
+
+    Everything is optional: if the caller doesn't specify a label, we
+    derive one from the source filename so the auto-created patient is
+    still recognisable in the patient list.
+    """
+    label: str | None = Field(default=None, max_length=64)
+    sex: str | None = Field(default=None, max_length=16)
+    birth_year: int | None = Field(default=None, ge=1900, le=2100)
+    notes: str | None = None
 
 
 # ── Patients ────────────────────────────────────────────────────────────────
@@ -261,6 +276,84 @@ def generate_genetics(patient_id: str, seed: int | None = None) -> dict[str, Any
     return {
         "profile": profile.to_dict(),
         "source": "synthetic",
+    }
+
+
+@router.post("/patients/from-job/{job_id}")
+def create_patient_from_job(
+    job_id: str, body: PatientFromJobIn | None = None
+) -> dict[str, Any]:
+    """Create a tracking patient pre-populated from a completed /analyze job.
+
+    Single round-trip from the results page: caller passes the job_id;
+    we (1) fetch the job's annotated variants, (2) build a real-data
+    ``GeneticProfile`` against the evidence-based PharmGKB catalog,
+    (3) create a ``Patient`` row, and (4) attach the profile. The
+    response carries everything the UI needs to navigate to the new
+    patient page and render its genetic context.
+
+    Errors:
+      404 — job not found, or job not yet complete.
+    """
+    # Lazy import to keep this router free of a top-level dependency on
+    # the root api.py (which would otherwise be circular).
+    from api import get_completed_job_results, get_job_filename
+
+    job_results = get_completed_job_results(job_id)
+    if job_results is None:
+        raise HTTPException(404, "job not found or not complete")
+
+    # Default the patient label to something readable when the caller
+    # didn't supply one — "Patient from <filename>" beats a bare UUID
+    # in the patient list.
+    payload = body or PatientFromJobIn()
+    if payload.label:
+        label = payload.label
+    else:
+        fname = get_job_filename(job_id) or job_id[:8]
+        label = f"Patient from {fname}"[:64]
+
+    patient = service.create_patient(
+        _conn(),
+        label=label,
+        sex=payload.sex,
+        birth_year=payload.birth_year,
+        notes=payload.notes,
+    )
+    profile = build_profile_from_job_results(job_results, job_id=job_id)
+    service.set_genetic_profile(
+        _conn(), patient.id, profile.to_json(), source=f"job:{job_id}"
+    )
+
+    # Surface coverage stats so the UI can render an honest "we found
+    # priors for K of N peptides" line on the results page.
+    covered_with_signal = sorted(
+        {
+            pep
+            for v in profile.variants
+            if v.dosage > 0
+            for pep in v.peptide_effects
+            if v.peptide_effects[pep] != 0.0
+        }
+    )
+    evidence = [
+        {
+            "rsid": v.rsid,
+            "gene": v.gene,
+            "genotype": v.genotype,
+            "dosage": v.dosage,
+            "evidence": evidence_payload(v.rsid),
+        }
+        for v in profile.variants
+        if v.dosage > 0
+    ]
+    return {
+        "patient": patient.to_dict(),
+        "profile": profile.to_dict(),
+        "source": f"job:{job_id}",
+        "peptides_with_evidence": sorted(PEPTIDES_WITH_EVIDENCE),
+        "peptides_with_patient_signal": covered_with_signal,
+        "variants_carried": evidence,
     }
 
 
