@@ -13,7 +13,7 @@ from ._base import cached_fetch
 
 _SOURCE = "federal_register"
 _TTL = 60 * 60 * 6  # 6 hours
-_TIMEOUT = 10
+_TIMEOUT = 6
 _BASE = "https://www.federalregister.gov/api/v1/documents.json"
 
 

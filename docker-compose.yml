@@ -46,6 +46,12 @@ services:
         # (bypassing any proxy), set NEXT_PUBLIC_API_BASE=http://localhost:8000
         # in .env to point the bundle at the api container's host port.
         NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-/api/v1}"
+    environment:
+      # Server-side base URL used by Next SSR to prefetch the curated
+      # regulatory baseline (paired with NEXT_PUBLIC_API_BASE above —
+      # NEXT_PUBLIC_* is for the browser bundle and is usually relative,
+      # which the Next server cannot fetch).
+      INTERNAL_API_BASE: "${INTERNAL_API_BASE:-http://api:8000}"
     ports:
       - "3000:3000"
     depends_on:

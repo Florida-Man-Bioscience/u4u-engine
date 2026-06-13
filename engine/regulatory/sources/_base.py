@@ -34,11 +34,10 @@ def cached_fetch(
     flagged as "stale". If no value has ever been cached, status is
     "unavailable" with data=None.
     """
-    hit, _ = regulatory_cache.get(source, lookup_key, ttl_seconds)
+    hit, fetched_at = regulatory_cache.get(source, lookup_key, ttl_seconds)
     if hit is not MISS:
-        cached_value, fetched_at = regulatory_cache.get_stale(source, lookup_key)
         return {
-            "data": cached_value,
+            "data": hit,
             "fetched_at": fetched_at,
             "status": "fresh",
             "source": source,

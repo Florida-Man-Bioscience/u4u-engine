@@ -17,7 +17,7 @@ from ._base import cached_fetch
 
 _SOURCE = "regulations_gov"
 _TTL = 60 * 60  # 1 hour
-_TIMEOUT = 10
+_TIMEOUT = 6
 _BASE = "https://api.regulations.gov/v4"
 
 

@@ -15,7 +15,7 @@ from ._base import cached_fetch
 
 _SOURCE = "openfda"
 _TTL = 60 * 60 * 24
-_TIMEOUT = 10
+_TIMEOUT = 6
 _ENFORCEMENT = "https://api.fda.gov/drug/enforcement.json"
 _EVENT = "https://api.fda.gov/drug/event.json"
 
