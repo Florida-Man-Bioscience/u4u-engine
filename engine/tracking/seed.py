@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import math
 import random
-import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -110,7 +109,7 @@ PATIENT_DEMOGRAPHICS = [
 # ── Public entry points ─────────────────────────────────────────────────────
 
 def seed(
-    conn: sqlite3.Connection,
+    conn,
     *,
     rng: random.Random | None = None,
     n_patients: int = 12,

@@ -8,11 +8,8 @@ from engine.tracking.seed import seed
 
 def test_seed_labels_are_marked_demo():
     db.reset_initialized()
-    conn = get_conn(":memory:")
-    try:
+    with get_conn(":memory:") as conn:
         seed(conn, rng=random.Random(1), n_patients=3)
         labels = [p.label for p in service.list_patients(conn)]
         assert labels
         assert all(lbl.startswith("DEMO-") for lbl in labels)
-    finally:
-        conn.close()

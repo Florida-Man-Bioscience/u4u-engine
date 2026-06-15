@@ -14,7 +14,6 @@ the deploy footprint small and the queries readable.
 from __future__ import annotations
 
 import math
-import sqlite3
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -189,7 +188,7 @@ def _aggregate_bin(values: list[float], center: float) -> TimeBin | None:
 # ── Core query ──────────────────────────────────────────────────────────────
 
 def cohort_trajectories(
-    conn: sqlite3.Connection,
+    conn,
     *,
     peptide_name: str,
     biomarker_name: str,
@@ -200,22 +199,24 @@ def cohort_trajectories(
     expected = _expected_for(peptide_name, biomarker_name)
     expected_dict = expected.to_dict() if expected else None
 
-    sql = """
+    from .service import _ph
+    ph = _ph(conn)
+    sql = f"""
         SELECT m.patient_id, m.value, m.measured_at,
                t.id AS treatment_id, t.dose, t.dose_unit, t.start_date
         FROM measurements m
         JOIN treatments t
           ON t.patient_id = m.patient_id
          AND (m.treatment_id IS NULL OR m.treatment_id = t.id)
-        WHERE t.peptide_name = ?
-          AND m.biomarker_name = ?
+        WHERE t.peptide_name = {ph}
+          AND m.biomarker_name = {ph}
     """
     params: list[Any] = [peptide_name, biomarker_name]
     if dose_min is not None:
-        sql += " AND t.dose >= ?"
+        sql += f" AND t.dose >= {ph}"
         params.append(dose_min)
     if dose_max is not None:
-        sql += " AND t.dose <= ?"
+        sql += f" AND t.dose <= {ph}"
         params.append(dose_max)
     sql += " ORDER BY m.measured_at"
 
@@ -291,18 +292,20 @@ def cohort_trajectories(
 
 # ── Catalog endpoints ───────────────────────────────────────────────────────
 
-def available_biomarkers(conn: sqlite3.Connection, peptide_name: str) -> list[dict[str, Any]]:
+def available_biomarkers(conn, peptide_name: str) -> list[dict[str, Any]]:
     """Return measurements panel + count of observed values per marker."""
     panel = get_biomarker_panel(peptide_name)
     if panel is None:
         return []
+    from .service import _ph
+    ph = _ph(conn)
     counts = {
         row["biomarker_name"]: row["n"]
         for row in conn.execute(
-            """SELECT m.biomarker_name AS biomarker_name, COUNT(*) AS n
+            f"""SELECT m.biomarker_name AS biomarker_name, COUNT(*) AS n
                FROM measurements m
                JOIN treatments t ON t.patient_id = m.patient_id
-               WHERE t.peptide_name = ?
+               WHERE t.peptide_name = {ph}
                GROUP BY m.biomarker_name""",
             (peptide_name,),
         ).fetchall()
@@ -334,7 +337,7 @@ def _tau_for(expected: BiomarkerMeasurement | None,
 
 
 def predict_response(
-    conn: sqlite3.Connection,
+    conn,
     *,
     patient_id: str,
     peptide_name: str,
@@ -571,7 +574,7 @@ def predict_response(
     }
 
 
-def peptides_with_data(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+def peptides_with_data(conn) -> list[dict[str, Any]]:
     """List peptides that have at least one treatment recorded."""
     rows = conn.execute(
         """SELECT t.peptide_name AS peptide_name,

@@ -26,6 +26,9 @@
 
             # Utilities
             urllib3
+
+            # Database
+            psycopg2
           ]))
           pkgs.nodejs_20
         ];

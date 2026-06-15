@@ -62,7 +62,6 @@ Limits
 from __future__ import annotations
 
 import math
-import sqlite3
 import statistics
 from dataclasses import dataclass
 from datetime import datetime
@@ -98,7 +97,7 @@ class DonorFit:
 
 
 def collect_donor_fits(
-    conn: sqlite3.Connection,
+    conn,
     *,
     peptide_name: str,
     biomarker_name: str,
@@ -116,19 +115,21 @@ def collect_donor_fits(
     that align positively to their treatment start. ``exclude_patient_id``
     is dropped so leave-one-out is the default.
     """
-    sql = """
+    from .service import _ph
+    ph = _ph(conn)
+    sql = f"""
         SELECT t.patient_id AS pid, t.start_date AS start_date,
                m.measured_at AS measured_at, m.value AS value
         FROM treatments t
         JOIN measurements m
           ON m.patient_id = t.patient_id
          AND (m.treatment_id IS NULL OR m.treatment_id = t.id)
-        WHERE t.peptide_name = ?
-          AND m.biomarker_name = ?
+        WHERE t.peptide_name = {ph}
+          AND m.biomarker_name = {ph}
     """
     params: list[Any] = [peptide_name, biomarker_name]
     if exclude_patient_id is not None:
-        sql += " AND t.patient_id != ?"
+        sql += f" AND t.patient_id != {ph}"
         params.append(exclude_patient_id)
 
     by_patient: dict[str, list[tuple[float, float]]] = {}

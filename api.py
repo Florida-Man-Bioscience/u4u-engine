@@ -50,6 +50,9 @@ from pydantic import BaseModel
 from engine import run_pipeline
 from engine.acmg import apply_signoff
 
+# ── Database (Postgres when DATABASE_URL is set, in-memory fallback otherwise) ─
+_DB_URL = os.getenv("DATABASE_URL", "").strip()
+
 
 class AcmgSignoffRequest(BaseModel):
     reviewer: str
@@ -113,7 +116,8 @@ from contextlib import asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Startup + shutdown hooks. Replaces the deprecated
     ``@app.on_event("startup")`` pattern."""
-    _load_jobs_from_disk()
+    _run_db_migrations()
+    _load_jobs_from_store()
     cleanup_task = asyncio.create_task(_cleanup_old_jobs())
     try:
         yield
@@ -240,10 +244,155 @@ def _serializable_job(job: dict) -> dict:
     return payload
 
 
+def _run_db_migrations() -> None:
+    """Run pending SQL migrations at startup (no-op when DATABASE_URL is absent)."""
+    if not _DB_URL:
+        return
+    try:
+        from db.migrate import run_migrations
+        run_migrations(_DB_URL)
+        log.info("Database migrations complete")
+    except Exception:
+        log.exception("Database migration failed — proceeding with in-memory job store")
+
+
+def _pg_insert_results(job_id: str, variants: list[dict]) -> None:
+    """Insert per-variant result rows. Called after pipeline completes."""
+    if not _DB_URL or not variants:
+        return
+    try:
+        from db.pool import get_conn as pg_conn
+        import psycopg2.extras
+
+        rows = []
+        for v in variants:
+            genes = v.get("genes") or []
+            reasons = v.get("reasons") or []
+            rows.append({
+                "job_id": job_id,
+                "variant_id": v.get("variant_id") or v.get("rsid") or f"{v.get('chrom')}:{v.get('pos')}",
+                "rsid": v.get("rsid"),
+                "location": v.get("location"),
+                "chrom": v.get("chrom"),
+                "pos": v.get("pos"),
+                "ref": v.get("ref"),
+                "alt": v.get("alt"),
+                "zygosity": v.get("zygosity"),
+                "consequence": v.get("consequence"),
+                "genes": genes if isinstance(genes, list) else [genes],
+                "clinvar": v.get("clinvar"),
+                "clinvar_raw": v.get("clinvar_raw"),
+                "disease_name": v.get("disease_name"),
+                "condition_key": v.get("condition_key"),
+                "gnomad_af": v.get("gnomad_af"),
+                "gnomad_popmax": v.get("gnomad_popmax"),
+                "gnomad_homozygote_count": v.get("gnomad_homozygote_count"),
+                "score": v.get("score", 0),
+                "tier": v.get("tier", "low"),
+                "reasons": reasons if isinstance(reasons, list) else [reasons],
+                "frequency_derived_label": v.get("frequency_derived_label"),
+                "carrier_note": v.get("carrier_note"),
+                "emoji": v.get("emoji"),
+                "headline": v.get("headline"),
+                "consequence_plain": v.get("consequence_plain"),
+                "rarity_plain": v.get("rarity_plain"),
+                "clinvar_plain": v.get("clinvar_plain"),
+                "action_hint": v.get("action_hint"),
+                "zygosity_plain": v.get("zygosity_plain"),
+                "full_json": psycopg2.extras.Json(v),
+            })
+
+        with pg_conn() as conn:
+            cur = conn.cursor()  # raw psycopg2 cursor via wrapper
+            psycopg2.extras.execute_batch(
+                cur,
+                """
+                INSERT INTO results (
+                    job_id, variant_id, rsid, location, chrom, pos, ref, alt,
+                    zygosity, consequence, genes, clinvar, clinvar_raw,
+                    disease_name, condition_key, gnomad_af, gnomad_popmax,
+                    gnomad_homozygote_count, score, tier, reasons,
+                    frequency_derived_label, carrier_note, emoji, headline,
+                    consequence_plain, rarity_plain, clinvar_plain, action_hint,
+                    zygosity_plain, full_json
+                ) VALUES (
+                    %(job_id)s, %(variant_id)s, %(rsid)s, %(location)s,
+                    %(chrom)s, %(pos)s, %(ref)s, %(alt)s, %(zygosity)s,
+                    %(consequence)s, %(genes)s, %(clinvar)s, %(clinvar_raw)s,
+                    %(disease_name)s, %(condition_key)s, %(gnomad_af)s,
+                    %(gnomad_popmax)s, %(gnomad_homozygote_count)s, %(score)s,
+                    %(tier)s, %(reasons)s, %(frequency_derived_label)s,
+                    %(carrier_note)s, %(emoji)s, %(headline)s,
+                    %(consequence_plain)s, %(rarity_plain)s, %(clinvar_plain)s,
+                    %(action_hint)s, %(zygosity_plain)s, %(full_json)s
+                )
+                ON CONFLICT DO NOTHING
+                """,
+                rows,
+                page_size=200,
+            )
+    except Exception:
+        log.exception("failed to insert results for job %s into Postgres", job_id)
+
+
 def _persist_jobs_locked() -> None:
-    """Atomically mirror the in-memory job store to disk, encrypted at rest."""
+    """Persist the current job store state.
+
+    When DATABASE_URL is set, upserts all jobs to Postgres in one connection.
+    Falls back to Fernet-encrypted JSON file if configured.
+    Postgres takes precedence over the file store.
+    """
+    if _DB_URL:
+        try:
+            from db.pool import get_conn as pg_conn
+            import psycopg2.extras
+            with pg_conn() as conn:
+                for job_id, job in _jobs.items():
+                    pipeline_output = job.get("results")
+                    conn.execute(
+                        """
+                        INSERT INTO jobs (id, status, filename, file_size_bytes,
+                            progress_step, progress_pct, variant_count, error_message,
+                            pipeline_output_json, created_at, started_at, finished_at)
+                        VALUES (%(id)s, %(status)s, %(filename)s, %(file_size_bytes)s,
+                            %(progress_step)s, %(progress_pct)s, %(variant_count)s,
+                            %(error_message)s, %(pipeline_output_json)s,
+                            %(created_at)s, %(started_at)s, %(finished_at)s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            status               = EXCLUDED.status,
+                            progress_step        = EXCLUDED.progress_step,
+                            progress_pct         = EXCLUDED.progress_pct,
+                            variant_count        = EXCLUDED.variant_count,
+                            error_message        = EXCLUDED.error_message,
+                            pipeline_output_json = EXCLUDED.pipeline_output_json,
+                            started_at           = EXCLUDED.started_at,
+                            finished_at          = EXCLUDED.finished_at
+                        """,
+                        {
+                            "id": job_id,
+                            "status": job.get("status", "pending"),
+                            "filename": job.get("filename", ""),
+                            "file_size_bytes": job.get("file_size", 0),
+                            "progress_step": (job.get("progress") or {}).get("step"),
+                            "progress_pct": (job.get("progress") or {}).get("pct", 0),
+                            "variant_count": job.get("count"),
+                            "error_message": job.get("error"),
+                            "pipeline_output_json": (
+                                psycopg2.extras.Json(pipeline_output)
+                                if pipeline_output is not None else None
+                            ),
+                            "created_at": job.get("created_at"),
+                            "started_at": job.get("started_at"),
+                            "finished_at": job.get("finished_at"),
+                        },
+                    )
+        except Exception:
+            log.exception("failed to persist jobs to Postgres")
+        return
+
+    # Fernet-encrypted JSON fallback (no DATABASE_URL)
     if not PERSIST_ENABLED:
-        return  # in-memory only — never write plaintext genomic-derived data
+        return
     path = Path(JOB_STORE_PATH)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -263,8 +412,76 @@ def _persist_jobs() -> None:
         _persist_jobs_locked()
 
 
+def _load_jobs_from_store() -> None:
+    """Populate _jobs from Postgres (preferred) or Fernet JSON file (fallback)."""
+    if _DB_URL:
+        _load_jobs_from_pg()
+    else:
+        _load_jobs_from_disk()
+
+
+def _load_jobs_from_pg() -> None:
+    """Load recent jobs from Postgres into the in-memory store."""
+    try:
+        from db.pool import get_conn as pg_conn
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=JOB_TTL_HOURS)
+        now = _now_iso()
+        restored = 0
+
+        with pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id::text, status, filename, file_size_bytes,
+                       progress_step, progress_pct, variant_count, error_message,
+                       pipeline_output_json, created_at, started_at, finished_at
+                FROM jobs
+                WHERE created_at > %s
+                ORDER BY created_at DESC
+                LIMIT 500
+                """,
+                (cutoff,),
+            )
+            rows = cur.fetchall()
+
+        with _jobs_lock:
+            for row in rows:
+                job_id = row["id"]
+                status = row["status"]
+                if status in {"pending", "running"}:
+                    status = "failed"
+                    error = "Job was interrupted by an API restart. Please upload again."
+                    finished_at = now
+                else:
+                    error = row.get("error_message")
+                    finished_at = row["finished_at"].isoformat() if row.get("finished_at") else None
+
+                created_at = row["created_at"].isoformat() if row.get("created_at") else now
+                started_at = row["started_at"].isoformat() if row.get("started_at") else None
+                pipeline_output = row.get("pipeline_output_json")
+
+                _jobs[job_id] = {
+                    "status":          status,
+                    "progress":        {"step": row.get("progress_step") or "Restored", "pct": row.get("progress_pct") or 0},
+                    "count":           row.get("variant_count"),
+                    "results":         pipeline_output,
+                    "partial_results": [],
+                    "error":           error,
+                    "filename":        row.get("filename", ""),
+                    "file_size":       row.get("file_size_bytes", 0),
+                    "created_at":      created_at,
+                    "started_at":      started_at,
+                    "finished_at":     finished_at,
+                }
+                restored += 1
+
+        log.info("loaded %d jobs from Postgres", restored)
+    except Exception:
+        log.exception("failed to load jobs from Postgres — starting with empty job store")
+
+
 def _load_jobs_from_disk() -> None:
-    """Load persisted jobs, marking interrupted pending/running jobs failed."""
+    """Load persisted jobs from Fernet-encrypted JSON file (no-DATABASE_URL fallback)."""
     if not PERSIST_ENABLED:
         return
     path = Path(JOB_STORE_PATH)
@@ -364,6 +581,8 @@ def _run_pipeline_task(
                 "finished_at": _now_iso(),
             })
             _persist_jobs_locked()
+        # Insert per-variant rows into results table (outside lock — can be slow)
+        _pg_insert_results(job_id, variants)
         log.info("job=%s done variants=%d", job_id, len(variants))
 
     except ValueError as exc:

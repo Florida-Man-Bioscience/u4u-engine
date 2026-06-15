@@ -5,13 +5,17 @@ CRUD operations for patients, treatments, and measurements.
 
 Identifiers are random hex strings (16 chars) — short enough for URLs,
 long enough that collisions are negligible at the scale this is meant for.
+
+SQL uses %s placeholders (psycopg2 / Postgres). Row results are normalised
+via _row() so the same code handles both RealDictCursor (Postgres) and
+sqlite3.Row (SQLite fallback in tests).
 """
 from __future__ import annotations
 
 import csv
 import io
 import secrets
-import sqlite3
+from datetime import datetime
 from typing import Iterable
 
 from .models import Measurement, Patient, Treatment
@@ -21,37 +25,55 @@ def _new_id() -> str:
     return secrets.token_hex(8)
 
 
+def _row(row) -> dict:
+    """Normalise a psycopg2 RealDictRow or sqlite3.Row to a plain dict,
+    converting any datetime values to ISO-8601 strings."""
+    d = dict(row)
+    for k, v in d.items():
+        if isinstance(v, datetime):
+            d[k] = v.isoformat()
+    return d
+
+
+def _ph(conn) -> str:
+    """Return the right parameter placeholder (%s for Postgres, ? for SQLite)."""
+    return "%s" if getattr(conn, "_is_pg", False) else "?"
+
+
 # ── Patients ────────────────────────────────────────────────────────────────
 
 def create_patient(
-    conn: sqlite3.Connection,
+    conn,
     *,
     label: str,
     sex: str | None = None,
     birth_year: int | None = None,
     notes: str | None = None,
 ) -> Patient:
+    ph = _ph(conn)
     pid = _new_id()
     conn.execute(
-        "INSERT INTO patients (id, label, sex, birth_year, notes) VALUES (?,?,?,?,?)",
+        f"INSERT INTO patients (id, label, sex, birth_year, notes) VALUES ({ph},{ph},{ph},{ph},{ph})",
         (pid, label, sex, birth_year, notes),
     )
     conn.commit()
     return get_patient(conn, pid)  # type: ignore[return-value]
 
 
-def get_patient(conn: sqlite3.Connection, patient_id: str) -> Patient | None:
-    row = conn.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
-    return Patient(**dict(row)) if row else None
+def get_patient(conn, patient_id: str) -> Patient | None:
+    ph = _ph(conn)
+    row = conn.execute(f"SELECT * FROM patients WHERE id = {ph}", (patient_id,)).fetchone()
+    return Patient(**_row(row)) if row else None
 
 
-def list_patients(conn: sqlite3.Connection) -> list[Patient]:
+def list_patients(conn) -> list[Patient]:
     rows = conn.execute("SELECT * FROM patients ORDER BY created_at DESC").fetchall()
-    return [Patient(**dict(r)) for r in rows]
+    return [Patient(**_row(r)) for r in rows]
 
 
-def delete_patient(conn: sqlite3.Connection, patient_id: str) -> bool:
-    cur = conn.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
+def delete_patient(conn, patient_id: str) -> bool:
+    ph = _ph(conn)
+    cur = conn.execute(f"DELETE FROM patients WHERE id = {ph}", (patient_id,))
     conn.commit()
     return cur.rowcount > 0
 
@@ -59,7 +81,7 @@ def delete_patient(conn: sqlite3.Connection, patient_id: str) -> bool:
 # ── Treatments ──────────────────────────────────────────────────────────────
 
 def create_treatment(
-    conn: sqlite3.Connection,
+    conn,
     *,
     patient_id: str,
     peptide_name: str,
@@ -71,12 +93,13 @@ def create_treatment(
     end_date: str | None = None,
     notes: str | None = None,
 ) -> Treatment:
+    ph = _ph(conn)
     tid = _new_id()
     conn.execute(
-        """INSERT INTO treatments
+        f"""INSERT INTO treatments
            (id, patient_id, peptide_name, dose, dose_unit, schedule, route,
             start_date, end_date, notes)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
         (tid, patient_id, peptide_name, dose, dose_unit, schedule, route,
          start_date, end_date, notes),
     )
@@ -84,31 +107,34 @@ def create_treatment(
     return get_treatment(conn, tid)  # type: ignore[return-value]
 
 
-def get_treatment(conn: sqlite3.Connection, treatment_id: str) -> Treatment | None:
-    row = conn.execute("SELECT * FROM treatments WHERE id = ?", (treatment_id,)).fetchone()
-    return Treatment(**dict(row)) if row else None
+def get_treatment(conn, treatment_id: str) -> Treatment | None:
+    ph = _ph(conn)
+    row = conn.execute(f"SELECT * FROM treatments WHERE id = {ph}", (treatment_id,)).fetchone()
+    return Treatment(**_row(row)) if row else None
 
 
-def list_treatments_for_patient(conn: sqlite3.Connection, patient_id: str) -> list[Treatment]:
+def list_treatments_for_patient(conn, patient_id: str) -> list[Treatment]:
+    ph = _ph(conn)
     rows = conn.execute(
-        "SELECT * FROM treatments WHERE patient_id = ? ORDER BY start_date DESC",
+        f"SELECT * FROM treatments WHERE patient_id = {ph} ORDER BY start_date DESC",
         (patient_id,),
     ).fetchall()
-    return [Treatment(**dict(r)) for r in rows]
+    return [Treatment(**_row(r)) for r in rows]
 
 
-def list_treatments_by_peptide(conn: sqlite3.Connection, peptide_name: str) -> list[Treatment]:
+def list_treatments_by_peptide(conn, peptide_name: str) -> list[Treatment]:
+    ph = _ph(conn)
     rows = conn.execute(
-        "SELECT * FROM treatments WHERE peptide_name = ? ORDER BY start_date",
+        f"SELECT * FROM treatments WHERE peptide_name = {ph} ORDER BY start_date",
         (peptide_name,),
     ).fetchall()
-    return [Treatment(**dict(r)) for r in rows]
+    return [Treatment(**_row(r)) for r in rows]
 
 
 # ── Measurements ────────────────────────────────────────────────────────────
 
 def create_measurement(
-    conn: sqlite3.Connection,
+    conn,
     *,
     patient_id: str,
     biomarker_name: str,
@@ -119,12 +145,13 @@ def create_measurement(
     unit: str | None = None,
     notes: str | None = None,
 ) -> Measurement:
+    ph = _ph(conn)
     mid = _new_id()
     conn.execute(
-        """INSERT INTO measurements
+        f"""INSERT INTO measurements
            (id, patient_id, treatment_id, biomarker_name, modality,
             value, unit, measured_at, notes)
-           VALUES (?,?,?,?,?,?,?,?,?)""",
+           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
         (mid, patient_id, treatment_id, biomarker_name, modality,
          value, unit, measured_at, notes),
     )
@@ -132,49 +159,52 @@ def create_measurement(
     return get_measurement(conn, mid)  # type: ignore[return-value]
 
 
-def get_measurement(conn: sqlite3.Connection, measurement_id: str) -> Measurement | None:
+def get_measurement(conn, measurement_id: str) -> Measurement | None:
+    ph = _ph(conn)
     row = conn.execute(
-        "SELECT * FROM measurements WHERE id = ?", (measurement_id,)
+        f"SELECT * FROM measurements WHERE id = {ph}", (measurement_id,)
     ).fetchone()
-    return Measurement(**dict(row)) if row else None
+    return Measurement(**_row(row)) if row else None
 
 
 def list_measurements_for_patient(
-    conn: sqlite3.Connection,
+    conn,
     patient_id: str,
     *,
     biomarker_name: str | None = None,
 ) -> list[Measurement]:
+    ph = _ph(conn)
     if biomarker_name:
         rows = conn.execute(
-            """SELECT * FROM measurements
-               WHERE patient_id = ? AND biomarker_name = ?
+            f"""SELECT * FROM measurements
+               WHERE patient_id = {ph} AND biomarker_name = {ph}
                ORDER BY measured_at""",
             (patient_id, biomarker_name),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM measurements WHERE patient_id = ? ORDER BY measured_at",
+            f"SELECT * FROM measurements WHERE patient_id = {ph} ORDER BY measured_at",
             (patient_id,),
         ).fetchall()
-    return [Measurement(**dict(r)) for r in rows]
+    return [Measurement(**_row(r)) for r in rows]
 
 
 def bulk_create_measurements(
-    conn: sqlite3.Connection,
+    conn,
     records: Iterable[dict],
 ) -> list[Measurement]:
     """Insert many measurements in one transaction. Each record needs
     patient_id, biomarker_name, value, measured_at. Other fields optional."""
+    ph = _ph(conn)
     out: list[Measurement] = []
     cur = conn.cursor()
     for r in records:
         mid = _new_id()
         cur.execute(
-            """INSERT INTO measurements
+            f"""INSERT INTO measurements
                (id, patient_id, treatment_id, biomarker_name, modality,
                 value, unit, measured_at, notes)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
             (
                 mid,
                 r["patient_id"],
@@ -212,36 +242,40 @@ CSV_OPTIONAL = {"treatment_id", "modality", "unit", "notes"}
 # ── Genetic profile ─────────────────────────────────────────────────────────
 
 def set_genetic_profile(
-    conn: sqlite3.Connection,
+    conn,
     patient_id: str,
     profile_json: str,
     *,
     source: str = "synthetic",
 ) -> None:
     """Upsert a genetic profile for a patient."""
+    ph = _ph(conn)
+    now_fn = "NOW()" if ph == "%s" else "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
     conn.execute(
-        """INSERT INTO patient_genetics (patient_id, profile_json, source)
-           VALUES (?, ?, ?)
+        f"""INSERT INTO patient_genetics (patient_id, profile_json, source)
+           VALUES ({ph}, {ph}, {ph})
            ON CONFLICT(patient_id) DO UPDATE SET
-               profile_json = excluded.profile_json,
-               source = excluded.source,
-               created_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')""",
+               profile_json = EXCLUDED.profile_json,
+               source = EXCLUDED.source,
+               created_at = {now_fn}""",
         (patient_id, profile_json, source),
     )
     conn.commit()
 
 
 def get_genetic_profile_json(
-    conn: sqlite3.Connection, patient_id: str
+    conn, patient_id: str
 ) -> tuple[str, str, str] | None:
     """Return (profile_json, source, created_at) or None."""
+    ph = _ph(conn)
     row = conn.execute(
-        "SELECT profile_json, source, created_at FROM patient_genetics WHERE patient_id = ?",
+        f"SELECT profile_json, source, created_at FROM patient_genetics WHERE patient_id = {ph}",
         (patient_id,),
     ).fetchone()
     if row is None:
         return None
-    return row["profile_json"], row["source"], row["created_at"]
+    d = _row(row)
+    return d["profile_json"], d["source"], d["created_at"]
 
 
 def parse_measurement_csv(text: str) -> tuple[list[dict], list[str]]:

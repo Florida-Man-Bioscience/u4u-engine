@@ -20,7 +20,6 @@ Each returned dict has the canonical variant shape from parsers.py:
 
 import time
 import requests
-import sqlite3
 import json
 import os
 from tenacity import (
@@ -144,6 +143,28 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
         return []
 
 
+def _get_cache_conn():
+    """Return a (conn, is_postgres) tuple. Falls back to SQLite."""
+    try:
+        from db.pool import DATABASE_URL, get_raw_conn
+        if DATABASE_URL:
+            return get_raw_conn(), True
+    except Exception:
+        pass
+    import sqlite3
+    conn = sqlite3.connect(_CACHE_DB_PATH, timeout=10.0)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS rsid_cache (
+            rsid TEXT,
+            genotype TEXT,
+            result_json TEXT,
+            PRIMARY KEY (rsid, genotype)
+        )
+    """)
+    return conn, False
+
+
 def resolve_rsids(
     rsids_and_genotypes: list,
     progress_callback=None,
@@ -167,40 +188,65 @@ def resolve_rsids(
     resolved = []
     total = len(rsids_and_genotypes)
 
-    conn = sqlite3.connect(_CACHE_DB_PATH, timeout=10.0)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS rsid_cache (
-            rsid TEXT,
-            genotype TEXT,
-            result_json TEXT,
-            PRIMARY KEY (rsid, genotype)
-        )
-    ''')
-    cur = conn.cursor()
+    conn, is_pg = _get_cache_conn()
 
-    for i, item in enumerate(rsids_and_genotypes):
-        if isinstance(item, tuple):
-            rsid, genotype = item[0], item[1] if len(item) > 1 else None
+    try:
+        for i, item in enumerate(rsids_and_genotypes):
+            if isinstance(item, tuple):
+                rsid, genotype = item[0], item[1] if len(item) > 1 else None
+            else:
+                rsid, genotype = item, None
+
+            geno_key = genotype or ""
+
+            if is_pg:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT result_json FROM rsid_cache WHERE rsid = %s AND genotype = %s",
+                    (rsid, geno_key),
+                )
+                row = cur.fetchone()
+                hit = row["result_json"] if row else None
+            else:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT result_json FROM rsid_cache WHERE rsid = ? AND genotype = ?",
+                    (rsid, geno_key),
+                )
+                row = cur.fetchone()
+                hit = row[0] if row else None
+
+            if hit:
+                resolved.extend(json.loads(hit))
+            else:
+                variants = resolve_rsid(rsid, genotype)
+                if is_pg:
+                    cur.execute(
+                        """
+                        INSERT INTO rsid_cache (rsid, genotype, result_json)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (rsid, genotype) DO UPDATE
+                            SET result_json = EXCLUDED.result_json
+                        """,
+                        (rsid, geno_key, json.dumps(variants)),
+                    )
+                    conn.commit()
+                else:
+                    cur.execute(
+                        "INSERT OR REPLACE INTO rsid_cache (rsid, genotype, result_json) VALUES (?, ?, ?)",
+                        (rsid, geno_key, json.dumps(variants)),
+                    )
+                    conn.commit()
+                resolved.extend(variants)
+
+            if progress_callback:
+                progress_callback(i + 1, total)
+
+    finally:
+        if is_pg:
+            from db.pool import put_conn
+            put_conn(conn)
         else:
-            rsid, genotype = item, None
+            conn.close()
 
-        cur.execute("SELECT result_json FROM rsid_cache WHERE rsid = ? AND genotype = ?", (rsid, genotype or ""))
-        row = cur.fetchone()
-
-        if row:
-            resolved.extend(json.loads(row[0]))
-        else:
-            variants = resolve_rsid(rsid, genotype)
-            cur.execute(
-                "INSERT OR REPLACE INTO rsid_cache (rsid, genotype, result_json) VALUES (?, ?, ?)",
-                (rsid, genotype or "", json.dumps(variants))
-            )
-            conn.commit()
-            resolved.extend(variants)
-
-        if progress_callback:
-            progress_callback(i + 1, total)
-
-    conn.close()
     return resolved
