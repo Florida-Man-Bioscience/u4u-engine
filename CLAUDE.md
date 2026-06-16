@@ -18,6 +18,10 @@ nix develop --command python -m pytest tests/test_engine/test_annotators.py -v
 
 # Run a single test by name
 nix develop --command python -m pytest tests/ -v -k "test_clinvar_fetch"
+
+# Run the Postgres smoke tests (off by default — boots an ephemeral PG
+# via initdb + pg_ctl and exercises the DATABASE_URL code paths)
+PG_TESTS=1 nix develop --command python -m pytest tests/test_postgres_smoke.py -v
 ```
 
 The `.venv/` in the repo root is a leftover from earlier development — don't use it.
