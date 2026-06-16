@@ -49,6 +49,9 @@ class AnnotationCache:
 
         Checked out once per thread and reused for the lifetime of that thread
         (typically a single pipeline execution in the ThreadPoolExecutor).
+        Held in autocommit so reads don't open implicit transactions that
+        would sit idle and block concurrent writers on row locks — each
+        SELECT and INSERT … ON CONFLICT is its own atomic statement.
         """
         wrapper = getattr(self._local, "pg_conn", None)
         if wrapper is not None and not wrapper.closed:
@@ -57,7 +60,7 @@ class AnnotationCache:
             return None
         try:
             from db.pool import get_raw_conn
-            wrapper = get_raw_conn()  # returns _ConnWrapper
+            wrapper = get_raw_conn(autocommit=True)
             self._local.pg_conn = wrapper
             return wrapper
         except Exception as exc:
@@ -66,16 +69,6 @@ class AnnotationCache:
             )
             self._local.pg_failed = True
             return None
-
-    def _pg_put(self, conn) -> None:
-        """Commit the current transaction on the thread-local Postgres conn."""
-        try:
-            conn.commit()
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
 
     # ── SQLite path ────────────────────────────────────────────────────────────
 
@@ -159,7 +152,6 @@ class AnnotationCache:
                     """,
                     (source, lookup_key, json.dumps(result)),
                 )
-                self._pg_put(conn)
             except Exception:
                 pass
         else:

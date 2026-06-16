@@ -127,9 +127,14 @@ def get_conn() -> Generator[_ConnWrapper, None, None]:
         pool.putconn(raw)
 
 
-def get_raw_conn() -> _ConnWrapper:
+def get_raw_conn(*, autocommit: bool = False) -> _ConnWrapper:
     """
     Check out a wrapped connection from the pool without a context manager.
+
+    Pass autocommit=True for long-lived thread-local handles (e.g. the
+    annotation cache) where holding an implicit transaction across many
+    reads would block writers on row locks. Per-statement commit is fine
+    when each call is a single INSERT … ON CONFLICT or a single SELECT.
 
     The caller MUST call `put_conn(conn)` when done.
     Prefer `get_conn()` context manager whenever possible.
@@ -139,6 +144,7 @@ def get_raw_conn() -> _ConnWrapper:
         raise RuntimeError("DATABASE_URL is not set")
     raw = pool.getconn()
     raw.cursor_factory = psycopg2.extras.RealDictCursor
+    raw.autocommit = autocommit
     return _ConnWrapper(raw)
 
 

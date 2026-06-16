@@ -101,20 +101,8 @@ def pg_database(tmp_path_factory):
 
 @pytest.fixture
 def pg_clean(pg_database):
-    """Truncate all writable tables between tests; keep schema_migrations.
-
-    Closes the connection pool first — AnnotationCache holds a long-lived
-    thread-local connection from the pool and leaves it idle-in-transaction
-    after each read, which would otherwise block the TRUNCATE on a row
-    lock. Closing the pool drops those connections so the next test gets
-    a fresh one.
-    """
+    """Truncate all writable tables between tests; keep schema_migrations."""
     yield
-    import db.pool as pool_mod
-    if pool_mod._pool is not None:
-        pool_mod._pool.closeall()
-        pool_mod._pool = None
-
     with psycopg2.connect(pg_database) as conn:
         with conn.cursor() as cur:
             cur.execute(
