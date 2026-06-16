@@ -1,0 +1,426 @@
+THIRD-PARTY SHAREWARE AND OPEN-SOURCE SOFTWARE DISCLOSURE
+U4U Engine — Personalized Genomic Analysis Platform
+Prepared for: UF Innovate — University of Florida Technology Transfer Office
+Date: June 16, 2026
+Inventors: Noah Thomas Jones, Curtis Dearing
+
+================================================================================
+PYTHON BACKEND — RUNTIME DEPENDENCIES
+================================================================================
+
+Package: requests
+Version (minimum): 2.31
+License: Apache License 2.0
+Purpose: HTTP client library used by all annotators to call external biomedical REST APIs.
+Source: https://pypi.org/project/requests/
+
+Package: tenacity
+Version (minimum): 8.2
+License: Apache License 2.0
+Purpose: Retry logic with exponential back-off for all external API calls; prevents transient network failures from failing a job.
+Source: https://pypi.org/project/tenacity/
+
+Package: pysam
+Version (minimum): 0.22
+License: MIT License
+Purpose: VCF and BAM/CRAM file parsing; used to read variant call format genomic data files.
+Source: https://pypi.org/project/pysam/
+
+Package: fastapi
+Version (minimum): 0.110
+License: MIT License
+Purpose: ASGI web framework providing the REST API layer (POST /analyze, GET /jobs/{id}, etc.).
+Source: https://pypi.org/project/fastapi/
+
+Package: uvicorn
+Version (minimum): 0.29
+License: BSD License
+Purpose: ASGI server that hosts the FastAPI application.
+Source: https://pypi.org/project/uvicorn/
+
+Package: python-multipart
+Version (minimum): 0.0.9
+License: Apache License 2.0
+Purpose: Multipart form-data parsing; required for genome file uploads via POST /analyze.
+Source: https://pypi.org/project/python-multipart/
+
+Package: sqlalchemy
+Version (minimum): 2.0
+License: MIT License
+Purpose: ORM and database abstraction layer used by the biomarker tracking and user account modules.
+Source: https://pypi.org/project/sqlalchemy/
+
+Package: asyncpg
+Version (minimum): 0.29
+License: Apache License 2.0
+Purpose: Async PostgreSQL driver for SQLAlchemy async sessions.
+Source: https://pypi.org/project/asyncpg/
+
+Package: alembic
+Version (minimum): 1.13
+License: MIT License
+Purpose: Database schema migration framework; manages incremental SQL migrations at startup.
+Source: https://pypi.org/project/alembic/
+
+Package: psycopg2 / psycopg2-binary
+Version (minimum): 2.9
+License: GNU Lesser General Public License v3 (LGPL 3)
+Purpose: Synchronous PostgreSQL database adapter; used by the connection pool, annotation cache, and job store.
+Source: https://pypi.org/project/psycopg2/
+
+Package: celery
+Version (minimum): 5.3
+License: BSD License
+Purpose: Distributed task queue framework declared as a dependency; used for job dispatching infrastructure.
+Source: https://pypi.org/project/celery/
+
+Package: redis (Python client)
+Version (minimum): 5.0
+License: MIT License
+Purpose: Python client for Redis, used as the message broker backend for Celery.
+Source: https://pypi.org/project/redis/
+
+Package: reportlab
+Version (minimum): 4.1
+License: BSD License
+Purpose: PDF report generation library.
+Source: https://pypi.org/project/reportlab/
+
+Package: httpx
+Version (minimum): 0.27
+License: BSD License
+Purpose: Async HTTP client used for non-blocking external API requests.
+Source: https://pypi.org/project/httpx/
+
+Package: aiohttp
+Version (minimum): 3.9
+License: Apache License 2.0
+Purpose: Async HTTP client/server framework used for certain asynchronous external API calls.
+Source: https://pypi.org/project/aiohttp/
+
+Package: pydantic
+Version (minimum): 2.6
+License: MIT License
+Purpose: Data validation and schema modeling for API request/response bodies and internal data structures.
+Source: https://pypi.org/project/pydantic/
+
+Package: cryptography
+Version (minimum): 42.0
+License: Apache License 2.0 / BSD License (dual)
+Purpose: Provides Fernet symmetric encryption used to encrypt genomic-derived job results at rest before disk persistence.
+Source: https://pypi.org/project/cryptography/
+
+Package: bcrypt
+Version (minimum): 4.0
+License: Apache License 2.0
+Purpose: Password hashing for the /auth/login endpoint backing app-user accounts.
+Source: https://pypi.org/project/bcrypt/
+
+Package: python-dotenv
+Version (minimum): 1.0
+License: BSD License
+Purpose: Loads environment variable configuration from .env files at startup.
+Source: https://pypi.org/project/python-dotenv/
+
+Package: urllib3
+Version (minimum): (transitive dependency)
+License: MIT License
+Purpose: HTTP transport library; pulled in transitively by requests and used directly in several annotators.
+Source: https://pypi.org/project/urllib3/
+
+================================================================================
+PYTHON BACKEND — TEST / DEVELOPMENT DEPENDENCIES
+================================================================================
+
+Package: pytest
+Version (minimum): 8.0
+License: MIT License
+Purpose: Test framework for the full unit and integration test suite.
+Source: https://pypi.org/project/pytest/
+
+Package: pytest-asyncio
+Version (minimum): 0.23
+License: Apache License 2.0
+Purpose: Async test support plugin for pytest; required for testing async FastAPI routes.
+Source: https://pypi.org/project/pytest-asyncio/
+
+Package: pytest-cov
+Version (minimum): 4.1
+License: MIT License
+Purpose: Code coverage reporting plugin for pytest.
+Source: https://pypi.org/project/pytest-cov/
+
+Package: responses
+Version (minimum): 0.23
+License: Apache License 2.0
+Purpose: HTTP mock library used in tests to intercept and stub all external API calls without live network access.
+Source: https://pypi.org/project/responses/
+
+================================================================================
+FRONTEND — RUNTIME DEPENDENCIES (Next.js Application)
+================================================================================
+
+Package: next
+Version: 16.1.4
+License: MIT License
+Purpose: React-based full-stack web framework providing the file upload form, results viewer, PGx dashboard, regulatory dashboard, and biomarker tracking UI.
+Source: https://www.npmjs.com/package/next
+
+Package: react
+Version: 19.2.3
+License: MIT License
+Purpose: Core UI component library.
+Source: https://www.npmjs.com/package/react
+
+Package: react-dom
+Version: 19.2.3
+License: MIT License
+Purpose: React DOM renderer; required to mount React components in the browser.
+Source: https://www.npmjs.com/package/react-dom
+
+Package: recharts
+Version (minimum): 2.15.4
+License: MIT License
+Purpose: SVG-based charting library used to render variant score charts, PGx visualizations, and biomarker tracking plots.
+Source: https://www.npmjs.com/package/recharts
+
+================================================================================
+FRONTEND — DEVELOPMENT DEPENDENCIES
+================================================================================
+
+Package: tailwindcss
+Version (minimum): 4
+License: MIT License
+Purpose: Utility-first CSS framework used for all frontend styling.
+Source: https://www.npmjs.com/package/tailwindcss
+
+Package: @tailwindcss/postcss
+Version (minimum): 4
+License: MIT License
+Purpose: PostCSS integration plugin for Tailwind CSS.
+Source: https://www.npmjs.com/package/@tailwindcss/postcss
+
+Package: typescript
+Version (minimum): 5
+License: Apache License 2.0
+Purpose: Static type-checking compiler for all frontend TypeScript source files.
+Source: https://www.npmjs.com/package/typescript
+
+Package: eslint
+Version (minimum): 9
+License: MIT License
+Purpose: JavaScript/TypeScript linter enforcing code quality rules.
+Source: https://www.npmjs.com/package/eslint
+
+Package: eslint-config-next
+Version: 16.1.4
+License: MIT License
+Purpose: Next.js-specific ESLint ruleset.
+Source: https://www.npmjs.com/package/eslint-config-next
+
+Package: @types/node
+Version (minimum): 20
+License: MIT License
+Purpose: TypeScript type definitions for Node.js built-in APIs.
+Source: https://www.npmjs.com/package/@types/node
+
+Package: @types/react
+Version (minimum): 19
+License: MIT License
+Purpose: TypeScript type definitions for React.
+Source: https://www.npmjs.com/package/@types/react
+
+Package: @types/react-dom
+Version (minimum): 19
+License: MIT License
+Purpose: TypeScript type definitions for react-dom.
+Source: https://www.npmjs.com/package/@types/react-dom
+
+================================================================================
+RUNTIME INFRASTRUCTURE
+================================================================================
+
+Component: Python 3.12 (CPython)
+License: Python Software Foundation License (PSF) — open source, GPL compatible
+Purpose: Interpreter for the entire backend engine and API. The NixOS development environment pins Python 3.12.
+Source: https://www.python.org/
+
+Component: Node.js 20
+License: MIT License
+Purpose: JavaScript runtime for building and serving the Next.js frontend.
+Source: https://nodejs.org/
+
+Component: PostgreSQL
+License: PostgreSQL License (open source, similar to BSD/MIT)
+Purpose: Primary production relational database storing jobs, per-variant results, user accounts, and biomarker measurements.
+Source: https://www.postgresql.org/
+
+Component: SQLite
+License: Public Domain
+Purpose: Embedded relational database used as fallback when DATABASE_URL is not configured (local development and test environments). Also used for annotation and rsID caches.
+Source: https://www.sqlite.org/
+
+Component: Redis
+License: BSD License (versions prior to 7.4); Redis Source Available License (RSAL) thereafter
+Purpose: In-memory data store used as the message broker for the Celery task queue.
+Source: https://redis.io/
+
+Component: NixOS / nixpkgs
+License: MIT License
+Purpose: Reproducible build system providing the pinned development shell environment (Python 3.12, Node.js 20, psycopg2, pytest, etc.) via flake.nix.
+Source: https://nixos.org/
+
+================================================================================
+EXTERNAL DATA SERVICES QUERIED AT RUNTIME VIA HTTP
+(No source code incorporated — third-party APIs called over the network)
+================================================================================
+
+Service: Ensembl Variant Effect Predictor (VEP) REST API
+Provider: EMBL-EBI / Wellcome Sanger Institute
+License: Apache License 2.0 (server software); data under EMBL-EBI terms of use
+Purpose: Primary variant consequence annotation — predicts effect of each variant on transcripts, returns consequence class, SIFT score, PolyPhen-2 score, and amino acid change.
+URL: https://rest.ensembl.org/
+
+Service: NCBI ClinVar E-utilities API
+Provider: National Center for Biotechnology Information (U.S. National Library of Medicine)
+License: Public domain (U.S. government work)
+Purpose: Clinical variant significance — returns pathogenicity classification (Pathogenic, Likely Pathogenic, VUS, Benign, etc.), associated disease name, and condition identifiers (OMIM, MedGen).
+URL: https://eutils.ncbi.nlm.nih.gov/
+
+Service: gnomAD GraphQL API
+Provider: Broad Institute of MIT and Harvard
+License: Data under ODC Open Database License (ODbL)
+Purpose: Population allele frequency data — returns global allele frequency, population-max frequency, and homozygote count for each variant across gnomAD v4.
+URL: https://gnomad.broadinstitute.org/api/
+
+Service: MyVariant.info REST API
+Provider: Su Lab, The Scripps Research Institute
+License: MIT License (server); data terms vary by source
+Purpose: Fallback variant annotator — aggregates data from multiple sources (ClinVar, ExAC, gnomAD, CADD, etc.) when primary annotators return no data.
+URL: https://myvariant.info/
+
+Service: UniProt REST API
+Provider: UniProt Consortium (EMBL-EBI, SIB, PIR)
+License: Creative Commons Attribution 4.0 (CC BY 4.0)
+Purpose: Protein function annotation — retrieves functional description of the protein product for each gene affected by a variant.
+URL: https://www.uniprot.org/help/api
+
+Service: PharmGKB REST API
+Provider: Stanford University
+License: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)
+Purpose: Pharmacogenomics drug-gene interaction data — retrieves known associations between a variant rsID and drug response, toxicity, or dosing.
+URL: https://www.pharmgkb.org/
+
+Service: NHGRI-EBI GWAS Catalog REST API
+Provider: National Human Genome Research Institute / EMBL-EBI
+License: Data under EMBL-EBI Terms of Use (freely available for research)
+Purpose: Genome-wide association study (GWAS) data — retrieves published trait associations for a given variant rsID from the curated GWAS Catalog.
+URL: https://www.ebi.ac.uk/gwas/rest/api/
+
+Service: KEGG REST API
+Provider: Kanehisa Laboratories, Kyoto University
+License: KEGG license (freely accessible for academic/non-commercial use; commercial license required for commercial use)
+Purpose: Biochemical pathway mapping — maps gene symbols to KEGG biochemical pathways to identify which metabolic or signaling pathways are affected across the full variant set.
+URL: https://rest.kegg.jp/
+
+Service: ClinicalTrials.gov API
+Provider: U.S. National Library of Medicine
+License: Public domain (U.S. government work)
+Purpose: Clinical trial lookup — retrieves active trial counts per peptide compound for the regulatory dashboard.
+URL: https://clinicaltrials.gov/api/v2/
+
+Service: openFDA API
+Provider: U.S. Food and Drug Administration
+License: Public domain (U.S. government work)
+Purpose: FDA adverse event, recall, and drug labeling data — augments the regulatory dashboard with live FDA enforcement and adverse event records per compound.
+URL: https://open.fda.gov/apis/
+
+Service: Federal Register / Regulations.gov API
+Provider: U.S. National Archives and Records Administration / GSA
+License: Public domain (U.S. government work)
+Purpose: Regulatory notice and public comment data — retrieves FDA rulemaking docket summaries and comment counts for the regulatory events dashboard.
+URL: https://www.federalregister.gov/api/v1/
+
+================================================================================
+NOTE ON PYTHON STANDARD LIBRARY
+================================================================================
+
+The following Python standard library modules are used throughout the codebase
+but are part of the CPython interpreter distribution and are not separately
+licensed third-party components: asyncio, concurrent.futures, csv, dataclasses,
+datetime, enum, functools, gzip, html, io, json, logging, math, os, pathlib,
+random, re, secrets, shutil, sqlite3, statistics, subprocess, tempfile, threading,
+time, typing, urllib.request, uuid.
+
+================================================================================
+NOTE ON ORIGINAL / PROPRIETARY ALGORITHMS — NO THIRD-PARTY CODE
+================================================================================
+
+The following components are implemented entirely in original code using only
+Python standard library functions (math, statistics). No third-party machine
+learning framework, statistics library, or Bayesian inference package was used.
+
+BAYESIAN BIOMARKER INFERENCE MODEL  (engine/tracking/bayes.py, genetics.py)
+-----------------------------------------------------------------------------
+The longitudinal biomarker tracking system implements a custom Normal-Normal
+conjugate Bayesian inference pipeline with the following original components:
+
+1. Genetic Prior Derivation
+   Per-patient prior on theta (fractional biomarker change from baseline) is
+   derived from the patient's genotype at 25 curated pharmacogenomically
+   relevant SNPs. Each SNP carries per-peptide effect weights scaled by
+   allele dosage (0/1/2 under Hardy-Weinberg equilibrium). The aggregate
+   weight g drives a tanh-compressed responder strength r ~ Normal(1 +
+   0.72*tanh(g), sigma_r), which then scales the panel's documented expected
+   percent change to produce a biomarker-specific Gaussian prior.
+
+2. Joint Bayesian Linear Regression (joint_fit_likelihood)
+   Given a set of timestamped measurements (week, value), the model jointly
+   estimates the pre-treatment baseline b and the effect-size parameter theta
+   via a reparameterized linear model: y_i = b + phi*a(w_i) + epsilon_i,
+   where phi = b*theta and a(w) = 1 - exp(-w/tau) is the peptide's
+   exponential approach curve. An informative Normal prior is placed on b
+   using the panel's documented physiologic baseline; phi has a weak prior.
+   The posterior precision matrix is solved in closed form (2x2 Bayesian
+   linear regression), iterating up to 4 rounds to refine the noise variance
+   sigma^2 from residuals. The parameter theta is recovered from phi/b using
+   the delta method. A Student-t inflation correction is applied to the
+   posterior standard deviation to prevent under-coverage at small sample
+   sizes (correction tabulated for df = 1..30).
+
+3. Fallback Estimator (effective_observation)
+   When the joint fit is not preferred, an inverse-variance pooling estimator
+   converts each (week, value) pair to a theta estimate via
+   theta_hat_i = (y_i/baseline - 1) / a(w_i) and combines them using
+   precision-weighted averaging.
+
+4. Normal-Normal Conjugate Update (update)
+   Prior and likelihood are combined: tau_post = tau_prior + tau_like,
+   mu_post = (tau_prior*mu_prior + tau_like*mu_like) / tau_post,
+   producing a closed-form Gaussian posterior on theta.
+
+5. Posterior Predictive Trajectory (predictive_curve)
+   The posterior is projected through the approach curve to produce a mean
+   trajectory V(w) = baseline*(1 + mu_post*a(w)) with a 95% credible band
+   that propagates both theta uncertainty and baseline uncertainty when no
+   pre-treatment sample is available.
+
+6. Expected Change Window (expected_window)
+   The posterior-informed expected detection window is derived analytically:
+   weeks_min is when the predicted |delta/baseline| first exceeds one
+   measurement-noise standard deviation; weeks_max is the 95%-plateau week
+   (~3*tau). If the 95% credible interval includes zero, the direction is
+   reported as inconclusive.
+
+PHARMACOGENOMIC HGNN ENSEMBLE  (engine/pgx/hgnn.py, conformal.py)
+-------------------------------------------------------------------
+The hypergraph neural network (HGNN) drug-response predictor and Mondrian
+conformal prediction calibrator are implemented in original Python code.
+No third-party neural network framework (TensorFlow, PyTorch, scikit-learn)
+is used. The conformal prediction layer applies Mondrian split conformal
+sets using the Venn-ABERS / standard quantile approach implemented entirely
+in original Python.
+
+================================================================================
+END OF THIRD-PARTY DISCLOSURE
+================================================================================
