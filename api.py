@@ -153,6 +153,10 @@ _executor = ThreadPoolExecutor(max_workers=WORKERS)
 from engine.tracking.api import router as _tracking_router  # noqa: E402
 app.include_router(_tracking_router)
 
+# ── App user accounts (Authentik-backed) ────────────────────────────────────
+from engine.users.api import router as _users_router  # noqa: E402
+app.include_router(_users_router)
+
 # ── Job store ─────────────────────────────────────────────────────────────────
 # Schema per job:
 #   status     : "pending" | "running" | "done" | "failed"
