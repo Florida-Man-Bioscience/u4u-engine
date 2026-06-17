@@ -42,13 +42,15 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, UploadFile, File
+from fastapi import BackgroundTasks, Depends, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 
 from engine import run_pipeline
 from engine.acmg import apply_signoff
+from engine.users.deps import current_user
+from engine.users.models import User
 
 # ── Database (Postgres when DATABASE_URL is set, in-memory fallback otherwise) ─
 _DB_URL = os.getenv("DATABASE_URL", "").strip()
@@ -357,11 +359,13 @@ def _persist_jobs_locked() -> None:
                         """
                         INSERT INTO jobs (id, status, filename, file_size_bytes,
                             progress_step, progress_pct, variant_count, error_message,
-                            pipeline_output_json, created_at, started_at, finished_at)
+                            pipeline_output_json, created_at, started_at, finished_at,
+                            created_by_user_id)
                         VALUES (%(id)s, %(status)s, %(filename)s, %(file_size_bytes)s,
                             %(progress_step)s, %(progress_pct)s, %(variant_count)s,
                             %(error_message)s, %(pipeline_output_json)s,
-                            %(created_at)s, %(started_at)s, %(finished_at)s)
+                            %(created_at)s, %(started_at)s, %(finished_at)s,
+                            %(created_by_user_id)s)
                         ON CONFLICT (id) DO UPDATE SET
                             status               = EXCLUDED.status,
                             progress_step        = EXCLUDED.progress_step,
@@ -371,6 +375,8 @@ def _persist_jobs_locked() -> None:
                             pipeline_output_json = EXCLUDED.pipeline_output_json,
                             started_at           = EXCLUDED.started_at,
                             finished_at          = EXCLUDED.finished_at
+                            -- created_by_user_id is provenance and is
+                            -- never updated after the initial insert.
                         """,
                         {
                             "id": job_id,
@@ -388,6 +394,7 @@ def _persist_jobs_locked() -> None:
                             "created_at": job.get("created_at"),
                             "started_at": job.get("started_at"),
                             "finished_at": job.get("finished_at"),
+                            "created_by_user_id": job.get("created_by_user_id"),
                         },
                     )
         except Exception:
@@ -438,7 +445,8 @@ def _load_jobs_from_pg() -> None:
                 """
                 SELECT id::text, status, filename, file_size_bytes,
                        progress_step, progress_pct, variant_count, error_message,
-                       pipeline_output_json, created_at, started_at, finished_at
+                       pipeline_output_json, created_at, started_at, finished_at,
+                       created_by_user_id::text AS created_by_user_id
                 FROM jobs
                 WHERE created_at > %s
                 ORDER BY created_at DESC
@@ -476,6 +484,7 @@ def _load_jobs_from_pg() -> None:
                     "created_at":      created_at,
                     "started_at":      started_at,
                     "finished_at":     finished_at,
+                    "created_by_user_id": row.get("created_by_user_id"),
                 }
                 restored += 1
 
@@ -654,6 +663,10 @@ async def analyze(
     # Medications are PHI — accept them as a multipart form field, never as a
     # URL query parameter (which would land in access logs / browser history).
     current_medications: str = Form(""),
+    # Soft auth: in prod the Authentik proxy stamps headers and this is
+    # the operator who created the job; in dev (no proxy) it's None and
+    # we record NULL ownership rather than 401-ing.
+    user: User | None = Depends(current_user),
 ):
     """
     Upload a genome file and receive a job_id.
@@ -706,6 +719,10 @@ async def analyze(
             "created_at":  _now_iso(),
             "started_at":  None,
             "finished_at": None,
+            # NULL in dev (no Authentik headers); the Authentik subject id
+            # in prod. Stamped once at job creation and not touched on
+            # subsequent _persist_jobs_locked() updates.
+            "created_by_user_id": user.id if user is not None else None,
         }
         _persist_jobs_locked()
 

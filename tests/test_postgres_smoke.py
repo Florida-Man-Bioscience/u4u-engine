@@ -206,3 +206,117 @@ def test_tracking_patient_treatment_measurement_flow(pg_database, pg_clean):
         assert len(rows) == 1
         assert rows[0].id == m.id
         assert rows[0].biomarker_name == "CRP"
+
+
+# ── Phase 1 ownership wiring ─────────────────────────────────────────────────
+
+
+def _seed_user(pg_database) -> str:
+    """Insert a user directly via psycopg2 and return its id.
+
+    The smoke fixture doesn't carry a request, so this stands in for
+    upsert_from_headers. Returns the row id so callers can verify FK
+    propagation.
+    """
+    with psycopg2.connect(pg_database) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO users (authentik_uid, username)
+                VALUES (%s, %s)
+                RETURNING id::text
+                """,
+                ("ak-smoke-001", "smoketester"),
+            )
+            user_id = cur.fetchone()[0]
+        conn.commit()
+    return user_id
+
+
+def test_tracking_created_by_persisted(pg_database, pg_clean):
+    """create_patient / create_treatment / create_measurement must
+    propagate the user id to the row so ownership survives a SELECT."""
+    from engine.tracking import db as tracking_db
+    from engine.tracking import service
+
+    user_id = _seed_user(pg_database)
+
+    with tracking_db.get_conn() as conn:
+        patient = service.create_patient(
+            conn, label="P-OWN-001", created_by_user_id=user_id
+        )
+        treatment = service.create_treatment(
+            conn,
+            patient_id=patient.id,
+            peptide_name="bpc-157",
+            start_date="2026-01-01",
+            created_by_user_id=user_id,
+        )
+        measurement = service.create_measurement(
+            conn,
+            patient_id=patient.id,
+            biomarker_name="CRP",
+            value=3.5,
+            measured_at="2026-02-01T10:00:00",
+            treatment_id=treatment.id,
+            created_by_user_id=user_id,
+        )
+
+    # Re-SELECT directly so we're verifying the column landed in PG, not
+    # the dataclass round-trip.
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute(
+            "SELECT created_by_user_id::text FROM patients WHERE id = %s",
+            (patient.id,),
+        )
+        assert cur.fetchone()[0] == user_id
+        cur.execute(
+            "SELECT created_by_user_id::text FROM treatments WHERE id = %s",
+            (treatment.id,),
+        )
+        assert cur.fetchone()[0] == user_id
+        cur.execute(
+            "SELECT created_by_user_id::text FROM measurements WHERE id = %s",
+            (measurement.id,),
+        )
+        assert cur.fetchone()[0] == user_id
+
+
+def test_jobs_created_by_persisted(pg_database, pg_clean, monkeypatch):
+    """_persist_jobs_locked must stamp created_by_user_id on the jobs
+    row when the in-memory dict carries it. We seed a fake job in the
+    api._jobs dict (rather than running the real pipeline) so the test
+    stays tight on the SQL path."""
+    import api
+
+    user_id = _seed_user(pg_database)
+
+    job_id = "00000000-0000-0000-0000-000000000abc"
+    monkeypatch.setattr(api, "_DB_URL", pg_database)
+    with api._jobs_lock:
+        api._jobs.clear()
+        api._jobs[job_id] = {
+            "status": "pending",
+            "progress": {"step": "Queued", "pct": 0},
+            "count": None,
+            "results": None,
+            "partial_results": [],
+            "error": None,
+            "filename": "smoke.vcf",
+            "file_size": 1,
+            "created_at": "2026-06-15T12:00:00+00:00",
+            "started_at": None,
+            "finished_at": None,
+            "created_by_user_id": user_id,
+        }
+        api._persist_jobs_locked()
+        api._jobs.clear()
+
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute(
+            "SELECT created_by_user_id::text FROM jobs WHERE id = %s::uuid",
+            (job_id,),
+        )
+        row = cur.fetchone()
+    assert row is not None, "job was not persisted"
+    assert row[0] == user_id

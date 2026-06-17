@@ -11,10 +11,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 
 from engine.peptides import PEPTIDE_BIOMARKERS, get_biomarker_panel
+from engine.users.deps import current_user
+from engine.users.models import User
 
 from . import analysis, service
 from .db import get_conn
@@ -25,6 +27,12 @@ from .genetics import (
 )
 from .pharmgkb_catalog import PEPTIDES_WITH_EVIDENCE
 from .profile_from_job import build_profile_from_job_results, evidence_payload
+
+
+def _user_id(user: User | None) -> str | None:
+    """Tiny helper — the FastAPI dep yields a User or None; the service
+    layer wants the bare id (or None in dev when no Authentik headers)."""
+    return user.id if user is not None else None
 
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -76,7 +84,10 @@ class PatientFromJobIn(BaseModel):
 # ── Patients ────────────────────────────────────────────────────────────────
 
 @router.post("/patients")
-def create_patient(body: PatientIn) -> dict[str, Any]:
+def create_patient(
+    body: PatientIn,
+    user: User | None = Depends(current_user),
+) -> dict[str, Any]:
     with get_conn() as conn:
         p = service.create_patient(
             conn,
@@ -84,6 +95,7 @@ def create_patient(body: PatientIn) -> dict[str, Any]:
             sex=body.sex,
             birth_year=body.birth_year,
             notes=body.notes,
+            created_by_user_id=_user_id(user),
         )
     return p.to_dict()
 
@@ -115,7 +127,11 @@ def delete_patient(patient_id: str) -> dict[str, Any]:
 # ── Treatments ──────────────────────────────────────────────────────────────
 
 @router.post("/patients/{patient_id}/treatments")
-def create_treatment(patient_id: str, body: TreatmentIn) -> dict[str, Any]:
+def create_treatment(
+    patient_id: str,
+    body: TreatmentIn,
+    user: User | None = Depends(current_user),
+) -> dict[str, Any]:
     with get_conn() as conn:
         if service.get_patient(conn, patient_id) is None:
             raise HTTPException(404, "patient not found")
@@ -132,6 +148,7 @@ def create_treatment(patient_id: str, body: TreatmentIn) -> dict[str, Any]:
             route=body.route,
             end_date=body.end_date,
             notes=body.notes,
+            created_by_user_id=_user_id(user),
         )
     return t.to_dict()
 
@@ -145,7 +162,10 @@ def list_treatments(patient_id: str) -> list[dict[str, Any]]:
 # ── Measurements ────────────────────────────────────────────────────────────
 
 @router.post("/measurements")
-def create_measurement(body: MeasurementIn) -> dict[str, Any]:
+def create_measurement(
+    body: MeasurementIn,
+    user: User | None = Depends(current_user),
+) -> dict[str, Any]:
     with get_conn() as conn:
         if service.get_patient(conn, body.patient_id) is None:
             raise HTTPException(404, "patient not found")
@@ -159,22 +179,31 @@ def create_measurement(body: MeasurementIn) -> dict[str, Any]:
             modality=body.modality,
             unit=body.unit,
             notes=body.notes,
+            created_by_user_id=_user_id(user),
         )
     return m.to_dict()
 
 
 @router.post("/measurements/bulk")
-def bulk_measurements(body: BulkMeasurementsIn) -> dict[str, Any]:
+def bulk_measurements(
+    body: BulkMeasurementsIn,
+    user: User | None = Depends(current_user),
+) -> dict[str, Any]:
     if not body.measurements:
         raise HTTPException(400, "no measurements provided")
     records = [m.model_dump() for m in body.measurements]
     with get_conn() as conn:
-        created = service.bulk_create_measurements(conn, records)
+        created = service.bulk_create_measurements(
+            conn, records, created_by_user_id=_user_id(user)
+        )
     return {"created": len(created), "ids": [m.id for m in created]}
 
 
 @router.post("/measurements/csv")
-async def upload_csv(file: UploadFile = File(...)) -> dict[str, Any]:
+async def upload_csv(
+    file: UploadFile = File(...),
+    user: User | None = Depends(current_user),
+) -> dict[str, Any]:
     raw = await file.read()
     try:
         text = raw.decode("utf-8")
@@ -184,7 +213,9 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, Any]:
     if not records:
         raise HTTPException(400, {"errors": errors})
     with get_conn() as conn:
-        created = service.bulk_create_measurements(conn, records)
+        created = service.bulk_create_measurements(
+            conn, records, created_by_user_id=_user_id(user)
+        )
     return {"created": len(created), "errors": errors}
 
 
@@ -268,7 +299,9 @@ def generate_genetics(patient_id: str, seed: int | None = None) -> dict[str, Any
 
 @router.post("/patients/from-job/{job_id}")
 def create_patient_from_job(
-    job_id: str, body: PatientFromJobIn | None = None
+    job_id: str,
+    body: PatientFromJobIn | None = None,
+    user: User | None = Depends(current_user),
 ) -> dict[str, Any]:
     """Create a tracking patient pre-populated from a completed /analyze job."""
     from api import get_completed_job_results, get_job_filename
@@ -291,6 +324,7 @@ def create_patient_from_job(
             sex=payload.sex,
             birth_year=payload.birth_year,
             notes=payload.notes,
+            created_by_user_id=_user_id(user),
         )
         profile = build_profile_from_job_results(job_results, job_id=job_id)
         service.set_genetic_profile(

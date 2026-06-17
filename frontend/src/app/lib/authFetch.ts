@@ -2,8 +2,11 @@
  * Shared API transport layer.
  *
  * Thin wrapper around fetch + XMLHttpRequest that prefixes paths with the
- * configured API base and normalises error handling. The module name is
- * historical — the app no longer has authentication.
+ * configured API base and normalises error handling. Auth lives upstream:
+ * the deploy stack puts an Authentik forward-auth proxy in front of the
+ * api, so requests from the browser carry no credentials of their own —
+ * the proxy stamps trusted X-Authentik-* headers before the api sees the
+ * request. The frontend just hits relative paths.
  */
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api/v1";

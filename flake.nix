@@ -29,6 +29,13 @@
 
             # Database
             psycopg2
+
+            # API surface (required by api.py and engine/users/deps.py;
+            # the in-process test suite doesn't spin up uvicorn but does
+            # import these modules)
+            fastapi
+            pydantic
+            python-multipart
           ]))
           pkgs.nodejs_20
         ];

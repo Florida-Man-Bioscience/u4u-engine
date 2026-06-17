@@ -49,12 +49,14 @@ def create_patient(
     sex: str | None = None,
     birth_year: int | None = None,
     notes: str | None = None,
+    created_by_user_id: str | None = None,
 ) -> Patient:
     ph = _ph(conn)
     pid = _new_id()
     conn.execute(
-        f"INSERT INTO patients (id, label, sex, birth_year, notes) VALUES ({ph},{ph},{ph},{ph},{ph})",
-        (pid, label, sex, birth_year, notes),
+        f"INSERT INTO patients (id, label, sex, birth_year, notes, created_by_user_id) "
+        f"VALUES ({ph},{ph},{ph},{ph},{ph},{ph})",
+        (pid, label, sex, birth_year, notes, created_by_user_id),
     )
     conn.commit()
     return get_patient(conn, pid)  # type: ignore[return-value]
@@ -92,16 +94,17 @@ def create_treatment(
     route: str | None = None,
     end_date: str | None = None,
     notes: str | None = None,
+    created_by_user_id: str | None = None,
 ) -> Treatment:
     ph = _ph(conn)
     tid = _new_id()
     conn.execute(
         f"""INSERT INTO treatments
            (id, patient_id, peptide_name, dose, dose_unit, schedule, route,
-            start_date, end_date, notes)
-           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
+            start_date, end_date, notes, created_by_user_id)
+           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
         (tid, patient_id, peptide_name, dose, dose_unit, schedule, route,
-         start_date, end_date, notes),
+         start_date, end_date, notes, created_by_user_id),
     )
     conn.commit()
     return get_treatment(conn, tid)  # type: ignore[return-value]
@@ -144,16 +147,17 @@ def create_measurement(
     modality: str | None = None,
     unit: str | None = None,
     notes: str | None = None,
+    created_by_user_id: str | None = None,
 ) -> Measurement:
     ph = _ph(conn)
     mid = _new_id()
     conn.execute(
         f"""INSERT INTO measurements
            (id, patient_id, treatment_id, biomarker_name, modality,
-            value, unit, measured_at, notes)
-           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
+            value, unit, measured_at, notes, created_by_user_id)
+           VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
         (mid, patient_id, treatment_id, biomarker_name, modality,
-         value, unit, measured_at, notes),
+         value, unit, measured_at, notes, created_by_user_id),
     )
     conn.commit()
     return get_measurement(conn, mid)  # type: ignore[return-value]
@@ -192,6 +196,8 @@ def list_measurements_for_patient(
 def bulk_create_measurements(
     conn,
     records: Iterable[dict],
+    *,
+    created_by_user_id: str | None = None,
 ) -> list[Measurement]:
     """Insert many measurements in one transaction. Each record needs
     patient_id, biomarker_name, value, measured_at. Other fields optional."""
@@ -203,8 +209,8 @@ def bulk_create_measurements(
         cur.execute(
             f"""INSERT INTO measurements
                (id, patient_id, treatment_id, biomarker_name, modality,
-                value, unit, measured_at, notes)
-               VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
+                value, unit, measured_at, notes, created_by_user_id)
+               VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})""",
             (
                 mid,
                 r["patient_id"],
@@ -215,6 +221,7 @@ def bulk_create_measurements(
                 r.get("unit"),
                 r["measured_at"],
                 r.get("notes"),
+                created_by_user_id,
             ),
         )
         out.append(Measurement(
@@ -228,6 +235,7 @@ def bulk_create_measurements(
             measured_at=r["measured_at"],
             notes=r.get("notes"),
             created_at="",
+            created_by_user_id=created_by_user_id,
         ))
     conn.commit()
     return out

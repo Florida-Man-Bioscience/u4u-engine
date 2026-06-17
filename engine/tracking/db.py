@@ -32,8 +32,24 @@ def _ensure_sqlite_schema(conn, key: str) -> None:
             return
         with open(_SCHEMA_PATH, encoding="utf-8") as fh:
             conn.executescript(fh.read())
+        _ensure_user_id_columns(conn)
         conn.commit()
         _sqlite_initialized.add(key)
+
+
+def _ensure_user_id_columns(conn) -> None:
+    """Bring pre-existing dev databases up to the current schema.
+
+    CREATE TABLE IF NOT EXISTS is a no-op against an existing table, so a
+    dev who created their data/biomarker_tracking.db before migration 005
+    would otherwise miss the created_by_user_id column. SQLite lacks
+    ADD COLUMN IF NOT EXISTS, so we read PRAGMA table_info and add what's
+    missing. Idempotent — costs three PRAGMA queries on a hot dev DB.
+    """
+    for table in ("patients", "treatments", "measurements"):
+        cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if "created_by_user_id" not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN created_by_user_id TEXT")
 
 
 def _is_postgres_configured(path) -> bool:
