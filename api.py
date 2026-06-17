@@ -15,9 +15,10 @@ The client polls /jobs/{job_id} until status is "done" or "failed".
 
 Job storage
 -----------
-Jobs are cached in memory and mirrored to a small JSON file so completed
-results survive an API process restart.  Raw uploaded genome files are still
-processed from memory and are never written to disk by this wrapper.
+Jobs are persisted to Postgres when DATABASE_URL is set; in dev (no
+DATABASE_URL) they live only in the in-memory ``_jobs`` dict and are
+lost on restart. Raw uploaded genome files are still processed from
+memory and are never written to disk by this wrapper.
 
 Environment variables
 ---------------------
@@ -28,15 +29,12 @@ FILTERS         — comma-separated filter filenames (default: "acmg81_rsids.txt
 WORKERS         — thread pool size — set to CPU count of host (default: 4)
 MAX_UPLOAD_MB   — file size limit in megabytes (default: 100)
 JOB_TTL_HOURS   — hours to keep completed jobs in the job store (default: 24)
-JOB_STORE_PATH  — JSON job store path (default: "${DATA_DIR}/jobs.json")
 ALLOWED_ORIGINS — comma-separated CORS origins for browser clients
 """
 
 import asyncio
-import json
 import logging
 import os
-from pathlib import Path
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -68,7 +66,6 @@ DATA_DIR      = os.getenv("DATA_DIR", "data")
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "100"))
 WORKERS       = int(os.getenv("WORKERS", "4"))
 JOB_TTL_HOURS = int(os.getenv("JOB_TTL_HOURS", "24"))
-JOB_STORE_PATH = os.getenv("JOB_STORE_PATH", os.path.join(DATA_DIR, "jobs.json"))
 
 _raw_filters = os.getenv("FILTERS", "acmg81_rsids.txt").strip()
 FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw_filters else []
@@ -76,38 +73,21 @@ FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-# ── Job-store encryption ───────────────────────────────────────────────────
-# Completed job results are derived from the user's genome (variants,
-# genotypes, conditions) and are therefore sensitive. They are only persisted
-# to disk when encrypted with a configured Fernet key (JOB_STORE_KEY). With no
-# key, disk persistence is DISABLED (in-memory only) rather than writing
-# plaintext PHI to disk.
-JOB_STORE_KEY = os.getenv("JOB_STORE_KEY", "").strip()
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("u4u.api")
 
-try:
-    from cryptography.fernet import Fernet, InvalidToken
-    _CRYPTO_AVAILABLE = True
-except Exception:  # ImportError, or a broken/incomplete crypto backend
-    _CRYPTO_AVAILABLE = False
-    InvalidToken = Exception  # type: ignore
-
-_fernet = None
-if JOB_STORE_KEY and _CRYPTO_AVAILABLE:
-    try:
-        _fernet = Fernet(JOB_STORE_KEY.encode())
-    except Exception:
-        log.error("JOB_STORE_KEY is not a valid Fernet key — disk persistence disabled.")
-        _fernet = None
-
-PERSIST_ENABLED = _fernet is not None
-if not PERSIST_ENABLED:
+# JOB_STORE_KEY used to drive a Fernet-encrypted JSON snapshot at
+# data/jobs.json for deployments without a database. With Postgres now
+# the canonical backend (and dev runs intentionally ephemeral), the
+# snapshot path was removed in Phase 4 of the storage architecture
+# rollout. We still read the env var so existing deploys don't see an
+# "unknown variable" error — just a one-line deprecation warning. Drop
+# the read entirely on the next release.
+if os.getenv("JOB_STORE_KEY", "").strip():
     log.warning(
-        "Job-store disk persistence DISABLED (no valid JOB_STORE_KEY or cryptography "
-        "unavailable). Genomic-derived results are kept in memory only and lost on "
-        "restart. Set JOB_STORE_KEY to a Fernet key to enable encrypted persistence."
+        "JOB_STORE_KEY is deprecated and no longer used — jobs persist "
+        "to Postgres when DATABASE_URL is set and are in-memory only "
+        "otherwise. Remove this env var on the next deploy."
     )
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -243,13 +223,6 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
     return response
 
 
-def _serializable_job(job: dict) -> dict:
-    """Strip process-local fields before writing a job to disk."""
-    payload = dict(job)
-    payload["partial_results"] = list(job.get("partial_results") or [])
-    return payload
-
-
 def _run_db_migrations() -> None:
     """Run pending SQL migrations at startup (no-op when DATABASE_URL is absent)."""
     if not _DB_URL:
@@ -344,78 +317,63 @@ def _pg_insert_results(job_id: str, variants: list[dict]) -> None:
 def _persist_jobs_locked() -> None:
     """Persist the current job store state.
 
-    When DATABASE_URL is set, upserts all jobs to Postgres in one connection.
-    Falls back to Fernet-encrypted JSON file if configured.
-    Postgres takes precedence over the file store.
+    Postgres when DATABASE_URL is set; otherwise no-op — dev mode keeps
+    jobs only in the in-memory ``_jobs`` dict and they're lost on
+    restart, which is intentional. The pre-Phase-4 Fernet snapshot at
+    data/jobs.json is gone.
     """
-    if _DB_URL:
-        try:
-            from db.pool import get_conn as pg_conn
-            import psycopg2.extras
-            with pg_conn() as conn:
-                for job_id, job in _jobs.items():
-                    pipeline_output = job.get("results")
-                    conn.execute(
-                        """
-                        INSERT INTO jobs (id, status, filename, file_size_bytes,
-                            progress_step, progress_pct, variant_count, error_message,
-                            pipeline_output_json, created_at, started_at, finished_at,
-                            created_by_user_id)
-                        VALUES (%(id)s, %(status)s, %(filename)s, %(file_size_bytes)s,
-                            %(progress_step)s, %(progress_pct)s, %(variant_count)s,
-                            %(error_message)s, %(pipeline_output_json)s,
-                            %(created_at)s, %(started_at)s, %(finished_at)s,
-                            %(created_by_user_id)s)
-                        ON CONFLICT (id) DO UPDATE SET
-                            status               = EXCLUDED.status,
-                            progress_step        = EXCLUDED.progress_step,
-                            progress_pct         = EXCLUDED.progress_pct,
-                            variant_count        = EXCLUDED.variant_count,
-                            error_message        = EXCLUDED.error_message,
-                            pipeline_output_json = EXCLUDED.pipeline_output_json,
-                            started_at           = EXCLUDED.started_at,
-                            finished_at          = EXCLUDED.finished_at
-                            -- created_by_user_id is provenance and is
-                            -- never updated after the initial insert.
-                        """,
-                        {
-                            "id": job_id,
-                            "status": job.get("status", "pending"),
-                            "filename": job.get("filename", ""),
-                            "file_size_bytes": job.get("file_size", 0),
-                            "progress_step": (job.get("progress") or {}).get("step"),
-                            "progress_pct": (job.get("progress") or {}).get("pct", 0),
-                            "variant_count": job.get("count"),
-                            "error_message": job.get("error"),
-                            "pipeline_output_json": (
-                                psycopg2.extras.Json(pipeline_output)
-                                if pipeline_output is not None else None
-                            ),
-                            "created_at": job.get("created_at"),
-                            "started_at": job.get("started_at"),
-                            "finished_at": job.get("finished_at"),
-                            "created_by_user_id": job.get("created_by_user_id"),
-                        },
-                    )
-        except Exception:
-            log.exception("failed to persist jobs to Postgres")
+    if not _DB_URL:
         return
-
-    # Fernet-encrypted JSON fallback (no DATABASE_URL)
-    if not PERSIST_ENABLED:
-        return
-    path = Path(JOB_STORE_PATH)
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(
-            {jid: _serializable_job(job) for jid, job in _jobs.items()}
-        ).encode("utf-8")
-        token = _fernet.encrypt(payload)
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        tmp_path.write_bytes(token)
-        tmp_path.replace(path)
+        from db.pool import get_conn as pg_conn
+        import psycopg2.extras
+        with pg_conn() as conn:
+            for job_id, job in _jobs.items():
+                pipeline_output = job.get("results")
+                conn.execute(
+                    """
+                    INSERT INTO jobs (id, status, filename, file_size_bytes,
+                        progress_step, progress_pct, variant_count, error_message,
+                        pipeline_output_json, created_at, started_at, finished_at,
+                        created_by_user_id)
+                    VALUES (%(id)s, %(status)s, %(filename)s, %(file_size_bytes)s,
+                        %(progress_step)s, %(progress_pct)s, %(variant_count)s,
+                        %(error_message)s, %(pipeline_output_json)s,
+                        %(created_at)s, %(started_at)s, %(finished_at)s,
+                        %(created_by_user_id)s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        status               = EXCLUDED.status,
+                        progress_step        = EXCLUDED.progress_step,
+                        progress_pct         = EXCLUDED.progress_pct,
+                        variant_count        = EXCLUDED.variant_count,
+                        error_message        = EXCLUDED.error_message,
+                        pipeline_output_json = EXCLUDED.pipeline_output_json,
+                        started_at           = EXCLUDED.started_at,
+                        finished_at          = EXCLUDED.finished_at
+                        -- created_by_user_id is provenance and is
+                        -- never updated after the initial insert.
+                    """,
+                    {
+                        "id": job_id,
+                        "status": job.get("status", "pending"),
+                        "filename": job.get("filename", ""),
+                        "file_size_bytes": job.get("file_size", 0),
+                        "progress_step": (job.get("progress") or {}).get("step"),
+                        "progress_pct": (job.get("progress") or {}).get("pct", 0),
+                        "variant_count": job.get("count"),
+                        "error_message": job.get("error"),
+                        "pipeline_output_json": (
+                            psycopg2.extras.Json(pipeline_output)
+                            if pipeline_output is not None else None
+                        ),
+                        "created_at": job.get("created_at"),
+                        "started_at": job.get("started_at"),
+                        "finished_at": job.get("finished_at"),
+                        "created_by_user_id": job.get("created_by_user_id"),
+                    },
+                )
     except Exception:
-        log.exception("failed to persist job store to %s", JOB_STORE_PATH)
+        log.exception("failed to persist jobs to Postgres")
 
 
 def _persist_jobs() -> None:
@@ -424,11 +382,9 @@ def _persist_jobs() -> None:
 
 
 def _load_jobs_from_store() -> None:
-    """Populate _jobs from Postgres (preferred) or Fernet JSON file (fallback)."""
+    """Populate _jobs from Postgres if configured; no-op otherwise."""
     if _DB_URL:
         _load_jobs_from_pg()
-    else:
-        _load_jobs_from_disk()
 
 
 def _load_jobs_from_pg() -> None:
@@ -491,55 +447,6 @@ def _load_jobs_from_pg() -> None:
         log.info("loaded %d jobs from Postgres", restored)
     except Exception:
         log.exception("failed to load jobs from Postgres — starting with empty job store")
-
-
-def _load_jobs_from_disk() -> None:
-    """Load persisted jobs from Fernet-encrypted JSON file (no-DATABASE_URL fallback)."""
-    if not PERSIST_ENABLED:
-        return
-    path = Path(JOB_STORE_PATH)
-    if not path.exists():
-        return
-
-    try:
-        token = path.read_bytes()
-        data = json.loads(_fernet.decrypt(token).decode("utf-8"))
-    except InvalidToken:
-        log.error(
-            "job store at %s could not be decrypted (wrong JOB_STORE_KEY?) — ignoring",
-            JOB_STORE_PATH,
-        )
-        return
-    except Exception:
-        log.exception("failed to read job store from %s", JOB_STORE_PATH)
-        return
-
-    if not isinstance(data, dict):
-        log.warning("ignoring invalid job store at %s", JOB_STORE_PATH)
-        return
-
-    now = _now_iso()
-    restored = 0
-    with _jobs_lock:
-        for job_id, job in data.items():
-            if not isinstance(job, dict):
-                continue
-            job.setdefault("progress", {"step": "Restored", "pct": 0})
-            job.setdefault("count", None)
-            job.setdefault("results", None)
-            job.setdefault("partial_results", [])
-            job.setdefault("error", None)
-            job.setdefault("started_at", None)
-            job.setdefault("finished_at", None)
-            if job.get("status") in {"pending", "running"}:
-                job.update({
-                    "status": "failed",
-                    "error": "Job was interrupted by an API restart. Please upload again.",
-                    "finished_at": now,
-                })
-            _jobs[str(job_id)] = job
-            restored += 1
-    log.info("loaded %d jobs from %s", restored, JOB_STORE_PATH)
 
 
 # ── Background job runner ─────────────────────────────────────────────────────
