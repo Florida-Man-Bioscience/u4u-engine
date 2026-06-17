@@ -320,3 +320,44 @@ def test_jobs_created_by_persisted(pg_database, pg_clean, monkeypatch):
         row = cur.fetchone()
     assert row is not None, "job was not persisted"
     assert row[0] == user_id
+
+
+# ── Phase 2: regulatory cache dual-mode ──────────────────────────────────────
+
+
+def test_regulatory_cache_writes_land_in_pg(pg_database, pg_clean):
+    """Confirm RegulatoryCache writes hit the Postgres regulatory_cache
+    table (not a stray SQLite file) when DATABASE_URL is set, and that
+    TTL and stale fallback still work end-to-end."""
+    from engine.regulatory.cache import MISS, RegulatoryCache
+
+    cache = RegulatoryCache()
+    assert cache._use_pg is True, "expected Postgres mode under DATABASE_URL"
+
+    payload = {"recalls_total": 4, "search_term": "tirzepatide"}
+    fetched_at = cache.put("openfda", "tirzepatide", payload)
+    assert fetched_at > 0
+
+    # Fresh hit
+    value, ts = cache.get("openfda", "tirzepatide", ttl_seconds=3600)
+    assert value == payload
+    assert abs(ts - fetched_at) < 1.0
+
+    # TTL miss returns the stale timestamp so the UI can label it
+    value, ts = cache.get("openfda", "tirzepatide", ttl_seconds=0)
+    assert value is MISS
+    assert ts is not None and abs(ts - fetched_at) < 1.0
+
+    # Stale fallback returns the value regardless of TTL
+    stale_value, stale_ts = cache.get_stale("openfda", "tirzepatide")
+    assert stale_value == payload
+    assert abs(stale_ts - fetched_at) < 1.0
+
+    # Verify the row really is in PG, not somewhere else
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute(
+            "SELECT source, lookup_key FROM regulatory_cache "
+            "WHERE source = %s AND lookup_key = %s",
+            ("openfda", "tirzepatide"),
+        )
+        assert cur.fetchone() is not None
