@@ -361,3 +361,63 @@ def test_regulatory_cache_writes_land_in_pg(pg_database, pg_clean):
             ("openfda", "tirzepatide"),
         )
         assert cur.fetchone() is not None
+
+
+# ── Phase 3: cache TTL eviction ──────────────────────────────────────────────
+
+
+def test_annotation_cache_evicts_rows_older_than_90d(pg_database, pg_clean):
+    """A put() against any key must clean out the table's stale rows.
+
+    Backdating the existing row's fetched_at to 100 days ago and writing
+    a new key should evict the old row without touching the fresh one.
+    """
+    from engine.annotators.cache import AnnotationCache, MISS
+
+    cache = AnnotationCache()
+    cache.put("clinvar", "rs_old", {"hit": "old"})
+
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute(
+            "UPDATE annotation_cache SET fetched_at = NOW() - INTERVAL '100 days' "
+            "WHERE lookup_key = %s",
+            ("rs_old",),
+        )
+        raw.commit()
+
+    cache.put("clinvar", "rs_new", {"hit": "new"})
+
+    # rs_old should be gone; rs_new should still be there
+    assert cache.get("clinvar", "rs_old") is MISS
+    assert cache.get("clinvar", "rs_new") == {"hit": "new"}
+
+
+def test_rsid_cache_evicts_on_resolve(pg_database, pg_clean, monkeypatch):
+    """resolve_rsids runs _evict_old_rsid_cache once per batch.
+
+    Insert an old row by hand, monkeypatch resolve_rsid to return a fake
+    variant (avoids the real Ensembl call), and call resolve_rsids — the
+    old row should be gone afterward and the new one should be cached.
+    """
+    import engine.rsid_resolver as rsid_resolver
+
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute(
+            "INSERT INTO rsid_cache (rsid, genotype, result_json, fetched_at) "
+            "VALUES (%s, %s, %s, NOW() - INTERVAL '100 days')",
+            ("rs_ancient", "", '[]'),
+        )
+        raw.commit()
+
+    monkeypatch.setattr(
+        rsid_resolver,
+        "resolve_rsid",
+        lambda rsid, geno: [{"rsid": rsid, "ref": "A", "alt": "G"}],
+    )
+    rsid_resolver.resolve_rsids([("rs_new", "AG")])
+
+    with psycopg2.connect(pg_database) as raw, raw.cursor() as cur:
+        cur.execute("SELECT rsid FROM rsid_cache ORDER BY rsid")
+        rsids = [r[0] for r in cur.fetchall()]
+    assert "rs_ancient" not in rsids
+    assert "rs_new" in rsids

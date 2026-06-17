@@ -87,9 +87,16 @@ class AnnotationCache:
                     source     TEXT NOT NULL,
                     lookup_key TEXT NOT NULL,
                     result_json TEXT,
+                    fetched_at REAL NOT NULL DEFAULT 0,
                     PRIMARY KEY (source, lookup_key)
                 )
             """)
+            # SQLite has no ADD COLUMN IF NOT EXISTS; probe PRAGMA so
+            # pre-existing dev DBs gain fetched_at without manual cleanup.
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(annotation_cache)").fetchall()}
+            if "fetched_at" not in cols:
+                conn.execute("ALTER TABLE annotation_cache ADD COLUMN fetched_at REAL NOT NULL DEFAULT 0")
+                conn.commit()
             self._local.sqlite_conn = conn
             return conn
         except Exception as exc:
@@ -136,7 +143,13 @@ class AnnotationCache:
                 return _MISS
 
     def put(self, source: str, lookup_key: str, result) -> None:
-        """Store a result. Silently skips if the cache is unavailable."""
+        """Store a result. Silently skips if the cache is unavailable.
+
+        Also evicts entries older than 90 days on the same call. Upstream
+        (ClinVar / gnomAD / dbSNP) refreshes monthly, so 90 days covers
+        two cycles; the per-table index on fetched_at makes the DELETE
+        a cheap no-op when nothing has aged out.
+        """
         if self._use_pg:
             conn = self._pg_conn()
             if conn is None:
@@ -144,11 +157,16 @@ class AnnotationCache:
             try:
                 cur = conn.cursor()
                 cur.execute(
+                    "DELETE FROM annotation_cache "
+                    "WHERE fetched_at < NOW() - INTERVAL '90 days'"
+                )
+                cur.execute(
                     """
-                    INSERT INTO annotation_cache (source, lookup_key, result_json)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO annotation_cache (source, lookup_key, result_json, fetched_at)
+                    VALUES (%s, %s, %s, NOW())
                     ON CONFLICT (source, lookup_key) DO UPDATE
-                        SET result_json = EXCLUDED.result_json
+                        SET result_json = EXCLUDED.result_json,
+                            fetched_at  = EXCLUDED.fetched_at
                     """,
                     (source, lookup_key, json.dumps(result)),
                 )
@@ -159,9 +177,17 @@ class AnnotationCache:
             if conn is None:
                 return
             try:
+                import time
+                cutoff = time.time() - 90 * 86400
                 conn.execute(
-                    "INSERT OR REPLACE INTO annotation_cache (source, lookup_key, result_json) VALUES (?, ?, ?)",
-                    (source, lookup_key, json.dumps(result)),
+                    "DELETE FROM annotation_cache WHERE fetched_at < ?",
+                    (cutoff,),
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO annotation_cache "
+                    "(source, lookup_key, result_json, fetched_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (source, lookup_key, json.dumps(result), time.time()),
                 )
                 conn.commit()
             except Exception:

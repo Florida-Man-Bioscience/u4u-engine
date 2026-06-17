@@ -159,10 +159,38 @@ def _get_cache_conn():
             rsid TEXT,
             genotype TEXT,
             result_json TEXT,
+            fetched_at REAL NOT NULL DEFAULT 0,
             PRIMARY KEY (rsid, genotype)
         )
     """)
+    # SQLite lacks ADD COLUMN IF NOT EXISTS — probe and ALTER so dev DBs
+    # created before migration 007 gain the new column on first run.
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(rsid_cache)").fetchall()}
+    if "fetched_at" not in cols:
+        conn.execute("ALTER TABLE rsid_cache ADD COLUMN fetched_at REAL NOT NULL DEFAULT 0")
+        conn.commit()
     return conn, False
+
+
+def _evict_old_rsid_cache(conn, is_pg: bool) -> None:
+    """Drop rows older than 90 days. Called once per resolve_rsids batch
+    so we keep eviction lazy without paying it on every individual
+    insert. Cheap with the fetched_at index from migration 007."""
+    try:
+        if is_pg:
+            cur = conn.cursor()
+            cur.execute(
+                "DELETE FROM rsid_cache "
+                "WHERE fetched_at < NOW() - INTERVAL '90 days'"
+            )
+            conn.commit()
+        else:
+            cutoff = time.time() - 90 * 86400
+            conn.execute("DELETE FROM rsid_cache WHERE fetched_at < ?", (cutoff,))
+            conn.commit()
+    except Exception:
+        # Eviction is best-effort; never let it stop a resolve from running.
+        pass
 
 
 def resolve_rsids(
@@ -189,6 +217,7 @@ def resolve_rsids(
     total = len(rsids_and_genotypes)
 
     conn, is_pg = _get_cache_conn()
+    _evict_old_rsid_cache(conn, is_pg)
 
     try:
         for i, item in enumerate(rsids_and_genotypes):
@@ -223,18 +252,20 @@ def resolve_rsids(
                 if is_pg:
                     cur.execute(
                         """
-                        INSERT INTO rsid_cache (rsid, genotype, result_json)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO rsid_cache (rsid, genotype, result_json, fetched_at)
+                        VALUES (%s, %s, %s, NOW())
                         ON CONFLICT (rsid, genotype) DO UPDATE
-                            SET result_json = EXCLUDED.result_json
+                            SET result_json = EXCLUDED.result_json,
+                                fetched_at  = EXCLUDED.fetched_at
                         """,
                         (rsid, geno_key, json.dumps(variants)),
                     )
                     conn.commit()
                 else:
                     cur.execute(
-                        "INSERT OR REPLACE INTO rsid_cache (rsid, genotype, result_json) VALUES (?, ?, ?)",
-                        (rsid, geno_key, json.dumps(variants)),
+                        "INSERT OR REPLACE INTO rsid_cache "
+                        "(rsid, genotype, result_json, fetched_at) VALUES (?, ?, ?, ?)",
+                        (rsid, geno_key, json.dumps(variants), time.time()),
                     )
                     conn.commit()
                 resolved.extend(variants)
