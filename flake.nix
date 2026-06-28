@@ -36,6 +36,10 @@
             fastapi
             pydantic
             python-multipart
+            # httpx backs starlette's TestClient; without it the FastAPI
+            # endpoint tests (e.g. tracking/test_api.py) importorskip and
+            # silently skip locally. Pinning it here gives local/CI parity.
+            httpx
           ]))
           pkgs.nodejs_20
         ];
