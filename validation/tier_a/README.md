@@ -18,6 +18,29 @@ determination is granted. See `docs/irb-setup-plan.md` (§1, Tier A) and
 | **PGx diplotype** | GeT-RM consensus star-allele diplotypes | exact-match concordance, per gene |
 | **PGx phenotype** | GeT-RM consensus phenotype (PM/IM/NM/RM/UM) | concordance, per gene |
 | **Variant genotype** | GIAB benchmark (site-level subset) | sensitivity / specificity / precision / F1 + genotype concordance |
+| **AR CAG STR calling** | synthetic EH output (no binary needed) | parser concordance + interpretation-boundary verification |
+
+### AR CAG STR calling — runnable now, no binary needed
+
+Validates `engine.repeat_callers.expansion_hunter` in two deterministic
+sub-tracks: (1) **parser concordance** — feeds synthetic ExpansionHunter
+VCF+JSON with known repeat counts through `parse_eh_output` and checks the count
+is read correctly; (2) **interpretation boundary verification** — checks the CAG
+sensitivity-tier classifier implements its documented breakpoints without
+off-by-one errors.
+
+```bash
+nix develop --command python -m validation.tier_a.str_calling \
+    --out-dir validation/reports
+```
+
+> ⚠️ Sub-track 2 is software *verification* (code matches its own spec), **not**
+> clinical validation: the master plan §5.2.7 flags the CAG breakpoints and
+> ancestry means as hand-curated and needing clinical-evidence backing — that is
+> a Tier C claim, out of scope here. The full instrument-in-the-loop concordance
+> (real binary + BAM + reference + STR truth set) is a documented hook; the
+> runner reports whether the binary/reference are even present. Current status:
+> 100% parser, 100% interpretation-boundary.
 
 ### Genome build handling — runnable now, no reference data needed
 
@@ -111,9 +134,10 @@ or "pipeline made no call" → the comparison is **skipped and the rate reported
   external-tool integration, not a parser; this harness covers the site-level
   subset directly comparable to the pipeline's per-variant output. Wire `hap.py`
   in as a follow-up if you need genome-wide stratified stats.
-- **STR / CAG-repeat concordance** (ExpansionHunter) — a separate Tier A track;
-  add as a parallel module. (Build-handling validation is now implemented — see
-  above.)
+- **End-to-end ExpansionHunter STR concordance** — running the real binary on
+  reference BAMs vs. an orthogonal CAG truth set. The deterministic parser +
+  interpretation sub-tracks are implemented (see above); the instrument-in-the-
+  loop run is the remaining hook. (Build-handling validation is also implemented.)
 - **Acceptance thresholds.** This computes the numbers; the pass/fail criteria
   (e.g. ≥99% PGx diplotype concordance) are set in the validation protocol, not
   hard-coded here.
