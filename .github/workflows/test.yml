@@ -36,15 +36,7 @@ jobs:
         run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
 
       - name: Run tests
-        # NOTE: tests/test_engine/test_tracking/test_api.py is deselected — it is
-        # a PRE-EXISTING break (predates the Tier A validation work) from the
-        # Postgres migration: it imports the removed engine.tracking.api
-        # set_test_conn seam AND assumes the old raw-connection get_conn() (it is
-        # now a @contextmanager). Fixing it properly modernizes the tracking
-        # DB test seam and is owned by tracking, not this branch. Excluding only
-        # this one module, the suite is green (639 passed, 11 skipped). Remove
-        # this --ignore once the tracking test is modernized — tracked in #12.
-        run: pytest tests/ -v --ignore=tests/test_engine/test_tracking/test_api.py
+        run: pytest tests/ -v
         env:
           # Tests run against mocked HTTP — no real API keys needed.
           # Set this in repo secrets if you want integration tests to hit live APIs.

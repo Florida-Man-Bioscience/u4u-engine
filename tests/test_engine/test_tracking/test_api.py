@@ -5,20 +5,24 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from engine.tracking import db, get_conn  # noqa: E402
-from engine.tracking.api import set_test_conn  # noqa: E402
+from engine.tracking import db  # noqa: E402
 
 
 @pytest.fixture
-def client():
+def client(tmp_path, monkeypatch):
+    # The migrated tracking API opens its own connection per request via
+    # get_conn() — there is no shared injected connection anymore. So the test
+    # DB must be a real file that persists across those per-request
+    # connections; an in-memory DB would hand each request a separate empty
+    # database. Point the tracking default path at a temp file and force the
+    # SQLite branch so the test stays hermetic regardless of any DATABASE_URL
+    # in the environment.
+    monkeypatch.setattr(db, "_DEFAULT_PATH", tmp_path / "tracking.db")
+    monkeypatch.setattr(db, "_is_postgres_configured", lambda path: False)
     db.reset_initialized()
-    conn = get_conn(":memory:")
-    set_test_conn(conn)
     from api import app
     with TestClient(app) as c:
         yield c
-    set_test_conn(None)
-    conn.close()
 
 
 def test_create_patient_and_treatment_and_measurement(client):
