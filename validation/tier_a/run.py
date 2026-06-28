@@ -115,21 +115,45 @@ def extract_observed_phenotypes(
     return observed
 
 
-def extract_observed_genotypes(pipeline_out: dict) -> dict[str, str]:
-    """Map a pipeline result to ``{site: genotype}`` keyed by rsID when present.
+def canonical_site(site: str) -> str:
+    """Canonical site key: bare ``chrom:pos`` for coordinates, rsID unchanged.
 
-    Falls back to ``chrom:pos`` when a variant has no rsID. Only variants the
-    pipeline actually reported appear here; absence is interpreted as a no-call
-    (reference) by :func:`compare_genotypes`.
+    Strips a leading ``chr`` so ``chr1:100`` and ``1:100`` unify (the engine and
+    the GIAB converter both emit bare chromosomes, but truth files may not).
+    Keys without a ``:`` (rsIDs) pass through untouched.
+    """
+    s = site.strip()
+    if ":" not in s:
+        return s
+    chrom, _, pos = s.partition(":")
+    chrom = chrom[3:] if chrom.lower().startswith("chr") else chrom
+    return f"{chrom}:{pos}"
+
+
+def extract_observed_genotypes(pipeline_out: dict) -> dict[str, str]:
+    """Map a pipeline result to ``{site: genotype}``, indexed under BOTH the
+    rsID and the canonical ``chrom:pos`` so a truth set keyed either way matches.
+
+    This matters for real data: GIAB benchmark VCFs carry no rsIDs, so
+    GIAB-derived truth is coordinate-keyed, while GeT-RM / hand-curated truth is
+    often rsID-keyed. The pipeline reports both an rsID and coordinates per
+    variant, so registering the genotype under each available key lets the
+    genotype track compare against either keyspace. (Keying by rsID alone — the
+    previous behaviour — silently turned every coordinate-keyed truth site into
+    a false negative.) Only variants the pipeline actually reported appear here;
+    absence of a site is interpreted as a no-call (reference) by
+    :func:`compare_genotypes`.
     """
     observed: dict[str, str] = {}
     for v in pipeline_out.get("variants", []) or []:
-        site = v.get("rsid")
-        if not site and v.get("chrom") and v.get("pos") is not None:
-            site = f"{v['chrom']}:{v['pos']}"
         gt = v.get("genotype")
-        if site and gt:
-            observed[site] = gt
+        if not gt:
+            continue
+        rsid = v.get("rsid")
+        if rsid:
+            observed[rsid] = gt
+        if v.get("chrom") and v.get("pos") is not None:
+            observed[canonical_site(f"{v['chrom']}:{v['pos']}")] = gt
     return observed
 
 
@@ -215,8 +239,11 @@ def run_concordance(
             if out is None:
                 continue
             obs = extract_observed_genotypes(out)
-            # restrict observed to the truth-set sites for a fair confusion matrix
-            obs_restricted = {s: obs.get(s, REF) for s in exp_sites}
+            # restrict observed to the truth-set sites for a fair confusion
+            # matrix. Look up each truth site via its canonical key so a
+            # coordinate-keyed (GIAB) or rsID-keyed truth set both resolve
+            # against the dual-keyed observed map.
+            obs_restricted = {s: obs.get(canonical_site(s), REF) for s in exp_sites}
             cm = compare_genotypes(obs_restricted, exp_sites)
             per_sample[sample] = cm.to_dict()
             for fld in ("tp", "fp", "fn", "tn", "genotype_mismatch"):
