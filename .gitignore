@@ -87,3 +87,19 @@ gpt-notes.md
 
 # Tier A validation reports are generated artifacts (uploaded as CI artifacts)
 validation/reports/
+
+# Tier A reference data — LOCAL-ONLY / operator-supplied policy.
+# See validation/reference/ACQUISITION.md §4. The truth sets and genome inputs
+# are NOT committed: GeT-RM/Coriell licensing + GIAB file size. What IS tracked:
+# the labeled seed placeholder (getrm_pgx_seed.tsv), the converter, the docs,
+# and the *.example.* templates. Everything below is operator-supplied locally.
+validation/reference/getrm_pgx.tsv
+validation/reference/giab_genotypes.tsv
+validation/reference/panel_sites_grch38.txt
+validation/reference/sample_inputs.tsv
+validation/reference/inputs/
+validation/reference/*.vcf
+validation/reference/*.vcf.gz
+validation/reference/*.bam
+validation/reference/*.bai
+validation/reference/*.xlsx

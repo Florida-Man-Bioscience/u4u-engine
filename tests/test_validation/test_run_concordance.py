@@ -170,6 +170,44 @@ def test_pipeline_run_cached_across_tracks(patched, monkeypatch):
     assert sorted(calls) == ["NA-001", "NA-003"]
 
 
+# ── Coordinate keyspace (real GIAB shape) ───────────────────────────────────
+
+def test_genotype_track_matches_coordinate_keyed_truth(tmp_path, monkeypatch):
+    """GIAB truth is coordinate-keyed (no rsIDs in benchmark VCFs), but the
+    pipeline reports variants with an rsID *and* coordinates. The genotype
+    track must match on coordinate even when the observed variant also has an
+    rsID — otherwise every GIAB site collapses to a false negative.
+    """
+    (tmp_path / "GIAB-1.vcf").write_text("", encoding="utf-8")
+    sample_map = tmp_path / "map.tsv"
+    sample_map.write_text(f"GIAB-1\t{tmp_path/'GIAB-1.vcf'}\n", encoding="utf-8")
+
+    # Truth keyed exactly as giab_truth_from_vcf.py emits: bare "chrom:pos".
+    truth = tmp_path / "giab.tsv"
+    truth.write_text(
+        "sample\tsite\tgenotype\n"
+        "GIAB-1\t1:100\t0/1\n"      # observed has rsid too → must still match
+        "GIAB-1\t2:200\t1/1\n"      # observed has no rsid → coordinate fallback
+        "GIAB-1\tchr3:300\tref\n",  # chr-prefixed truth → canonicalized to 3:300
+        encoding="utf-8",
+    )
+
+    pipeline_out = {
+        "variants": [
+            {"rsid": "rs777", "genotype": "0/1", "chrom": "1", "pos": 100},
+            {"genotype": "1/1", "chrom": "2", "pos": 200},  # rsID-less
+        ],
+    }
+    monkeypatch.setattr(runner, "run_sample", lambda p: pipeline_out)
+
+    report = runner.run_concordance(None, str(truth), str(sample_map))
+    c = report["tracks"]["variant_genotype"]["combined"]
+    assert c["tp"] == 2          # both variant sites detected via coordinate
+    assert c["fn"] == 0          # ← was 2 before the dual-key fix
+    assert c["tn"] == 1          # chr3:300 truth-ref, not observed → TN
+    assert c["genotype_mismatch"] == 0
+
+
 # ── Honesty contract: no fabricated denominator ─────────────────────────────
 
 def test_no_sample_map_yields_undefined_rates_and_warning(patched):
