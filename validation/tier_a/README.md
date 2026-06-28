@@ -14,9 +14,26 @@ determination is granted. See `docs/irb-setup-plan.md` (§1, Tier A) and
 
 | Track | Reference | Metric |
 |---|---|---|
+| **Genome build handling** | synthetic labeled headers (no external data) | detection concordance + gating correctness + H-01 unsafe-pass count |
 | **PGx diplotype** | GeT-RM consensus star-allele diplotypes | exact-match concordance, per gene |
 | **PGx phenotype** | GeT-RM consensus phenotype (PM/IM/NM/RM/UM) | concordance, per gene |
 | **Variant genotype** | GIAB benchmark (site-level subset) | sensitivity / specificity / precision / F1 + genotype concordance |
+
+### Genome build handling — runnable now, no reference data needed
+
+Validates `engine.genome_build`, the control for the master plan's #1
+launch-blocking hazard **H-01** (silent GRCh37/GRCh38 conflation). Build
+detection is pure header parsing, so this track is fully deterministic and needs
+no acquired reference materials — it produces real numbers immediately:
+
+```bash
+nix develop --command python -m validation.tier_a.build_handling \
+    --out-dir validation/reports
+```
+
+It exits **non-zero if the H-01 control fails** (any non-GRCh38 coordinate file
+allowed to proceed), so it can be wired in as a CI gate. Current status on the
+fixture matrix: 100% detection, 100% gating, **0 unsafe passes — H-01 holds**.
 
 Maps onto the Clinical Validation Master Plan §9 (analytical validation) and the
 GeT-RM/GIAB reference materials named in its Appendix C.
@@ -94,8 +111,9 @@ or "pipeline made no call" → the comparison is **skipped and the rate reported
   external-tool integration, not a parser; this harness covers the site-level
   subset directly comparable to the pipeline's per-variant output. Wire `hap.py`
   in as a follow-up if you need genome-wide stratified stats.
-- **STR / CAG-repeat concordance** (ExpansionHunter) and **build-handling
-  validation** — separate Tier A tracks; add as parallel modules.
+- **STR / CAG-repeat concordance** (ExpansionHunter) — a separate Tier A track;
+  add as a parallel module. (Build-handling validation is now implemented — see
+  above.)
 - **Acceptance thresholds.** This computes the numbers; the pass/fail criteria
   (e.g. ≥99% PGx diplotype concordance) are set in the validation protocol, not
   hard-coded here.
