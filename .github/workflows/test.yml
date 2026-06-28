@@ -38,3 +38,21 @@ jobs:
           # Tests run against mocked HTTP — no real API keys needed.
           # Set this in repo secrets if you want integration tests to hit live APIs.
           NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+
+      - name: Tier A analytical-validation gates
+        # The build-handling and STR runners exit non-zero on a control
+        # failure (e.g. a non-GRCh38 coordinate file allowed to proceed —
+        # hazard H-01 — or an EH-parser/interpretation regression). Running
+        # them here turns those controls into hard CI gates, in addition to
+        # the offline unit tests above. Both need no external data or network.
+        run: |
+          python -m validation.tier_a.build_handling --out-dir validation/reports
+          python -m validation.tier_a.str_calling     --out-dir validation/reports
+
+      - name: Upload Tier A validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tier-a-validation-reports-py${{ matrix.python-version }}
+          path: validation/reports/
+          if-no-files-found: ignore
