@@ -30,7 +30,10 @@ jobs:
         # (imported eagerly from its __init__), so without it pytest errors out
         # during collection rather than running the suite. These are all pure
         # wheels (no system libs) and mirror the runtime image's deps.
-        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography
+        # psycopg2-binary is required since the Postgres migration: db/pool.py
+        # imports psycopg2 at module load and tests/conftest.py pulls it in, so
+        # without it pytest errors during collection (matches requirements.txt).
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
 
       - name: Run tests
         run: pytest tests/ -v
