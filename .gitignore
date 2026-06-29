@@ -1,3 +1,7 @@
+# Generated PDF renders of the Markdown docs (docs-pdf/) — NOT tracked.
+# Rebuild with the pandoc/xelatex batch; source of truth stays the .md files.
+docs-pdf/
+
 # Python
 __pycache__/
 *.py[cod]
