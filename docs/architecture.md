@@ -4,7 +4,7 @@ U4U takes a raw genome file, annotates each variant against clinical and populat
 
 ---
 
-## System Diagram
+## System Diagram[^mermaid]
 
 ```mermaid
 flowchart TD
@@ -69,13 +69,13 @@ flowchart TD
 | Component | Technology | Status |
 |-----------|-----------|--------|
 | Annotation pipeline | Python 3.11+ | **Complete** |
-| API layer | FastAPI + BackgroundTasks | **Complete** |
-| Job store | In-memory dict (MVP) → Postgres | In-memory done |
+| API layer | FastAPI[^fastapi] + BackgroundTasks[^backgroundtasks] | **Complete** |
+| Job store | In-memory dict (MVP[^mvp]) → Postgres | In-memory done |
 | Database | Postgres (`db/schema.sql`) | Schema written |
 | Container | Docker + docker-compose | **Complete** |
 | Frontend | React web app | Not built |
-| Desktop (future) | Electron | Not started |
-| Hosting | K8s cluster | Not deployed |
+| Desktop (future) | Electron[^electron] | Not started |
+| Hosting | K8s[^k8s] cluster | Not deployed |
 | CI | GitHub Actions | Running |
 
 ---
@@ -100,7 +100,7 @@ Frontend polls `GET /jobs/{job_id}` every 3 seconds, reads `progress.pct` to dri
 
 ## Data flow
 
-1. `POST /analyze` reads file bytes, creates a job record, returns `job_id` immediately
+1. `POST /analyze` reads file bytes (uploaded as `multipart/form-data`[^multipart]), creates a job record, returns `job_id` immediately
 2. Background thread calls `run_pipeline(file_bytes, filename, filters, progress_callback)`
 3. `progress_callback` writes step/pct to the job record on every pipeline step
 4. Engine hits VEP → ClinVar → gnomAD per variant (annotation cache intercepts when warm)
@@ -132,7 +132,7 @@ The current whitelist filter (`acmg81_rsids.txt`) keeps only variants whose rsID
 
 Limitation: novel variants (no rsID) are filtered out. For VCF analysis of rare disease cases, set `FILTERS=""` to run all variants through annotation — the scoring engine will still tier them correctly.
 
-Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVar. The seed file (~200 rsIDs) covers founder mutations and is usable out of the box.
+Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVar. The seed file (~200 rsIDs) covers founder mutations[^founder] and is usable out of the box.
 
 ---
 
@@ -141,13 +141,13 @@ Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVa
 | Field | Type | Description |
 |-------|------|-------------|
 | `variant_id` | str | rsid or "chrom:pos" |
-| `rsid` | str\|None | dbSNP rsID |
+| `rsid` | str\|None | dbSNP[^dbsnp] rsID |
 | `location` | str | "chrom:pos" |
 | `chrom` | str | chromosome (no chr prefix) |
 | `pos` | int | 1-based position |
 | `ref` / `alt` | str | alleles |
 | `zygosity` | str | heterozygous \| homozygous_alt \| unknown |
-| `consequence` | str | VEP SO term (e.g. missense_variant) |
+| `consequence` | str | VEP SO term[^soterm] (e.g. missense_variant) |
 | `genes` | list[str] | affected gene symbols |
 | `clinvar` | str\|None | clinical significance (lowercased) |
 | `clinvar_raw` | str\|None | original ClinVar value |
@@ -173,7 +173,7 @@ Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVa
 
 ## Compute model
 
-**MVP:** all computation server-side. Thread pool (`WORKERS=4`) handles concurrent jobs. No local execution.
+**MVP:** all computation server-side. Thread pool[^threadpool] (`WORKERS=4`) handles concurrent jobs. No local execution.
 
 **Hybrid (future):** Electron desktop app runs format validation + variant filtering locally, calls server API for annotation. Keeps raw genome file on the user's device.
 
@@ -182,5 +182,22 @@ Run `scripts/generate_filters.py` to refresh `data/acmg81_rsids.txt` from ClinVa
 ## Deployment checklist
 
 - `docker compose up --build` — confirm `/health` returns `{"status":"ok"}`
-- `psql $DATABASE_URL -f db/schema.sql` — initialize Postgres
+- `psql[^psql] $DATABASE_URL -f db/schema.sql` — initialize Postgres
+
+---
+
+## Footnotes
+
+[^mermaid]: **Mermaid** — a text-based diagramming syntax that renders flowcharts/diagrams from a fenced code block; GitHub and many viewers render it inline.
+[^fastapi]: **FastAPI** — a modern Python web framework for building APIs, based on type hints and ASGI; used for the `/analyze`, `/jobs`, and `/health` endpoints.
+[^backgroundtasks]: **BackgroundTasks** — FastAPI/Starlette mechanism for running work after returning a response, so the long pipeline runs off the request thread while the client gets an immediate `job_id`.
+[^mvp]: **MVP (Minimum Viable Product)** — the simplest version that delivers core value; here the in-memory job store before Postgres persistence is added.
+[^electron]: **Electron** — a framework for building desktop apps with web technologies (Chromium + Node.js); the planned route for running file handling locally on a user's machine.
+[^k8s]: **K8s (Kubernetes)** — a container-orchestration platform for deploying and scaling containerized services across a cluster.
+[^multipart]: **multipart/form-data** — the HTTP content type used to upload files in a form POST; each part carries one field or file with its own headers.
+[^founder]: **Founder mutations** — disease variants that are common within a population because they descend from a single ancestor (founder); a small seed list of them covers a disproportionate share of real cases.
+[^dbsnp]: **dbSNP** — NCBI's public database of short genetic variations; it assigns the `rs` identifiers (rsIDs) used throughout the pipeline.
+[^soterm]: **SO term (Sequence Ontology term)** — a controlled-vocabulary label for a variant's molecular consequence (e.g. `missense_variant`, `stop_gained`), used by VEP for consistency across tools.
+[^threadpool]: **Thread pool** — a fixed set of worker threads (here `WORKERS=4`) that process jobs concurrently without spawning unbounded threads; suited to the pipeline's blocking I/O.
+[^psql]: **psql** — the PostgreSQL command-line client; here used to load `db/schema.sql` into the database.
 - `NCBI_API_KEY=<key> python scripts/generate_filters.py` — refresh `data/acmg81_rsids.txt` from live ClinVar data

@@ -16,11 +16,11 @@ The results screen is the whole product. A person uploads their genome file, wai
 
 23andMe uses card grids. Every health app uses card grids. Don't do that.
 
-This is a **prioritized findings report**, not a social feed. Think about what a genetic counselor would hand someone after an appointment — one clean page, organized by what needs attention first, where the most critical finding is impossible to miss and every result ends with one concrete action. That's the feeling to design toward.
+This is a **prioritized findings report**, not a social feed. Think about what a genetic counselor[^counselor] would hand someone after an appointment — one clean page, organized by what needs attention first, where the most critical finding is impossible to miss and every result ends with one concrete action. That's the feeling to design toward.
 
 **Layout:** single column, full-width, sectioned by urgency. Not a grid, not tiles. Scannable top-to-bottom like a document.
 
-**Each finding is a row** with a color-coded left border (tier color), gene name, one-line summary, and an action button. Click the row to expand inline detail. Nothing opens a new page, nothing uses a modal.
+**Each finding is a row** with a color-coded left border (tier color), gene name, one-line summary, and an action button. Click the row to expand inline detail. Nothing opens a new page, nothing uses a modal[^modal].
 
 **Section order:**
 1. Summary header — total findings, tier breakdown, filename
@@ -53,11 +53,11 @@ GET /jobs/<job_id>
   }
 ```
 
-Poll every 3 seconds. Stop when `status` is `"done"` or `"failed"`.
+Poll[^polling] every 3 seconds. Stop when `status` is `"done"` or `"failed"`.
 
 ### Result object — one per variant
 
-Every result in the `results` array has exactly these fields. All JSON-safe, pre-sorted by score descending. Don't re-sort client-side.
+Every result in the `results` array has exactly these fields. All JSON-safe[^jsonsafe], pre-sorted by score descending. Don't re-sort client-side. (Field meanings — `zygosity`, `consequence`, `clinvar`, `gnomad_af`, `condition_key`, `tier`, `carrier_note` — are documented in `docs/pipeline.md` and `docs/architecture.md`.)
 
 ```json
 {
@@ -127,7 +127,7 @@ Progress page. Don't let people navigate away.
 - Progress bar — `progress.pct` (0 → 100)
 - Step label — `progress.step` (e.g. "Annotating rs80357906 (4/81)")
 - Static copy: "Genome analysis usually takes 1–3 minutes."
-- Browser `beforeunload` warning: "Analysis in progress. Leaving this page will cancel your results."
+- Browser `beforeunload`[^beforeunload] warning: "Analysis in progress. Leaving this page will cancel your results."
 
 If `status == "failed"`: show the `error` message and a retry button that returns to upload.
 
@@ -167,15 +167,15 @@ Left-border color matches tier. Gene name bold. Headline fills center. Action bu
 - `zygosity_plain`
 - `rarity_plain`
 - `clinvar_plain`
-- `action_hint` — most prominent element in the expanded state, styled as a CTA
+- `action_hint` — most prominent element in the expanded state, styled as a CTA[^cta]
 - Source links (small, below): ClinVar, gnomAD, gene card
 
-**Carrier row variant:**
+**Carrier[^carrier] row variant:**
 - Blue left border, 🔵 badge
 - Collapsed: "CFTR — You appear to be a carrier for cystic fibrosis"
 - Expanded: `carrier_note` text + `action_hint`
 
-**VUS row variant:**
+**VUS[^vus] row variant:**
 - Yellow left border, 🟡 badge
 - Collapsed: "GENE — Variant of uncertain significance"
 - Expanded: `consequence_plain`, `rarity_plain`, `frequency_derived_label` if set, plus: "Not enough evidence to classify this variant as harmful or harmless."
@@ -191,7 +191,7 @@ Collapsed by default. Same row format, lower visual weight. Toggle to reveal.
 ### Zero findings state
 
 ```
-No findings in the 81 ACMG actionable genes.
+No findings in the 81 ACMG[^acmg] actionable genes.
 This is common — most people don't have known pathogenic variants in these genes.
 It does not mean your genome has no variants worth knowing about.
 ```
@@ -214,7 +214,7 @@ For MVP: just capture it. No complex backend needed.
 
 ### Download report
 
-`window.print()` with a print stylesheet. MVP only. Contents: header, tier breakdown, findings table (gene | tier | headline | action), disclaimer.
+`window.print()`[^windowprint] with a print stylesheet[^printstyle]. MVP only. Contents: header, tier breakdown, findings table (gene | tier | headline | action), disclaimer.
 
 ---
 
@@ -270,7 +270,7 @@ Build `<PollingLoop />` and `<FindingRow />` data layer first against the JSON s
 6. **Processing screen**
 7. **Print stylesheet** for report — last
 
-**Design against real content — not Lorem Ipsum:**
+**Design against real content — not Lorem Ipsum[^lorem]:**
 
 Finding 1:
 ```
@@ -321,3 +321,20 @@ The design goal: a non-scientist reads one row and understands what it means and
 | Roadmap + phase owners | `docs/roadmap.md` — GitHub |
 | Notion website page | U4U Notion → Website subpage |
 | GitHub repo | https://github.com/Florida-Man-Bioscience/u4u-engine |
+
+---
+
+## Footnotes
+
+[^counselor]: **Genetic counselor** — a healthcare professional trained to interpret genetic test results and help patients understand risk, inheritance, and next steps. The doc uses their hand-off report as the design metaphor.
+[^modal]: **Modal** — a pop-up dialog that overlays the page and blocks interaction with everything behind it until dismissed. The spec deliberately avoids these in favor of inline expansion.
+[^jsonsafe]: **JSON-safe** — every field value is a plain JSON type (string, number, boolean, null, array, object) with no special encoding needed, so the frontend can consume it directly.
+[^polling]: **Polling** — repeatedly requesting an endpoint on a timer (here every 3s) to check for a status change, rather than receiving a push notification.
+[^beforeunload]: **`beforeunload`** — a browser event that fires when the user tries to leave/close the page; the app hooks it to warn that navigating away cancels the in-progress analysis.
+[^cta]: **CTA (Call To Action)** — a visually prominent prompt (button/link) directing the user to the single recommended next step.
+[^vus]: **VUS (Variant of Uncertain Significance)** — a variant whose evidence is insufficient to classify as pathogenic or benign; shown with explicit "not enough evidence" language.
+[^carrier]: **Carrier** — someone with one copy of a recessive variant who is typically unaffected themselves but can pass it on; relevant for family planning.
+[^acmg]: **ACMG genes** — the 81-gene American College of Medical Genetics "Secondary Findings" list of clinically actionable genes the report screens.
+[^windowprint]: **`window.print()`** — the browser API that opens the native print dialog; used as the MVP "download report" mechanism (print-to-PDF).
+[^printstyle]: **Print stylesheet** — CSS rules scoped to printing (`@media print`) that reformat the page for paper/PDF output (hide nav, adjust layout).
+[^lorem]: **Lorem Ipsum** — conventional placeholder filler text. The spec insists on designing with real clinical content instead, since wording is part of the product.
