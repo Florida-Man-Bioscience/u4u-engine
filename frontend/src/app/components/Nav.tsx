@@ -37,6 +37,12 @@ export function Nav() {
             Regulatory
           </Link>
           <Link
+            href="/study"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            Study
+          </Link>
+          <Link
             href="/"
             className="text-zinc-400 hover:text-white transition-colors"
           >
