@@ -475,6 +475,16 @@ def predict_response(
         # fallback); treat it as deterministic so the predictive curve
         # falls back to the old behaviour.
         baseline_sd = 0.0
+        # Brand-new patient: no usable measurements yet, so
+        # ``estimate_baseline`` returns None and the predictive curves
+        # would come back empty — leaving the chart blank exactly when the
+        # *prior* prediction ("what we expect before any data") is the only
+        # thing we have to show. Anchor on the panel's documented
+        # physiologic baseline and carry its uncertainty so the prior
+        # predictive renders a credible band around the genetic prior.
+        if baseline is None and baseline_prior_mean > 0:
+            baseline = baseline_prior_mean
+            baseline_sd = baseline_prior_sd
 
     # When a pre-treatment measurement directly pins b, propagating its
     # joint-fit σ_b through ``predictive_curve`` ends up double-counting
@@ -537,7 +547,7 @@ def predict_response(
             posterior=prior_only,
             tau_weeks=tau,
             week_grid=week_grid,
-            baseline_sd=baseline_prior_sd if observations else 0.0,
+            baseline_sd=baseline_prior_sd if observations else baseline_sd,
         )
         if baseline is not None else bayes.PredictiveCurve(points=[])
     )
