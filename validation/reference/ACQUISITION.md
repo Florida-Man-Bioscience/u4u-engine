@@ -63,11 +63,26 @@ nix develop --command python validation/reference/giab_truth_from_vcf.py \
     --out      validation/reference/giab_genotypes.tsv
 ```
 
-`--panel` is a file of `chrom:pos` (GRCh38) sites — e.g. positions distilled
-from `data/peptide_genes.bed` / the ACMG81 panel — one per line. Panel sites
+`--panel` is a file of `chrom:pos` (GRCh38) sites, one per line. Panel sites
 present in the VCF get their called genotype; panel sites absent get `ref`
 (valid **only** when the site lies in the benchmark BED — see the converter's
 `--confident-bed` option to enforce this).
+
+Generate the panel from the ACMG81 rsID set (the sites the pipeline filters on)
+with the bundled distillation tool — it resolves each rsID to its GRCh38
+coordinate via the engine's cache-backed resolver:
+
+```bash
+nix develop --command python validation/reference/build_panel.py \
+    --rsids data/acmg81_rsids.txt \
+    --bed   data/peptide_genes.bed \
+    --out   validation/reference/panel_sites_grch38.txt
+```
+
+It reports any rsIDs that fail to resolve (never silently dropped) and, with
+`--bed`, a coverage report of which peptide genes the panel does/doesn't reach.
+Note: gene *ranges* (the BED) are not enumerable into discrete sites — to add a
+gene's sites, pass an rsID list for that gene's variants as another `--rsids`.
 
 ## 3. Sample input files (what you feed the pipeline)
 
@@ -101,7 +116,7 @@ are tracked.
 | File (gitignored)                          | What it is                                  | How to make it                          |
 |--------------------------------------------|---------------------------------------------|-----------------------------------------|
 | `getrm_pgx.tsv`                            | GeT-RM consensus diplotypes (truth)         | reshape the consolidated XLSX — see §1   |
-| `panel_sites_grch38.txt`                   | `chrom:pos` panel restricting the GIAB truth | distil from ACMG81 / peptide-gene panel  |
+| `panel_sites_grch38.txt`                   | `chrom:pos` panel restricting the GIAB truth | `build_panel.py` — see §2                |
 | `giab_genotypes.tsv`                       | GIAB genotype truth subset                  | `giab_truth_from_vcf.py` — see §2        |
 | `inputs/*.vcf.gz` (and `.bam`)             | genome input per reference sample           | download from GIAB / ENA — see §3        |
 | `sample_inputs.tsv`                        | `sample<TAB>path` map for the runner        | copy `sample_inputs.example.tsv`, edit   |
