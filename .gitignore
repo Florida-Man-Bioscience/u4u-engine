@@ -79,10 +79,6 @@ ExportBlock-*/
 one_variant.txt
 small_test.txt
 u4unotionpage.zip
-ExportBlock-*/
-one_variant.txt
-small_test.txt
-u4unotionpage.zip
 gpt-notes.md
 
 # Tier A validation reports are generated artifacts (uploaded as CI artifacts)
