@@ -43,6 +43,36 @@ def test_predict_response_without_treatment_falls_back_to_prior(conn):
     assert result["posterior"]["mean_pct_change"] == result["prior"]["mean_pct_change"]
 
 
+def test_predict_response_new_patient_renders_prior_predictive_band(conn):
+    """Regression: a brand-new patient (genetic prior, zero measurements)
+    must still get a non-empty predictive curve with a credible band.
+
+    Before the panel-baseline fallback, ``estimate_baseline([])`` returned
+    None and both predictive curves came back empty — leaving the chart
+    blank exactly when the prior prediction is the only thing to show.
+    The curve must be anchored on the panel's documented baseline and the
+    95%% band must open up away from t=0 (θ uncertainty is real)."""
+    p = service.create_patient(conn, label="NEW-001")
+    service.set_genetic_profile(
+        conn, p.id, generate_synthetic_profile(random.Random(3)).to_json(),
+    )
+    result = analysis.predict_response(
+        conn, patient_id=p.id, peptide_name="CJC-1295", biomarker_name="Serum IGF-1",
+    )
+    assert result["likelihood"] is None
+    assert result["n_measurements"] == 0
+    # Baseline anchored on the panel value (Serum IGF-1 baseline = 180).
+    assert result["baseline"] is not None
+    assert result["baseline"] > 0
+    prior_pts = result["prior_predictive"]["points"]
+    post_pts = result["posterior_predictive"]["points"]
+    assert prior_pts, "prior predictive must render for a new patient"
+    assert post_pts, "posterior predictive must render for a new patient"
+    # At t=0 the band is a point (a(0)=0); by the plateau it must have width.
+    last = post_pts[-1]
+    assert last["hi_95"] - last["lo_95"] > 0
+
+
 def test_predict_response_without_genetics_uses_flat_prior(conn):
     """No genetic profile → prior is (0, 0.3) and posterior follows likelihood."""
     p = service.create_patient(conn, label="P-002")

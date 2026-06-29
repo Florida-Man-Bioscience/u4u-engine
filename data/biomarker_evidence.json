@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "description": "Research-backed evidence registry for peptide -> biomarker response magnitudes. Curated, citation-anchored overrides for the informal defaults in engine/tracking/biomarker_params.py. Each entry records the documented effect magnitude, the evidence GRADE, an explicit relative_sd (uncertainty in the magnitude, as a fraction of the magnitude), and the real, retrieved citations that back it. The loader (engine/tracking/evidence.py) merges these over BIOMARKER_PARAMS; the Bayesian prior (engine/tracking/genetics.derive_prior) uses relative_sd in place of the flat PANEL_REL_SD when an entry exists, so well-studied markers get tighter priors and sparsely-evidenced ones get wider priors. Update this file with engine/tracking/evidence_update.py; never hand-edit a citation you have not actually retrieved.",
+  "grade_definitions": {
+    "A": "Multiple human RCTs or a meta-analysis; magnitude well established.",
+    "B": "At least one human RCT; magnitude directionally firm but class- or dose-approximate.",
+    "C": "Human observational, open-label, or mechanistic-only; direction supported, magnitude soft.",
+    "D": "Preclinical only (animal / in vitro); human magnitude is an extrapolation."
+  },
+  "grade_default_relative_sd": {
+    "A": 0.10,
+    "B": 0.15,
+    "C": 0.22,
+    "D": 0.30
+  },
+  "uncited_relative_sd": 0.20,
+  "entries": {
+    "Serum IGF-1": {
+      "max_pct_change": 0.55,
+      "relative_sd": 0.15,
+      "grade": "B",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin", "GHRP-2"],
+      "rationale": "GH-axis secretagogues robustly raise circulating IGF-1 in humans. Tesamorelin's pivotal RCT in HIV-associated lipodystrophy showed a large, sustained IGF-1 rise (roughly a doubling from baseline). Direction is firm from human RCTs; the +55% panel magnitude is a class-level, dose-dependent approximation (hence grade B, not A), so relative_sd is tightened to 0.15 from the 0.20 default but not to the 0.10 A-tier.",
+      "citations": [
+        {
+          "doi": "10.1056/nejmoa072375",
+          "title": "Metabolic Effects of a Growth Hormone-Releasing Factor in Patients with HIV",
+          "authors": "Falutz et al.",
+          "year": 2007,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1001/jama.292.2.210",
+          "title": "Growth Hormone-Releasing Hormone in HIV-Infected Men With Lipodystrophy",
+          "authors": "Falutz et al.",
+          "year": 2004,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    },
+    "Serum VEGF": {
+      "max_pct_change": 0.45,
+      "relative_sd": 0.30,
+      "grade": "D",
+      "peptides": ["BPC-157"],
+      "rationale": "BPC-157 promotes angiogenesis and upregulates VEGF/VEGFR2 signaling in animal wound-healing and endothelial models. Evidence is preclinical only; the human serum-VEGF magnitude is an extrapolation, so relative_sd is widened to 0.30 (grade D) rather than the 0.20 default.",
+      "citations": [
+        {
+          "doi": "10.3389/fphar.2021.627533",
+          "title": "Stable Gastric Pentadecapeptide BPC 157 and Wound Healing",
+          "authors": "Seiwerth et al.",
+          "year": 2021,
+          "journal": "Frontiers in Pharmacology",
+          "design": "Review",
+          "evidence": "preclinical"
+        },
+        {
+          "doi": "10.2147/dddt.s82030",
+          "title": "Body protective compound-157 enhances alkali-burn wound healing in vivo and promotes proliferation, migration, and angiogenesis in vitro",
+          "authors": "Huang et al.",
+          "year": 2015,
+          "journal": "Drug Design, Development and Therapy",
+          "design": "Animal/in vitro",
+          "evidence": "preclinical"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    },
+    "Plasma nitrite/nitrate (NOx)": {
+      "max_pct_change": 0.50,
+      "relative_sd": 0.30,
+      "grade": "D",
+      "peptides": ["BPC-157"],
+      "rationale": "BPC-157 modulates vasomotor tone via the Src-Caveolin-1-eNOS pathway, raising NO production in endothelial/animal models. Preclinical only; human plasma NOx magnitude is an extrapolation (grade D, relative_sd 0.30).",
+      "citations": [
+        {
+          "doi": "10.1038/s41598-020-74022-y",
+          "title": "Modulatory effects of BPC 157 on vasomotor tone and the activation of Src-Caveolin-1-endothelial nitric oxide synthase pathway",
+          "authors": "Hsieh et al.",
+          "year": 2020,
+          "journal": "Scientific Reports",
+          "design": "Animal/in vitro",
+          "evidence": "preclinical"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    }
+  }
+}
