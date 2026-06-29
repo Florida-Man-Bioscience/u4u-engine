@@ -13,7 +13,7 @@
 
 ## 1. The threshold question — is this even Human Subjects Research?
 
-Most of pipeline *performance* testing can be done **without** triggering full IRB review, because it uses reference materials and de-identified data that are not "human subjects" under the Common Rule (45 CFR 46). **But "no full review" is not "no IRB" — you still need the IRB/HRPP to issue a written determination** (NHSR or Exempt). Journals, regulators (FDA/CAP), and partners will later ask to see that letter.
+Most of pipeline *performance* testing can be done **without** triggering full IRB[^irb] review, because it uses reference materials and de-identified data that are not "human subjects" under the Common Rule (45 CFR 46)[^commonrule]. **But "no full review" is not "no IRB" — you still need the IRB/HRPP[^hrpp] to issue a written determination** (NHSR[^nhsr] or Exempt[^exempt]). Journals, regulators (FDA/CAP[^cap]), and partners will later ask to see that letter.
 
 Route **every planned data source** into one of three lanes:
 
@@ -139,3 +139,10 @@ The analytical performance work (Lanes A/B) can therefore start **weeks** ahead 
 ---
 
 *Cross-references: `docs/clinical-validation-plan.md` §3 (intended use / regulatory posture), §9–§11 (analytical & clinical validation designs = the study endpoints), §13 (privacy/security = the data-management plan), §18 (governance/ethics rationale).*
+
+[^irb]: **IRB (Institutional Review Board)** — the committee that reviews and approves human-subjects research to protect participants' rights and welfare; its written determination is required before regulated activities begin.
+[^commonrule]: **Common Rule (45 CFR 46)** — the U.S. federal regulation governing the protection of human research subjects; its definitions decide whether an activity counts as "human subjects research" at all.
+[^hrpp]: **HRPP (Human Research Protection Program)** — the institution-wide office that houses the IRB and issues official determination letters; the operational body you actually file with.
+[^nhsr]: **NHSR (Not Human Subjects Research)** — a formal IRB determination that an activity falls outside the Common Rule definition, so full review does not apply — but the written letter still matters.
+[^exempt]: **Exempt** — an IRB determination that research meets one of the regulatory exemption categories (e.g. secondary use of de-identified data); lighter review than full board, but still an official determination.
+[^cap]: **CAP (College of American Pathologists)** — a laboratory accreditation body whose inspectors, alongside the FDA, may later request the IRB determination letter as evidence of compliant validation.
