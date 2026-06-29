@@ -69,7 +69,7 @@ u4u-engine/
 
 ### `data/peptidiq_engine_schema.json`
 
-**What it is:** JSON Schema (draft 2020-12) formally specifying the input and output contract for the PeptidIQ scoring engine.
+**What it is:** JSON Schema (draft 2020-12)[^jsonschema] formally specifying the input and output contract for the PeptidIQ scoring engine.
 
 **Key structure:**
 - `input_layer` — variant data, patient demographics, ancestry, sample metadata
@@ -83,15 +83,15 @@ u4u-engine/
 
 ### `db/migrations/003_peptide_condition_library.sql`
 
-**What it is:** Postgres migration that creates the two peptide tables. Wrapped in `BEGIN`/`COMMIT` so it is atomic.
+**What it is:** Postgres migration[^migration] that creates the two peptide tables. Wrapped in `BEGIN`/`COMMIT` so it is atomic[^atomic].
 
 **Tables created:**
 - `peptide_condition_library` — core genotype–peptide response rows (gene, variant, peptide name, response level, mechanism, dosing notes, clinical flags, contraindications)
 - `peptide_trade_offs` — linked trade-off rows for complex peptide interactions
 
-**Indexes:** 10 total — partial index on `response_level = 'contraindicated'`, GIN index on `gene_variants TEXT[]`, composite indexes on `(gene, peptide_name)` and `(gene, response_level)`.
+**Indexes:**[^index] 10 total — partial index[^partialindex] on `response_level = 'contraindicated'`, GIN index[^gin] on `gene_variants TEXT[]`, composite indexes[^composite] on `(gene, peptide_name)` and `(gene, response_level)`.
 
-**Triggers:** `set_updated_at()` fires on UPDATE for both tables.
+**Triggers:**[^trigger] `set_updated_at()` fires on UPDATE for both tables.
 
 **Run with:**
 ```bash
@@ -102,7 +102,7 @@ psql $DATABASE_URL -f db/migrations/003_peptide_condition_library.sql
 
 ### `db/models/peptide_models.py`
 
-**What it is:** SQLAlchemy 2.0 ORM models for the peptide tables, using `Mapped[]` type annotations and `AsyncSession`.
+**What it is:** SQLAlchemy 2.0 ORM[^orm] models for the peptide tables, using `Mapped[]` type annotations[^mapped] and `AsyncSession`[^asyncsession].
 
 **Classes:**
 - `PeptideConditionLibrary` — maps to `peptide_condition_library`
@@ -124,7 +124,7 @@ from db.models.peptide_models import PeptideConditionLibrary, get_peptide_respon
 
 **What it is:** 12 INSERT rows populating `peptide_condition_library` with clinically validated genotype–peptide data.
 
-**Genes covered:** AR (CAG short/long), ESR1 (rs9340799), ESR2 (rs4986938), OXTR (rs53576), MC4R (Val103Ile), GLP1R (Ala316Thr), RET (M918T), TP53 (R175H), BRCA1 (pathogenic)
+**Genes covered:** AR (CAG short/long), ESR1 (rs9340799), ESR2 (rs4986938), OXTR (rs53576), MC4R (Val103Ile[^proteinnotation]), GLP1R (Ala316Thr), RET (M918T), TP53 (R175H), BRCA1 (pathogenic)
 
 **Run after the migration:**
 ```bash
@@ -135,7 +135,7 @@ psql $DATABASE_URL -f db/seeds/peptide_seed_data.sql
 
 ### `engine/repeat_callers/expansion_hunter.py`
 
-**What it is:** Python wrapper around Illumina's ExpansionHunter binary for calling short tandem repeats (STRs) from BAM/CRAM files.
+**What it is:** Python wrapper around Illumina's ExpansionHunter binary for calling short tandem repeats (STRs)[^str] from BAM/CRAM[^bam] files.
 
 **Entry point:**
 ```python
@@ -150,7 +150,7 @@ result = call_ar_cag_repeat(
 ```
 
 **Key constants:**
-- `AR_CAG_REPEAT_SPEC` — chrX:67545316–67545385 (hg38), primary allele = AR
+- `AR_CAG_REPEAT_SPEC` — chrX:67545316–67545385 (hg38[^hg38]), primary allele = AR
 - Ancestry reference means: African=20, Caucasian=22, Hispanic=23, Asian=24
 
 **Sensitivity tiers (shorter CAG = higher AR sensitivity):**
@@ -166,13 +166,13 @@ result = call_ar_cag_repeat(
 
 **Graceful degradation:** If no BAM path is provided but a VCF is available, `parse_eh_output()` can extract repeat counts directly from ExpansionHunter VCF/JSON output without rerunning the binary.
 
-**Dependencies:** ExpansionHunter binary must be on PATH; hg38 reference FASTA required for live BAM calling.
+**Dependencies:** ExpansionHunter binary must be on PATH[^path]; hg38 reference FASTA[^fasta] required for live BAM calling.
 
 ---
 
 ### `engine/annotators/kegg_mapper.py`
 
-**What it is:** Maps patient variant gene symbols to 8 priority KEGG signaling pathways and generates plain-English clinical implication text.
+**What it is:** Maps patient variant gene symbols to 8 priority KEGG[^kegg] signaling pathways and generates plain-English clinical implication text.
 
 **Entry points:**
 ```python
@@ -184,7 +184,7 @@ summary = generate_pathway_summary(hits)
 
 **Priority pathways:**
 
-| KEGG ID | Name | Key Genes |
+| KEGG ID[^keggid] | Name | Key Genes |
 |---------|------|-----------|
 | hsa04915 | Estrogen signaling | ESR1, ESR2, NCOA1 |
 | hsa04912 | GnRH signaling | GNRHR, KISS1R, AR |
@@ -197,13 +197,13 @@ summary = generate_pathway_summary(hits)
 
 **Offline-first design:** All gene membership is hardcoded. Pass `use_api=True` with a `KEGGCache` instance to optionally refresh from rest.kegg.jp (results cached in SQLite, refreshed every 30 days).
 
-**Cross-pathway combination notes:** 7 clinically relevant co-hit pairs trigger additional interpretive text (e.g. ESR1 + CYP19A1 → compounded estrogen activity note).
+**Cross-pathway combination notes:** 7 clinically relevant co-hit[^cohit] pairs trigger additional interpretive text (e.g. ESR1 + CYP19A1 → compounded estrogen activity note).
 
 ---
 
 ### `tests/test_engine/test_expansion_hunter.py`
 
-58 tests across 7 test classes. Covers: repeat spec constants, all 6 sensitivity tier boundary conditions (21 parametrized), ancestry correction, graceful degradation, VCF/JSON parsing fixtures, subprocess mocking, integration flow.
+58 tests across 7 test classes. Covers: repeat spec constants, all 6 sensitivity tier boundary conditions (21 parametrized[^parametrized]), ancestry correction, graceful degradation, VCF/JSON parsing fixtures, subprocess mocking[^mocking], integration flow.
 
 **Run:** `pytest tests/test_engine/test_expansion_hunter.py -v`
 **Status:** ✅ 58 passed
@@ -273,3 +273,30 @@ if bam_path and sex:
 | Expand seed data beyond 12 rows | Medium | Target: 50+ gene–peptide combinations |
 | Wire condition library to frontend results display | Medium | Join on `condition_key` |
 | Security audit | Low | Plan in `U4U_Cybersecurity_Execution_Plan.docx` |
+
+---
+
+## Footnotes
+
+[^jsonschema]: **JSON Schema (draft 2020-12)** — a versioned standard for formally describing and validating the structure of JSON documents; the `const` keyword pins a value so the evidence weights can never drift.
+[^migration]: **Migration** — a versioned, ordered SQL script that incrementally changes a database schema (adds tables/columns/indexes); running migrations in sequence brings any database to the current structure.
+[^atomic]: **Atomic (BEGIN/COMMIT)** — the migration runs inside a transaction, so either every statement applies or none does; a failure rolls the database back to its prior state.
+[^index]: **Index** — an auxiliary data structure that speeds up lookups on specific columns at the cost of extra storage and write overhead.
+[^partialindex]: **Partial index** — an index covering only rows that match a condition (here `response_level = 'contraindicated'`), keeping it small and fast for that common query.
+[^gin]: **GIN index** — PostgreSQL's Generalized Inverted Index, suited to indexing the elements *inside* composite values like arrays (`TEXT[]`) so membership queries are fast.
+[^composite]: **Composite index** — an index on more than one column together (e.g. `(gene, peptide_name)`), efficient for queries that filter on that combination.
+[^trigger]: **Trigger** — a database procedure that fires automatically on an event (here, before/after `UPDATE`) — used to auto-maintain the `updated_at` timestamp.
+[^orm]: **ORM (Object-Relational Mapper)** — SQLAlchemy maps database tables to Python classes so rows are manipulated as objects rather than via raw SQL.
+[^mapped]: **`Mapped[]` type annotations** — SQLAlchemy 2.0's typed column declarations (e.g. `Mapped[str]`), giving static type checking and IDE support for ORM models.
+[^asyncsession]: **AsyncSession** — SQLAlchemy's asynchronous database session, allowing non-blocking `await`-ed queries that don't tie up the server thread.
+[^proteinnotation]: **Protein/variant notation (Val103Ile, M918T, R175H, rs9340799)** — shorthand for a specific change: `Val103Ile` means amino acid 103 changes from valine to isoleucine; `M918T` is the one-letter form (methionine→threonine at 918); `rs…` is the dbSNP identifier for the variant.
+[^str]: **STR (Short Tandem Repeat)** — a short DNA motif repeated many times in a row; the repeat count can be clinically meaningful (e.g. the AR CAG repeat).
+[^bam]: **BAM / CRAM** — compressed binary formats storing aligned sequencing reads; repeat calling needs the raw reads, not just a variant list. CRAM is a more compact, reference-based variant of BAM.
+[^hg38]: **hg38 (GRCh38)** — the current human reference genome assembly; coordinates like `chrX:67545316` are positions within it. An earlier assembly (hg19/GRCh37) uses different coordinates.
+[^path]: **PATH** — the operating system's list of directories searched for executables; "on PATH" means the binary can be invoked by name from any working directory.
+[^fasta]: **FASTA** — a plain-text format holding reference DNA sequences; ExpansionHunter needs the hg38 reference FASTA to interpret read alignments.
+[^kegg]: **KEGG (Kyoto Encyclopedia of Genes and Genomes)** — a public database of biological pathways (networks of interacting genes/proteins carrying out a cellular process).
+[^keggid]: **KEGG ID** — KEGG's stable pathway identifier; the `hsa` prefix denotes *Homo sapiens* pathways (e.g. `hsa04915` = estrogen signaling).
+[^cohit]: **Co-hit** — when a patient carries variants in two genes belonging to related pathways simultaneously; the combination can carry extra interpretive meaning.
+[^parametrized]: **Parametrized tests** — a single test function run repeatedly with different input values (pytest's `@parametrize`), here exercising each tier boundary condition.
+[^mocking]: **Subprocess mocking** — replacing the real external `ExpansionHunter` process call with a stand-in during tests, so tests run fast and deterministically without the binary installed.
