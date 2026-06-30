@@ -164,6 +164,71 @@
         }
       ],
       "last_reviewed": "2026-06-30"
+    },
+    "Body weight (GLP-1 RA)": {
+      "max_pct_change": -0.13,
+      "relative_sd": 0.10,
+      "grade": "A",
+      "peptides": ["Semaglutide", "Tirzepatide", "Liraglutide"],
+      "rationale": "GLP-1 receptor agonists produce large, sustained weight loss in multiple pivotal RCTs and head-to-head trials: semaglutide 2.4 mg ~15% (STEP program; Wadden 2021 STEP 3), semaglutide vs liraglutide head-to-head (Rubino 2022 STEP 8), and tirzepatide vs semaglutide (Frías 2021 SURPASS-2). Direction and approximate magnitude are firmly established across the class (grade A); the panel magnitude (-13%) is a representative class mean spanning ~8% (liraglutide) to ~21% (tirzepatide), so relative_sd is the tight A-tier 0.10. This is a class-qualified marker that does NOT apply to the generic 'Body weight' marker used by weaker peptides.",
+      "citations": [
+        {
+          "doi": "10.1001/jama.2021.1831",
+          "title": "Effect of Subcutaneous Semaglutide vs Placebo as an Adjunct to Intensive Behavioral Therapy on Body Weight in Adults With Overweight or Obesity (STEP 3)",
+          "authors": "Wadden et al.",
+          "year": 2021,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1001/jama.2021.23619",
+          "title": "Effect of Weekly Subcutaneous Semaglutide vs Daily Liraglutide on Body Weight in Adults With Overweight or Obesity Without Diabetes (STEP 8)",
+          "authors": "Rubino et al.",
+          "year": 2022,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1056/nejmoa2107519",
+          "title": "Tirzepatide versus Semaglutide Once Weekly in Patients with Type 2 Diabetes (SURPASS-2)",
+          "authors": "Frías et al.",
+          "year": 2021,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "HbA1c (GLP-1 RA)": {
+      "max_pct_change": -0.18,
+      "relative_sd": 0.10,
+      "grade": "A",
+      "peptides": ["Semaglutide", "Tirzepatide", "Liraglutide"],
+      "rationale": "GLP-1 receptor agonists lower HbA1c substantially and consistently across the class, established by a meta-analysis of GLP-1 RA cardiovascular-outcome trials (Bethel 2021) and the tirzepatide-vs-semaglutide SURPASS-2 RCT (Frías 2021), where reductions reach ~1.5-2.0 percentage points. Direction and magnitude are well established (grade A), relative_sd 0.10. Class-qualified marker; does not apply to the generic 'HbA1c' used by weaker metabolic peptides.",
+      "citations": [
+        {
+          "doi": "10.2337/dc20-1815",
+          "title": "HbA1c Change and Diabetic Retinopathy During GLP-1 Receptor Agonist Cardiovascular Outcome Trials: A Meta-analysis and Meta-regression",
+          "authors": "Bethel et al.",
+          "year": 2021,
+          "journal": "Diabetes Care",
+          "design": "Meta-analysis",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1056/nejmoa2107519",
+          "title": "Tirzepatide versus Semaglutide Once Weekly in Patients with Type 2 Diabetes (SURPASS-2)",
+          "authors": "Frías et al.",
+          "year": 2021,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
     }
   }
 }
