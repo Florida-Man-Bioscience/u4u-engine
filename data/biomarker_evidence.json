@@ -89,6 +89,81 @@
         }
       ],
       "last_reviewed": "2026-06-29"
+    },
+    "Serum IGFBP-3": {
+      "max_pct_change": 0.40,
+      "relative_sd": 0.15,
+      "grade": "B",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin", "GHRP-2"],
+      "rationale": "IGFBP-3 is the principal GH-dependent carrier of circulating IGF-1, so GH-axis secretagogues that raise GH/IGF-1 raise IGFBP-3 in parallel. Supraphysiological GH administration measurably increases the IGF axis including IGFBP-3 in healthy adults (Dall 2000), and an oral GH secretagogue (NN703) stimulated the GH/IGF axis in adults (Svensson 2003). Direction is firm from human data; the specific IGFBP-3 magnitude for these secretagogues is a class-level, dose-dependent inference (grade B, not A), so relative_sd is tightened to 0.15 rather than the 0.10 A-tier.",
+      "citations": [
+        {
+          "doi": "10.1210/jcem.85.11.6964",
+          "title": "The Effect of Four Weeks of Supraphysiological Growth Hormone Administration on the Insulin-Like Growth Factor Axis in Women and Men",
+          "authors": "Dall et al.",
+          "year": 2000,
+          "journal": "Journal of Clinical Endocrinology & Metabolism",
+          "design": "Controlled trial",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1046/j.1365-2265.2003.01754.x",
+          "title": "Oral administration of the growth hormone secretagogue NN703 in adult patients with growth hormone deficiency",
+          "authors": "Svensson et al.",
+          "year": 2003,
+          "journal": "Clinical Endocrinology",
+          "design": "Clinical trial",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "Lean body mass (DXA)": {
+      "max_pct_change": 0.05,
+      "relative_sd": 0.22,
+      "grade": "C",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin"],
+      "rationale": "GH-axis stimulation is anabolic, and the tesamorelin pivotal RCT in HIV-associated lipodystrophy assessed body composition. The trial's primary endpoint was visceral adipose tissue; lean-body-mass / fat-free-mass change is a SECONDARY body-composition endpoint and the effect is small (the panel magnitude is only +5%). That makes the magnitude soft and partly an anabolic-class extrapolation (grade C, relative_sd 0.22), not a firm RCT-derived effect size.",
+      "citations": [
+        {
+          "doi": "10.1056/nejmoa072375",
+          "title": "Metabolic Effects of a Growth Hormone-Releasing Factor in Patients with HIV",
+          "authors": "Falutz et al.",
+          "year": 2007,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "Absolute CD4+ T-lymphocyte count": {
+      "max_pct_change": 0.55,
+      "relative_sd": 0.22,
+      "grade": "C",
+      "peptides": ["Thymosin Alpha-1"],
+      "rationale": "Thymosin Alpha-1 promotes T-cell maturation and immune reconstitution. A randomized pilot in HIV patients with low CD4 counts on HAART measured CD4 reconstitution directly (Chadwick 2003), and the multicenter ETASS sepsis RCT showed immune restoration with Tα1 (Wu 2013) — though ETASS's primary immune marker was monocyte HLA-DR rather than absolute CD4 count, so it supports direction more than the CD4-count magnitude. The direct CD4-count evidence is a small pilot and the response is strongly population-dependent (HIV vs sepsis vs healthy), so this is graded C with relative_sd 0.22.",
+      "citations": [
+        {
+          "doi": "10.1111/j.1365-2249.2003.02331.x",
+          "title": "A pilot study of the safety and efficacy of thymosin alpha 1 in augmenting immune reconstitution in HIV-infected patients with low CD4 counts taking highly active antiretroviral therapy",
+          "authors": "Chadwick et al.",
+          "year": 2003,
+          "journal": "Clinical and Experimental Immunology",
+          "design": "Pilot RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1186/cc11932",
+          "title": "The efficacy of thymosin alpha 1 for severe sepsis (ETASS): a multicenter, single-blind, randomized and controlled trial",
+          "authors": "Wu et al.",
+          "year": 2013,
+          "journal": "Critical Care",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
     }
   }
 }
