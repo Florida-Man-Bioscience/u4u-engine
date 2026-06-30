@@ -7,6 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to match the ruff in flake.nix (nix develop) so the lint
+      # result is identical locally and in CI. Bump both together.
+      - name: Run ruff
+        run: |
+          pip install ruff==0.15.13
+          ruff check .
+
   test:
     runs-on: ubuntu-latest
     strategy:
