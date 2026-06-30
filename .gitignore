@@ -1,6 +1,8 @@
 # Generated PDF renders of the Markdown docs (docs-pdf/) — NOT tracked.
 # Rebuild with the pandoc/xelatex batch; source of truth stays the .md files.
 docs-pdf/
+docs-pdf.zip
+docs-pdf.tar.gz
 
 # Generated architecture diagrams / HTML renders at the repo root — NOT tracked.
 /[0-9][0-9]_*.pdf
