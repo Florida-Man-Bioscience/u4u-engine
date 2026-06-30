@@ -44,6 +44,11 @@ Added April 2026. Extends the genomics pipeline into a clinically actionable pep
 
 **Predictive Logic Architecture** — spec documented in Notion[^notion] (Predictive Logic Architecture page); 4-layer scoring engine (Input → Evidence [35/25/20/20 weights] → Outcome → Logic Flow).
 
+**Bayesian Biomarker Tracking & Evidence Registry** (`engine/tracking/`) ✅
+- Longitudinal biomarker tracking with a Normal–Normal conjugate model (`bayes.py`): `analysis.predict_response` fuses a genetics-derived prior (`genetics.derive_prior`), leave-one-out cohort pooling (`pooling.py`), and the measurement likelihood into a posterior with 95% credible intervals and a forward predictive curve. REST API at `/tracking/...`; the generative model is documented in-app at `/tracking/model`.
+- **Research-backed evidence registry** (`engine/tracking/evidence.py` + `data/biomarker_evidence.json`): citation-anchored, grade-tagged (A–D) per-biomarker effect entries. The evidence grade sets the prior's `relative_sd` — tighter for well-evidenced markers, flat `PANEL_REL_SD` fallback for the (still majority) uncited markers. Honesty contract: an entry requires ≥1 real, retrieved citation (DOI); curate via `python -m engine.tracking.evidence_update`.
+- **GLP-1 / incretin class** (Semaglutide, Tirzepatide, Liraglutide) integrated as first-class, grade-A evidence-backed peptides, with class-qualified marker names (e.g. `Body weight (GLP-1 RA)`) so their large, well-evidenced effects do not bleed onto the smaller generic markers shared by weaker peptides (AOD-9604, MOTS-c).
+
 ---
 
 ## Repo
@@ -52,6 +57,7 @@ Added April 2026. Extends the genomics pipeline into a clinically actionable pep
 engine/
   annotators/       ClinVar, gnomAD, VEP, MyVariant, kegg_mapper modules
   repeat_callers/   ExpansionHunter STR caller (AR CAG repeat)
+  tracking/         Bayesian biomarker tracking + research-backed evidence registry
   pipeline.py       run_pipeline() entry point
   scoring.py        scoring + tier logic
   summary.py        plain-English text generation
