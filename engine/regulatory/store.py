@@ -27,14 +27,14 @@ def _normalize(name: str) -> str:
 @lru_cache(maxsize=1)
 def load_peptides() -> dict:
     """Return the parsed peptides.json contents."""
-    with open(_PEPTIDES_PATH, "r", encoding="utf-8") as fh:
+    with open(_PEPTIDES_PATH, encoding="utf-8") as fh:
         return json.load(fh)
 
 
 @lru_cache(maxsize=1)
 def load_events() -> dict:
     """Return the parsed events.json contents."""
-    with open(_EVENTS_PATH, "r", encoding="utf-8") as fh:
+    with open(_EVENTS_PATH, encoding="utf-8") as fh:
         return json.load(fh)
 
 

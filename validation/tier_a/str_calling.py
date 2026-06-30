@@ -42,7 +42,7 @@ import json
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from engine.repeat_callers.expansion_hunter import (
     DEFAULT_REFERENCE_FASTA,
@@ -53,7 +53,6 @@ from engine.repeat_callers.expansion_hunter import (
 
 from .metrics import compare_categorical
 
-
 # ──────────────────────────────────────────────────────────────────────────
 # Sub-track 1 — EH output parsing concordance
 # ──────────────────────────────────────────────────────────────────────────
@@ -62,8 +61,8 @@ from .metrics import compare_categorical
 class EHOutputFixture:
     """A synthetic ExpansionHunter output with a known true repeat count."""
     id: str
-    repcn_vcf: Optional[str]          # REPCN INFO value, e.g. "22" or "19/22"; None to omit
-    json_repeat_size: Optional[int]   # JSON RepeatSize; None to omit
+    repcn_vcf: str | None          # REPCN INFO value, e.g. "22" or "19/22"; None to omit
+    json_repeat_size: int | None   # JSON RepeatSize; None to omit
     expected_repeat_count: int        # what parse_eh_output should return
 
 
@@ -113,8 +112,8 @@ def run_parser_concordance(
     fixtures: list[EHOutputFixture] = EH_FIXTURES,
 ) -> dict[str, Any]:
     """Parse each synthetic EH output and compare the count to ground truth."""
-    observed: dict[tuple[str, str], Optional[str]] = {}
-    expected: dict[tuple[str, str], Optional[str]] = {}
+    observed: dict[tuple[str, str], str | None] = {}
+    expected: dict[tuple[str, str], str | None] = {}
     details: list[dict[str, Any]] = []
 
     with tempfile.TemporaryDirectory(prefix="str_val_") as td:
@@ -163,8 +162,8 @@ def run_interpretation_verification(
     cases: list[tuple[int, str]] = BOUNDARY_CASES,
 ) -> dict[str, Any]:
     """Check the sensitivity-tier classifier against its documented breakpoints."""
-    observed: dict[tuple[str, str], Optional[str]] = {}
-    expected: dict[tuple[str, str], Optional[str]] = {}
+    observed: dict[tuple[str, str], str | None] = {}
+    expected: dict[tuple[str, str], str | None] = {}
     details: list[dict[str, Any]] = []
 
     for count, exp_level in cases:
@@ -225,7 +224,7 @@ def run_str_validation() -> dict[str, Any]:
 
 
 def render_markdown(report: dict[str, Any]) -> str:
-    def pct(x: Optional[float]) -> str:
+    def pct(x: float | None) -> str:
         return "n/a" if x is None else f"{x * 100:.1f}%"
 
     parser = report["parser_concordance"]["concordance"]
@@ -269,7 +268,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description="Tier A AR CAG STR calling validation")

@@ -21,9 +21,13 @@ Returns
 
 import requests
 from tenacity import (
-    retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
-from .cache import annotation_cache, MISS
+
+from .cache import MISS, annotation_cache
 
 _BASE = "https://rest.uniprot.org/uniprotkb"
 _TIMEOUT = 10

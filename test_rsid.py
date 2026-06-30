@@ -1,4 +1,5 @@
 import sqlite3
+
 try:
     conn = sqlite3.connect("data/rsid_cache.db")
     cur = conn.cursor()

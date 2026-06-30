@@ -372,7 +372,7 @@ def test_annotation_cache_evicts_rows_older_than_90d(pg_database, pg_clean):
     Backdating the existing row's fetched_at to 100 days ago and writing
     a new key should evict the old row without touching the fresh one.
     """
-    from engine.annotators.cache import AnnotationCache, MISS
+    from engine.annotators.cache import MISS, AnnotationCache
 
     cache = AnnotationCache()
     cache.put("clinvar", "rs_old", {"hit": "old"})

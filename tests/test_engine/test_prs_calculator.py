@@ -9,17 +9,17 @@ Run: pytest tests/test_engine/test_prs_calculator.py -v
 """
 
 import pytest
+
 from engine.annotators.prs_calculator import (
     PRS_VARIANTS,
-    calculate_prs,
-    calculate_single_trait_prs,
-    get_inflammatory_baseline,
     _extract_rsid,
     _get_dosage,
     _normalize_prs,
     _percentile_to_category,
+    calculate_prs,
+    calculate_single_trait_prs,
+    get_inflammatory_baseline,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Test PRS Variant Database

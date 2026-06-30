@@ -26,9 +26,9 @@ reported as ``None`` (undefined), never as a misleading 0.0 or 1.0.
 """
 from __future__ import annotations
 
+from collections.abc import Hashable
 from dataclasses import dataclass, field
-from typing import Any, Hashable, Optional
-
+from typing import Any
 
 # ──────────────────────────────────────────────────────────────────────────
 # 1. Categorical concordance (PGx diplotype / phenotype, or any label match)
@@ -39,8 +39,8 @@ class Discordance:
     """A single observed≠expected comparison, kept for the audit trail."""
     sample: str
     key: str               # e.g. gene name "CYP2C19"
-    expected: Optional[str]
-    observed: Optional[str]
+    expected: str | None
+    observed: str | None
 
 
 @dataclass
@@ -55,7 +55,7 @@ class CategoricalConcordance:
     n_skipped_missing: int = 0
 
     @property
-    def concordance_rate(self) -> Optional[float]:
+    def concordance_rate(self) -> float | None:
         """Fraction exactly concordant, or None if nothing was compared."""
         if self.n_compared == 0:
             return None
@@ -87,7 +87,7 @@ class CategoricalConcordance:
         }
 
 
-def _norm(value: Optional[str]) -> Optional[str]:
+def _norm(value: str | None) -> str | None:
     """Normalize a label for comparison: strip, collapse case. None stays None."""
     if value is None:
         return None
@@ -96,8 +96,8 @@ def _norm(value: Optional[str]) -> Optional[str]:
 
 
 def compare_categorical(
-    observed: dict[tuple[str, str], Optional[str]],
-    expected: dict[tuple[str, str], Optional[str]],
+    observed: dict[tuple[str, str], str | None],
+    expected: dict[tuple[str, str], str | None],
     *,
     case_sensitive: bool = False,
 ) -> CategoricalConcordance:
@@ -159,32 +159,32 @@ class ConfusionMatrix:
     genotype_mismatch: int = 0
 
     @staticmethod
-    def _ratio(num: int, den: int) -> Optional[float]:
+    def _ratio(num: int, den: int) -> float | None:
         return (num / den) if den else None
 
     @property
-    def sensitivity(self) -> Optional[float]:
+    def sensitivity(self) -> float | None:
         # recall for variant detection
         return self._ratio(self.tp, self.tp + self.fn)
 
     @property
-    def specificity(self) -> Optional[float]:
+    def specificity(self) -> float | None:
         return self._ratio(self.tn, self.tn + self.fp)
 
     @property
-    def precision(self) -> Optional[float]:
+    def precision(self) -> float | None:
         # positive predictive value
         return self._ratio(self.tp, self.tp + self.fp)
 
     @property
-    def f1(self) -> Optional[float]:
+    def f1(self) -> float | None:
         p, r = self.precision, self.sensitivity
         if p is None or r is None or (p + r) == 0:
             return None
         return 2 * p * r / (p + r)
 
     @property
-    def genotype_concordance(self) -> Optional[float]:
+    def genotype_concordance(self) -> float | None:
         """Of detected true-variant sites, fraction with the correct genotype.
 
         Every detected true-variant site is counted in ``tp`` (detection),
@@ -214,8 +214,8 @@ REF = "ref"
 
 
 def compare_genotypes(
-    observed: dict[Hashable, Optional[str]],
-    expected: dict[Hashable, Optional[str]],
+    observed: dict[Hashable, str | None],
+    expected: dict[Hashable, str | None],
 ) -> ConfusionMatrix:
     """Build a confusion matrix from observed vs. expected genotype-by-site maps.
 

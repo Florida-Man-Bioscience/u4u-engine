@@ -24,9 +24,8 @@ The lookup tolerates the existing engine peptide names (e.g. "BPC-157",
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Literal
-
 
 Modality = Literal[
     "clinical_chem",          # standard chemistry panel (glucose, ALT, creatinine…)

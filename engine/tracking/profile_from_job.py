@@ -30,7 +30,7 @@ that logic could live here.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .genetics import GeneticProfile, GeneticVariant, Genotype
@@ -143,7 +143,7 @@ def build_profile_from_job_results(
 
     return GeneticProfile(
         variants=profile_variants,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         source=f"job:{job_id}",
     )
 

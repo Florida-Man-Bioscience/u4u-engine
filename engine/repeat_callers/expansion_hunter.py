@@ -478,7 +478,6 @@ def parse_eh_output(
             continue
 
         # Match the AR locus by checking the ID column or INFO field.
-        chrom = fields[0]
         record_id = fields[2]
         info = fields[7]
 

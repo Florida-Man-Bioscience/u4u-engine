@@ -38,11 +38,11 @@ import os
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from fastapi import BackgroundTasks, Depends, FastAPI, Form, HTTPException, UploadFile, File
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from engine import run_pipeline
@@ -133,10 +133,12 @@ _executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
 from engine.tracking.api import router as _tracking_router  # noqa: E402
+
 app.include_router(_tracking_router)
 
 # ── App user accounts (Authentik-backed) ────────────────────────────────────
 from engine.users.api import router as _users_router  # noqa: E402
+
 app.include_router(_users_router)
 
 # ── Job store ─────────────────────────────────────────────────────────────────
@@ -188,7 +190,7 @@ def get_job_filename(job_id: str) -> str | None:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
@@ -240,8 +242,9 @@ def _pg_insert_results(job_id: str, variants: list[dict]) -> None:
     if not _DB_URL or not variants:
         return
     try:
-        from db.pool import get_conn as pg_conn
         import psycopg2.extras
+
+        from db.pool import get_conn as pg_conn
 
         rows = []
         for v in variants:
@@ -325,8 +328,9 @@ def _persist_jobs_locked() -> None:
     if not _DB_URL:
         return
     try:
-        from db.pool import get_conn as pg_conn
         import psycopg2.extras
+
+        from db.pool import get_conn as pg_conn
         with pg_conn() as conn:
             for job_id, job in _jobs.items():
                 pipeline_output = job.get("results")
@@ -391,7 +395,7 @@ def _load_jobs_from_pg() -> None:
     """Load recent jobs from Postgres into the in-memory store."""
     try:
         from db.pool import get_conn as pg_conn
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=JOB_TTL_HOURS)
+        cutoff = datetime.now(UTC) - timedelta(hours=JOB_TTL_HOURS)
         now = _now_iso()
         restored = 0
 
@@ -515,7 +519,7 @@ def _run_pipeline_task(
             _persist_jobs_locked()
         log.warning("job=%s validation error: %s", job_id, exc)
 
-    except Exception as exc:
+    except Exception:
         with _jobs_lock:
             _jobs[job_id].update({
                 "status":      "failed",
@@ -532,7 +536,7 @@ async def _cleanup_old_jobs():
     """Remove completed/failed jobs older than JOB_TTL_HOURS to prevent memory leak."""
     while True:
         await asyncio.sleep(3600)  # run hourly
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=JOB_TTL_HOURS)
+        cutoff = datetime.now(UTC) - timedelta(hours=JOB_TTL_HOURS)
         with _jobs_lock:
             expired = [
                 jid for jid, j in _jobs.items()
@@ -827,7 +831,7 @@ def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest):
                 notes=req.notes,
             )
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
         _persist_jobs_locked()
         return target["acmg"]

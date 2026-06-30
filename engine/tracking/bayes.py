@@ -33,9 +33,9 @@ from __future__ import annotations
 
 import math
 import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
-
+from typing import Any
 
 _Z95 = 1.959963984540054  # qnorm(0.975)
 
@@ -110,7 +110,7 @@ class JointFit:
     uncertainty into the credible bands when no pre-treatment sample was
     available.
     """
-    likelihood: "Likelihood"
+    likelihood: Likelihood
     baseline: float
     baseline_sd: float
 
@@ -353,7 +353,7 @@ def joint_fit_likelihood(
     sx = sum(a_vec)
     sxx = sum(a * a for a in a_vec)
     sy = sum(y_vec)
-    sxy = sum(a * y for a, y in zip(a_vec, y_vec))
+    sxy = sum(a * y for a, y in zip(a_vec, y_vec, strict=False))
 
     b_hat = baseline_prior_mean
     phi_hat = 0.0
@@ -383,7 +383,7 @@ def joint_fit_likelihood(
 
         if n >= 3:
             # Refine σ² from residuals (degrees of freedom = n − 2).
-            resid = [y - (b_hat + phi_hat * a) for y, a in zip(y_vec, a_vec)]
+            resid = [y - (b_hat + phi_hat * a) for y, a in zip(y_vec, a_vec, strict=False)]
             ss = sum(r * r for r in resid)
             df = max(n - 2, 1)
             sigma2_new = ss / df

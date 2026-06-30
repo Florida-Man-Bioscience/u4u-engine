@@ -21,7 +21,6 @@ from validation.tier_a.reference import (
     load_pgx_reference,
 )
 
-
 # ── categorical concordance ────────────────────────────────────────────────
 
 def test_categorical_all_concordant():

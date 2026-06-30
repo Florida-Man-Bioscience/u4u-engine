@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from .biomarkers import BiomarkerMeasurement
 
-
 PEPTIDE_MEASUREMENTS: dict[str, tuple[BiomarkerMeasurement, ...]] = {
     "BPC-157": (
         BiomarkerMeasurement("Serum VEGF", "proteomic", "serum", "pg/mL",

@@ -34,7 +34,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 from .metrics import (
     REF,
@@ -47,7 +46,6 @@ from .reference import (
     load_genotype_truth,
     load_pgx_reference,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────────
 # Sample input map
@@ -91,10 +89,10 @@ def run_sample(input_path: Path) -> dict:
 
 def extract_observed_diplotypes(
     sample: str, pipeline_out: dict
-) -> dict[tuple[str, str], Optional[str]]:
+) -> dict[tuple[str, str], str | None]:
     """Map a pipeline result to ``{(sample, gene): diplotype}``."""
     pgx = pipeline_out.get("pgx_profile") or {}
-    observed: dict[tuple[str, str], Optional[str]] = {}
+    observed: dict[tuple[str, str], str | None] = {}
     for call in pgx.get("star_alleles", []) or []:
         gene = call.get("gene")
         if gene:
@@ -104,10 +102,10 @@ def extract_observed_diplotypes(
 
 def extract_observed_phenotypes(
     sample: str, pipeline_out: dict
-) -> dict[tuple[str, str], Optional[str]]:
+) -> dict[tuple[str, str], str | None]:
     """Map a pipeline result to ``{(sample, gene): phenotype}`` (e.g. "PM")."""
     pgx = pipeline_out.get("pgx_profile") or {}
-    observed: dict[tuple[str, str], Optional[str]] = {}
+    observed: dict[tuple[str, str], str | None] = {}
     for call in pgx.get("star_alleles", []) or []:
         gene = call.get("gene")
         if gene:
@@ -162,9 +160,9 @@ def extract_observed_genotypes(pipeline_out: dict) -> dict[str, str]:
 # ──────────────────────────────────────────────────────────────────────────
 
 def run_concordance(
-    pgx_reference: Optional[str],
-    genotype_truth: Optional[str],
-    sample_map: Optional[str],
+    pgx_reference: str | None,
+    genotype_truth: str | None,
+    sample_map: str | None,
 ) -> dict:
     """Execute the configured concordance tracks and return a report dict."""
     report: dict = {
@@ -184,7 +182,7 @@ def run_concordance(
     # Cache pipeline runs so both PGx and genotype tracks reuse one execution.
     pipeline_cache: dict[str, dict] = {}
 
-    def _ensure_run(sample: str) -> Optional[dict]:
+    def _ensure_run(sample: str) -> dict | None:
         if sample in pipeline_cache:
             return pipeline_cache[sample]
         path = samples.get(sample)
@@ -206,8 +204,8 @@ def run_concordance(
             (c.sample, c.gene): c.phenotype for c in ref_calls if c.phenotype
         }
 
-        obs_diplo: dict[tuple[str, str], Optional[str]] = {}
-        obs_pheno: dict[tuple[str, str], Optional[str]] = {}
+        obs_diplo: dict[tuple[str, str], str | None] = {}
+        obs_pheno: dict[tuple[str, str], str | None] = {}
         for sample in sorted({c.sample for c in ref_calls}):
             out = _ensure_run(sample)
             if out is None:
@@ -261,7 +259,7 @@ def run_concordance(
 # Reporting
 # ──────────────────────────────────────────────────────────────────────────
 
-def _fmt_rate(rate: Optional[float]) -> str:
+def _fmt_rate(rate: float | None) -> str:
     return "n/a (undefined)" if rate is None else f"{rate * 100:.1f}%"
 
 
@@ -320,7 +318,7 @@ def render_markdown(report: dict) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Tier A analytical concordance runner")
     ap.add_argument("--pgx-reference", help="GeT-RM PGx diplotype TSV")
     ap.add_argument("--genotype-truth", help="Variant genotype truth TSV")

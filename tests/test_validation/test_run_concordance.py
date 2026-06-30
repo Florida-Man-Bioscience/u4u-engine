@@ -24,7 +24,6 @@ import pytest
 
 from validation.tier_a import run as runner
 
-
 # ── Synthetic pipeline outputs, keyed by sample id ──────────────────────────
 # Shapes mirror engine.run_pipeline's return: pgx_profile.star_alleles (dicts
 # with gene/diplotype/phenotype) and variants (dicts with rsid/genotype).

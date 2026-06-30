@@ -12,8 +12,8 @@ fresh, stale, or unavailable.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable
 
 from .sources import (
     fetch_docket_summary,

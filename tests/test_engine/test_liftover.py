@@ -1,8 +1,8 @@
 """
 Tests for engine/liftover.py and the build-handling policy.
 """
+from engine.genome_build import detect_build, plan_build_handling
 from engine.liftover import lift_coordinate_variants
-from engine.genome_build import plan_build_handling, detect_build
 
 
 def _coord(chrom, pos, vtype="coordinate", rsid=None):

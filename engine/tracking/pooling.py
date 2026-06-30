@@ -63,12 +63,12 @@ from __future__ import annotations
 
 import math
 import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Sequence
+from typing import Any
 
-from . import bayes, service
-
+from . import bayes
 
 MIN_DONORS = 3
 

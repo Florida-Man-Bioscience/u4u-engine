@@ -34,7 +34,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +156,7 @@ HARDCODED_PATHWAY_GENES: dict[str, set[str]] = {
         "MC4R", "MC3R", "MC1R", "AGRP", "POMC", "PCSK1", "LEPR", "LEP",
         "NPY", "NPY1R", "NPY2R", "GHRL", "GHSR", "BDNF", "NTRK2",
         "ADCY1", "ADCY2", "ADCY3", "ADCY5", "PRKAR1A", "PRKAR2A",
-        "PRKACA", "CREB1", "SIM1", "PCSK1", "CPE",
+        "PRKACA", "CREB1", "SIM1", "CPE",
     },
     "map00140": {
         "CYP19A1", "CYP11A1", "CYP11B1", "CYP11B2", "CYP17A1", "CYP21A2",
@@ -502,8 +502,8 @@ class KEGGCache:
 
         oldest = datetime.fromisoformat(row[0])
         if oldest.tzinfo is None:
-            oldest = oldest.replace(tzinfo=timezone.utc)
-        age = (datetime.now(timezone.utc) - oldest).days
+            oldest = oldest.replace(tzinfo=UTC)
+        age = (datetime.now(UTC) - oldest).days
         return age >= max_age_days
 
     # ------------------------------------------------------------------
@@ -545,7 +545,7 @@ class KEGGCache:
             return set(HARDCODED_PATHWAY_GENES.get(pathway_id, set()))
 
         symbols = self._resolve_entrez_to_symbols(gene_ids)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         with sqlite3.connect(str(self.db_path)) as conn:
             conn.execute(

@@ -2,8 +2,14 @@
 Tests for the ACMG/AMP evidence-combining rules and the evidence classifier.
 """
 from engine.acmg import (
-    AcmgConfig, Classification, EvidenceCode, Strength, classify_acmg, combine,
-    load_lof_mechanism_genes, load_known_pathogenic_aa,
+    AcmgConfig,
+    Classification,
+    EvidenceCode,
+    Strength,
+    classify_acmg,
+    combine,
+    load_known_pathogenic_aa,
+    load_lof_mechanism_genes,
 )
 
 

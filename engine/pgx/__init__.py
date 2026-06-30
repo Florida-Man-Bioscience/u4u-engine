@@ -8,12 +8,12 @@ graph-based drug-response ranker with conformal prediction sets.
 Public entry point: orchestrator.pgx_stage(variants, medications=None, bam_path=None)
 """
 from .types import (
-    StarAlleleCall,
-    HLACall,
-    Phenotype,
-    DrugRecommendation,
     DrugPrediction,
+    DrugRecommendation,
+    HLACall,
     PGxProfile,
+    Phenotype,
+    StarAlleleCall,
 )
 
 __all__ = [

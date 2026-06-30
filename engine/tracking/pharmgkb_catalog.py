@@ -59,11 +59,10 @@ with the published functional consequence.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from .genetics import CatalogEntry
-
 
 # ── PharmGKB evidence-level → weight magnitude ─────────────────────────────
 _LEVEL_WEIGHT: dict[str, float] = {

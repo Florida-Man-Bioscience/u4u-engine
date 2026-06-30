@@ -19,9 +19,6 @@ Public interface
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # RECEPTOR DEFINITIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -344,7 +341,7 @@ def _generate_interpretation(
 def predict_receptor_expression(
     gene: str,
     variant_rsids: list[str],
-) -> Optional[dict]:
+) -> dict | None:
     """
     Predict receptor expression and isoform for a single receptor gene.
 

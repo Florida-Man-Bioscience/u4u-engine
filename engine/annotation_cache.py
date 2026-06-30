@@ -22,7 +22,7 @@ import json
 import os
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _CACHE_DB_PATH = os.path.join(os.getenv("DATA_DIR", "data"), "annotation_cache.db")
 
@@ -89,7 +89,7 @@ def put(source: str, key: str, result) -> None:
     """
     try:
         conn = _get_conn()
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         conn.execute(
             "INSERT OR REPLACE INTO annotation_cache (source, lookup_key, result_json, created_at) VALUES (?, ?, ?, ?)",
             (source, key, json.dumps(result), now),

@@ -8,11 +8,10 @@ and summary generation.
 import pytest
 
 from engine.annotators.peptide_mapper import (
-    map_peptide_coverage,
-    generate_peptide_summary,
     PEPTIDE_GENE_MAP,
+    generate_peptide_summary,
+    map_peptide_coverage,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

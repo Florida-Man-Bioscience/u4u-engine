@@ -16,8 +16,7 @@ References:
 """
 from __future__ import annotations
 
-from ..types import DrugRecommendation, Phenotype, StarAlleleCall, HLACall
-
+from ..types import DrugRecommendation, HLACall, Phenotype, StarAlleleCall
 
 # (gene, phenotype) → list of (drug, classification, recommendation, guideline_id)
 REC_TABLE: dict[tuple[str, Phenotype], list[tuple[str, str, str, str]]] = {

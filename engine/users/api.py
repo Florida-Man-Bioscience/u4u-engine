@@ -22,7 +22,6 @@ from fastapi import APIRouter, HTTPException, Request
 from . import service
 from .db import get_conn
 
-
 router = APIRouter(prefix="/users", tags=["users"])
 
 

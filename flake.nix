@@ -42,6 +42,8 @@
             httpx
           ]))
           pkgs.nodejs_20
+          # Linter (standalone Rust binary, not a python package). Config in pyproject.toml.
+          pkgs.ruff
         ];
 
         shellHook = ''

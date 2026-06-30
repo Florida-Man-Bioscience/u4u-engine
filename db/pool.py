@@ -13,8 +13,8 @@ Thread-safe; suitable for FastAPI sync handlers and ThreadPoolExecutor.
 import logging
 import os
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import psycopg2
 import psycopg2.extras

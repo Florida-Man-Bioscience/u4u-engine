@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Callable, Optional
+from collections.abc import Callable
 
 log = logging.getLogger(__name__)
 
@@ -64,14 +64,14 @@ def liftover_available(from_build: str = "GRCh37") -> bool:
     return _get_lifter() is not None
 
 
-def _make_convert(lifter) -> Callable[[str, int], Optional[tuple[str, int]]]:
+def _make_convert(lifter) -> Callable[[str, int], tuple[str, int] | None]:
     """
     Wrap a pyliftover lifter as ``convert(chrom, pos1based) -> (chrom, pos1based)``.
 
     pyliftover uses 'chr'-prefixed names and 0-based coordinates; the engine
     uses bare chromosome names and 1-based positions.
     """
-    def convert(chrom: str, pos: int) -> Optional[tuple[str, int]]:
+    def convert(chrom: str, pos: int) -> tuple[str, int] | None:
         query_chrom = chrom if str(chrom).startswith("chr") else f"chr{chrom}"
         res = lifter.convert_coordinate(query_chrom, int(pos) - 1)
         if not res:
@@ -83,7 +83,7 @@ def _make_convert(lifter) -> Callable[[str, int], Optional[tuple[str, int]]]:
 
 def lift_coordinate_variants(
     variants: list[dict],
-    convert: Callable[[str, int], Optional[tuple[str, int]]],
+    convert: Callable[[str, int], tuple[str, int] | None],
 ) -> tuple[list[dict], list[dict]]:
     """
     Lift coordinate variants using a ``convert`` callable (dependency-injected

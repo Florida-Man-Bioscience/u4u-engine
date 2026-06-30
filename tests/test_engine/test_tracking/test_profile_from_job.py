@@ -15,7 +15,6 @@ from engine.tracking.profile_from_job import (
     evidence_payload,
 )
 
-
 # ── Catalog sanity ────────────────────────────────────────────────────────
 
 

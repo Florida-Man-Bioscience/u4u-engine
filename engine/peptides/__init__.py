@@ -1,7 +1,7 @@
 from .biomarkers import (
+    PEPTIDE_BIOMARKERS,
     BiomarkerMeasurement,
     BiomarkerPanel,
-    PEPTIDE_BIOMARKERS,
     get_biomarker_panel,
 )
 

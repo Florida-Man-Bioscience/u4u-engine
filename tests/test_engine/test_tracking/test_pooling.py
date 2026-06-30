@@ -9,7 +9,6 @@ import pytest
 
 from engine.tracking import analysis, pooling, service
 
-
 # ── Variance-components estimator on synthetic donor fits ──────────────────
 
 def _donor(theta_hat: float, sigma: float, n_obs: int = 5) -> pooling.DonorFit:
