@@ -66,8 +66,7 @@ export function PosteriorChart({
     prediction?.posterior_predictive.points.map((p) => ({
       x: p.weeks_since_start,
       mean: p.mean,
-      lo: p.lo_95,
-      width: p.hi_95 - p.lo_95,
+      range: [p.lo_95, p.hi_95] as [number, number],
     })) ?? [];
 
   const priorBand =
@@ -315,25 +314,19 @@ export function PosteriorChart({
           );
         })()}
 
-        {/* 95% credible band on the posterior predictive mean.
-            Implemented as stacked areas: lo (transparent) + width (translucent). */}
+        {/* 95% credible band on the posterior predictive mean, drawn as an
+            explicit [lo_95, hi_95] range Area. NOT a stacked-area trick: each
+            <Area> carries its own `data` (no chart-level data), so recharts
+            can't compute stack offsets and a stacked lo-baseline + width
+            collapses to 0..width pinned at the x-axis. A range Area positions
+            lo..hi directly. (Same fix as CohortChart's IQR band.) */}
         <Area
           data={band}
-          dataKey="lo"
-          stroke="transparent"
-          fill="transparent"
-          stackId="ci"
-          isAnimationActive={false}
-          legendType="none"
-        />
-        <Area
-          data={band}
-          dataKey="width"
+          dataKey="range"
           name="posterior 95% CI"
           stroke="transparent"
           fill="#0f766e"
           fillOpacity={0.16}
-          stackId="ci"
           isAnimationActive={false}
         />
         {/* Prior-only mean curve as a dashed line for comparison. */}
