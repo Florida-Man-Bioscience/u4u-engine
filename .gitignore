@@ -2,6 +2,12 @@
 # Rebuild with the pandoc/xelatex batch; source of truth stays the .md files.
 docs-pdf/
 
+# Generated architecture diagrams / HTML renders at the repo root — NOT tracked.
+/[0-9][0-9]_*.pdf
+/disclosure_flowchart.pdf
+/README.html
+/u4u-engine-internals-architecture.html
+
 # Python
 __pycache__/
 *.py[cod]
