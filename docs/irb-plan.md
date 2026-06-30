@@ -38,20 +38,15 @@ Route **every planned data source** into one of three lanes:
 
 ---
 
-## 2. Which IRB has jurisdiction — VERIFY, don't assume
+## 2. Which IRB has jurisdiction — RESOLVED: UF as single IRB of record
 
-This turns on **which entity is "engaged" in the research** (obtains identifiable data / consent / federal funding), and the signals here genuinely conflict. **This is a decision only you can make — flagged, not guessed:**
+This question is **settled**: the **University of Florida IRB is the canonical IRB of record**, and because the study spans **multiple sites**, UF IRB serves as the **single IRB of record (sIRB)** under the Common Rule cooperative-research provision (45 CFR 46.114) and NIH sIRB policy.
 
-- The work sits under a **UF Dropbox**, and there's a **UF Innovate patent disclosure** in the repo → points to **University of Florida** engagement (UF IRB-01, or **IRB-02 / Health Science Center** for clinical/health data).
-- But **Florida Man Bioscience is a company** that recommends *and* sells peptides → points to a **commercial / central IRB** (Advarra, WCG) for the corporate entity.
+- **UF reviews for everyone.** All other sites — including **Florida Man Bioscience** — cede review to UF via reliance agreements rather than standing up their own (commercial) IRBs. **SMART IRB** is the standard reliance mechanism; **OneFlorida+** for in-network sites.
+- **Engagement signals support this:** the work sits under UF infrastructure with a **UF Innovate patent disclosure**, so UF personnel/resources/IP are central → UF IRB must be engaged regardless of FMB's commercial role.
+- The specific UF board routes by data type (IRB-01 Gainesville Health Science Center for genomic/clinical; IRB-02 social/behavioral; IRB-03 Jacksonville) — "UF canonical" fixes the institution; the sub-board is a routing detail confirmed with the UF HRPP[^hrpp] via myIRB.
 
-**Discriminators to confirm (answer these and the path falls out):**
-
-1. **Is there federal funding** touching this work? → may trigger **single-IRB (sIRB)** requirements.
-2. **Are UF personnel, resources, data, or UF-owned IP central** to the study? → UF IRB likely **must** be engaged; FMB may rely on it via a **reliance agreement**.
-3. **Is FMB the entity obtaining identifiable data / running the study?** → FMB is "engaged" and needs **its own IRB** (commercial IRB is the standard route) or a reliance agreement with UF's.
-
-→ **Action (human):** determine engaged entity/entities and pick the IRB of record before drafting the submission. Everything downstream (forms, fees, CITI training host, reliance agreements) depends on it.
+→ **Action (human, now mechanical):** confirm the UF sub-board with the HRPP; build the **reliance-agreement / site-authorization roster** for every ceding site; set the CITI training host = UF. Everything downstream (forms, fees, training host, reliance agreements) follows from this fixed point.
 
 ---
 
@@ -98,7 +93,7 @@ These are the items an IRB will specifically scrutinize for *this* pipeline. Mos
 ## 5. Submission sequence
 
 1. **Build the Lane Table** (§1) — assign every data source. *(delegable — I can draft from the planned source list)*
-2. **Determine the engaged entity → pick the IRB of record** (§2). *(human decision)*
+2. **Confirm the UF sub-board with the HRPP and build the reliance roster** (§2 — IRB of record is settled as UF/sIRB). *(human, mechanical)*
 3. **Complete CITI training** for all personnel. *(human)*
 4. **Draft the lane-appropriate documents** (§4). *(delegable — I draft protocol, consent, data-management plan, NHSR/exempt requests; human reviews/signs)*
 5. **Author the COI management plan**; route through institutional COI office. *(human-led, I can draft)*
@@ -124,7 +119,7 @@ The analytical performance work (Lanes A/B) can therefore start **weeks** ahead 
 ## 7. Task split — yours vs. delegable
 
 **🔴 Only-you (human decisions / accountability):**
-- Determine the engaged entity and **pick the IRB of record** (§2) — blocks everything.
+- **Confirm the UF sub-board and execute reliance agreements** (§2) — IRB of record is settled (UF/sIRB); this is now setup, not a decision.
 - Decide the **scope fork**: existing-data-only vs. new specimen collection (§ scope note).
 - Serve as / name the **PI of record**; complete **CITI training**.
 - Sign the **COI management plan** and route it through the institutional COI office.

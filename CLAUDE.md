@@ -78,7 +78,11 @@ result = run_pipeline(file_bytes, filename, filters=[...])
 
 **Regulatory module** (`engine/regulatory/`): curated peptide FDA status merged with live sources (ClinicalTrials.gov, openFDA, Federal Register). Served at `/regulatory/peptides` and `/regulatory/events`. Live source failures degrade gracefully.
 
-**Biomarker tracking** (`engine/tracking/`): SQLite-backed longitudinal biomarker tracking with Bayesian posterior updates. REST API mounted at `/tracking/...` via `engine/tracking/api.py`.
+**Biomarker tracking** (`engine/tracking/`): SQLite-backed longitudinal biomarker tracking with Bayesian posterior updates. REST API mounted at `/tracking/...` via `engine/tracking/api.py`. `analysis.predict_response` combines a genetics-derived prior (`genetics.derive_prior`), leave-one-out cohort pooling (`pooling.py`), and the measurement likelihood into a posterior with 95% credible intervals plus a predictive curve (`bayes.py`, Normal–Normal conjugate). Per-biomarker effect magnitudes live in `biomarker_params.py`.
+
+- **Research-backed evidence registry** (`engine/tracking/evidence.py` + `data/biomarker_evidence.json`): citation-anchored, grade-tagged (A–D) per-biomarker effect entries. The grade sets the prior's `relative_sd` (tighter for well-evidenced markers; flat `PANEL_REL_SD` fallback for uncited markers — most of the panel). Honesty contract: an entry requires ≥1 retrieved citation (real DOI). Curate via the CLI `python -m engine.tracking.evidence_update` (`set`/`show`/`validate`; refuses an uncited entry). Entries are keyed by the exact `BIOMARKER_PARAMS` / panel measurement name, which is also what binds at prediction time.
+- **GLP-1 / incretin class** (Semaglutide / Tirzepatide / Liraglutide) are first-class, grade-A evidence-backed peptides. Their flagship endpoints use **class-qualified marker names** (`"Body weight (GLP-1 RA)"`, `"HbA1c (GLP-1 RA)"`, …) so their large, well-evidenced effects do not bleed onto the much smaller generic `"Body weight"` / `"HbA1c"` markers shared by weaker peptides (AOD-9604, MOTS-c).
+- The generative model is documented in-app at `/tracking/model` (inline-SVG data flow + the formalization mirroring `bayes.py`).
 
 ### The API (`api.py`)
 
