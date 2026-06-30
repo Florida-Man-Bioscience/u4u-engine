@@ -1,8 +1,8 @@
 """Tests for engine/parsers.py"""
 
 import pytest
-from engine.parsers import parse_file, _infer_zygosity_from_genotype, _is_failed_genotype
 
+from engine.parsers import _infer_zygosity_from_genotype, _is_failed_genotype, parse_file
 
 # ---------------------------------------------------------------------------
 # 23andMe format

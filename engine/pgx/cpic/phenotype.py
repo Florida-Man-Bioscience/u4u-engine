@@ -11,11 +11,11 @@ the BAM consensus path we use ALLELE_FUNCTIONS directly.
 """
 from __future__ import annotations
 
-from ..types import Phenotype
 from ..star_alleles.allele_definitions import (
     ALLELE_FUNCTIONS,
     PHENOTYPE_BINS,
 )
+from ..types import Phenotype
 
 
 def activity_score(gene: str, diplotype: str) -> float | None:

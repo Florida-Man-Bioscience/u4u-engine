@@ -18,16 +18,20 @@ Each returned dict has the canonical variant shape from parsers.py:
     chrom, pos, ref, alt, rsid, variant_type="coordinate", genotype, zygosity
 """
 
-import time
-import requests
 import json
 import os
-from tenacity import (
-    retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
-)
-from .validators import validate_rsid
-from .parsers import _infer_zygosity_from_genotype
+import time
 
+import requests
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from .parsers import _infer_zygosity_from_genotype
+from .validators import validate_rsid
 
 _ENSEMBL_BASE    = "https://rest.ensembl.org"
 _REQUEST_TIMEOUT = 10  # seconds
@@ -136,7 +140,7 @@ def resolve_rsid(rsid: str, genotype: str | None = None) -> list[dict]:
                 }
                 for alt in all_alts
             ]
-            
+
         return results
 
     except Exception:

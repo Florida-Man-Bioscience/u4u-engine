@@ -26,9 +26,10 @@ from __future__ import annotations
 import json
 import math
 import random
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Iterable, Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from .evidence import evidence_for
 
@@ -86,7 +87,7 @@ class GeneticProfile:
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, raw: str) -> "GeneticProfile":
+    def from_json(cls, raw: str) -> GeneticProfile:
         d = json.loads(raw)
         variants = [
             GeneticVariant(
@@ -292,7 +293,7 @@ def generate_synthetic_profile(
         ))
     return GeneticProfile(
         variants=variants,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         source=source,
     )
 

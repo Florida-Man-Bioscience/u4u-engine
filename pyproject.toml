@@ -1,0 +1,41 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+# Vendored / generated trees and the leftover virtualenv are not ours to lint.
+extend-exclude = [
+    ".venv",
+    "frontend",
+    "data",
+    "validation/reference",
+]
+
+[tool.ruff.lint]
+# Conservative, high-signal rule set:
+#   F  — pyflakes (unused imports, undefined names, dead-code signals)
+#   E/W — pycodestyle errors/warnings
+#   I  — import ordering
+#   UP — pyupgrade (py312-appropriate modernizations)
+#   B  — flake8-bugbear (likely-bug patterns)
+select = ["F", "E", "W", "I", "UP", "B"]
+
+# E501 (line too long) is noisy on existing docstrings/tables; rely on the
+# formatter for line length rather than failing the lint.
+# UP042 — `(str, Enum)` is an intentional, JSON-serialization-friendly pattern
+#         used across the engine; converting to StrEnum risks behavior changes.
+# UP047 — PEP 695 generic syntax is optional modernization, not a defect.
+ignore = ["E501", "UP042", "UP047"]
+
+[tool.ruff.lint.per-file-ignores]
+# Package __init__.py files re-export their submodules' public API; those
+# imports are "unused" locally but are the intended package surface (e.g.
+# `from engine import run_pipeline`). Standard ruff convention.
+"__init__.py" = ["F401"]
+# Tests legitimately use star-imports / fixtures that read as unused.
+"tests/**" = ["F811", "F401"]
+# FastAPI's dependency-injection idiom puts Depends()/File() in argument
+# defaults (B008); the late "V3 annotators" import block in pipeline.py and
+# the post-config imports in api.py are intentional grouping (E402).
+"api.py" = ["B008", "E402"]
+"engine/tracking/api.py" = ["B008"]
+"engine/pipeline.py" = ["E402"]

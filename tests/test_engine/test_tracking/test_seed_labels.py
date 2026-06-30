@@ -1,8 +1,7 @@
 """Seeded demo patients must be unmistakably labeled as non-real."""
 import random
 
-from engine.tracking import db, get_conn
-from engine.tracking import service
+from engine.tracking import db, get_conn, service
 from engine.tracking.seed import seed
 
 

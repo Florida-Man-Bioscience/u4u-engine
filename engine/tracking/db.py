@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import os
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
 _SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 _DEFAULT_PATH = Path(os.getenv("DATA_DIR", "data")) / "biomarker_tracking.db"
@@ -26,7 +26,6 @@ _sqlite_initialized: set[str] = set()
 
 
 def _ensure_sqlite_schema(conn, key: str) -> None:
-    import sqlite3
     with _lock:
         if key in _sqlite_initialized:
             return

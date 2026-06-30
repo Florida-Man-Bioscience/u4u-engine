@@ -11,9 +11,9 @@ Public interface
 """
 
 from __future__ import annotations
+
 import html
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _INVESTIGATIONAL_DISCLAIMER = (
     "This peptide is investigational and not FDA-approved for this use. A match "
@@ -439,7 +439,7 @@ def generate_dossiers(pipeline_result: dict) -> dict[str, str]:
     recs = (pipeline_result.get("peptide_recommendations") or {}).get("recommendations", [])
     variants = pipeline_result.get("variants", [])
 
-    now_str = datetime.now(timezone.utc).strftime("%d-%b-%Y").upper()
+    now_str = datetime.now(UTC).strftime("%d-%b-%Y").upper()
 
     dossiers = {}
     for rec in recs:

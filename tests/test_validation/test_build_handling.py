@@ -10,8 +10,8 @@ from __future__ import annotations
 from validation.tier_a.build_handling import (
     FIXTURES,
     BuildFixture,
-    run_build_validation,
     _vcf,
+    run_build_validation,
 )
 
 

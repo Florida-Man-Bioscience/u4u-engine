@@ -20,7 +20,7 @@ Public interface
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .criteria import Classification
 
@@ -69,7 +69,7 @@ def apply_signoff(
         "automated_classification": automated,
         "final_classification": final,
         "notes": str(notes or "").strip(),
-        "signed_at": signed_at or datetime.now(timezone.utc).isoformat(),
+        "signed_at": signed_at or datetime.now(UTC).isoformat(),
     }
 
     updated = dict(acmg_result)

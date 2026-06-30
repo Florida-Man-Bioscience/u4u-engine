@@ -7,7 +7,7 @@ produces correct output shape and ordering.
 import pytest
 import responses as resp_lib
 
-from engine import run_pipeline, annotate_variant
+from engine import annotate_variant, run_pipeline
 
 # ---------------------------------------------------------------------------
 # Mock responses

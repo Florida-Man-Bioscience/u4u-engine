@@ -29,7 +29,6 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -38,7 +37,7 @@ class PGxReferenceCall:
     sample: str
     gene: str
     diplotype: str               # e.g. "*1/*2"
-    phenotype: Optional[str]     # consensus phenotype label if provided (e.g. "IM")
+    phenotype: str | None     # consensus phenotype label if provided (e.g. "IM")
     source: str                  # provenance, e.g. "GeT-RM 2016"
 
 

@@ -1,7 +1,8 @@
 """Tests for engine/quality_filter.py"""
 
 import pytest
-from engine.quality_filter import apply_quality_filter, filter_stats, GQ_THRESHOLD, DP_THRESHOLD
+
+from engine.quality_filter import DP_THRESHOLD, GQ_THRESHOLD, apply_quality_filter, filter_stats
 
 
 def _v(**kwargs):

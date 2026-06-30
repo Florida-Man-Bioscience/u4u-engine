@@ -26,7 +26,6 @@ from . import bayes, pooling, service
 from .biomarker_params import expected_pct_change, params_for
 from .genetics import GeneticProfile, derive_prior
 
-
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _parse_dt(value: str) -> datetime | None:

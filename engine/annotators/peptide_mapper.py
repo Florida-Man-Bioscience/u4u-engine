@@ -10,10 +10,9 @@ Public interface
 """
 
 from __future__ import annotations
-from typing import Optional
 
-from .bpc157_predictor import BPC157_PATHWAY_GENES
 from ..peptides import get_biomarker_panel
+from .bpc157_predictor import BPC157_PATHWAY_GENES
 
 # Build BPC-157 standalone gene set from the predictor's pathway definitions
 _BPC157_ALL_GENES = set()
@@ -272,15 +271,15 @@ def _determine_efficacy(
         if has_pathogenic:
             return (
                 "Strong Fit",
-                f"Pathogenic variant(s) detected in target pathways. "
-                f"This therapeutic is designed to compensate for these genetic deficits.",
+                "Pathogenic variant(s) detected in target pathways. "
+                "This therapeutic is designed to compensate for these genetic deficits.",
                 reasons,
             )
         if has_vus or has_unknown:
             return (
                 "Possible Fit",
-                f"Variant(s) of uncertain significance detected in target pathways. "
-                f"This therapeutic may compensate, but clinical impact is unclear.",
+                "Variant(s) of uncertain significance detected in target pathways. "
+                "This therapeutic may compensate, but clinical impact is unclear.",
                 reasons,
             )
 
@@ -288,15 +287,15 @@ def _determine_efficacy(
         if has_pathogenic:
             return (
                 "Likely Reduced",
-                f"Pathogenic variant(s) in targeted receptor gene(s). "
-                f"This is likely to reduce or alter therapeutic efficacy.",
+                "Pathogenic variant(s) in targeted receptor gene(s). "
+                "This is likely to reduce or alter therapeutic efficacy.",
                 reasons,
             )
         if has_vus or has_unknown:
             return (
                 "Possibly Altered",
-                f"Variant(s) of uncertain significance in receptor gene(s). "
-                f"Efficacy may be altered but clinical impact is unclear.",
+                "Variant(s) of uncertain significance in receptor gene(s). "
+                "Efficacy may be altered but clinical impact is unclear.",
                 reasons,
             )
 
@@ -304,21 +303,21 @@ def _determine_efficacy(
         if has_pathogenic:
             return (
                 "Caution",
-                f"Pathogenic variant(s) detected that require clinical screening "
-                f"(e.g. oncology risk) before initiating therapy.",
+                "Pathogenic variant(s) detected that require clinical screening "
+                "(e.g. oncology risk) before initiating therapy.",
                 reasons,
             )
         if has_vus or has_unknown:
             return (
                 "Review Recommended",
-                f"Variant(s) of uncertain significance detected in safety-relevant gene(s). "
-                f"Clinical review is recommended before initiating therapy.",
+                "Variant(s) of uncertain significance detected in safety-relevant gene(s). "
+                "Clinical review is recommended before initiating therapy.",
                 reasons,
             )
 
     return (
         "Review Needed",
-        f"Variant(s) detected in target genes with unclear net effect on this therapy.",
+        "Variant(s) detected in target genes with unclear net effect on this therapy.",
         reasons,
     )
 

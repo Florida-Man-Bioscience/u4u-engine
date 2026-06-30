@@ -10,8 +10,9 @@ Postgres and `?` for SQLite.
 from __future__ import annotations
 
 import secrets
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any
 
 from .models import User
 

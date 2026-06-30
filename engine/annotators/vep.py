@@ -16,11 +16,14 @@ ClinVar lookup returns nothing.
 
 import requests
 from tenacity import (
-    retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
-from ..validators import validate_coordinates
-from .cache import annotation_cache, MISS
 
+from ..validators import validate_coordinates
+from .cache import MISS, annotation_cache
 
 _VEP_URL = "https://rest.ensembl.org/vep/human/region"
 _TIMEOUT = 10

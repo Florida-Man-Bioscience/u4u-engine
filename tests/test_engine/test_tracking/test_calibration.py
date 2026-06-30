@@ -38,7 +38,6 @@ from engine.tracking.bayes import (
     update,
 )
 
-
 # ── Synthetic trajectory generator ──────────────────────────────────────────
 
 @dataclass

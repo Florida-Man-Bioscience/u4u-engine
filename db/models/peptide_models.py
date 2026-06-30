@@ -32,15 +32,13 @@ Usage example (FastAPI route):
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import List, Optional
 
 from sqlalchemy import (
-    Boolean,
     CHAR,
+    Boolean,
     CheckConstraint,
-    Column,
     Date,
-    ForeignKey,         # noqa: F401  (available for future FK use)
+    ForeignKey,  # noqa: F401  (available for future FK use)
     Index,
     String,
     Text,
@@ -113,11 +111,11 @@ class PeptideConditionLibrary(Base):
         String(20), nullable=False,
         comment="'SNP', 'CNV', or 'STR_repeat'",
     )
-    rsid: Mapped[Optional[str]] = mapped_column(
+    rsid: Mapped[str | None] = mapped_column(
         String(20), nullable=True, index=True,
         comment="dbSNP rsID — NULL for CNVs and STRs",
     )
-    variant_description: Mapped[Optional[str]] = mapped_column(
+    variant_description: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="Human-readable variant description, e.g. 'CAG repeat < 22'",
     )
@@ -129,11 +127,11 @@ class PeptideConditionLibrary(Base):
         String(100), nullable=False, index=True,
         comment="Compound name, e.g. 'Testosterone (topical)'",
     )
-    peptide_class: Mapped[Optional[str]] = mapped_column(
+    peptide_class: Mapped[str | None] = mapped_column(
         String(50), nullable=True,
         comment="Therapeutic class: Androgen | HRT | GLP-1 RA | Neuropeptide | …",
     )
-    target_receptor: Mapped[Optional[str]] = mapped_column(
+    target_receptor: Mapped[str | None] = mapped_column(
         String(50), nullable=True,
         comment="Primary receptor target, e.g. 'AR', 'MC3R/MC4R', 'GLP1R'",
     )
@@ -157,11 +155,11 @@ class PeptideConditionLibrary(Base):
         Text, nullable=False,
         comment="2–3 sentence scientific explanation of the genotype–response link",
     )
-    dosing_guidance: Mapped[Optional[str]] = mapped_column(
+    dosing_guidance: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="Genotype-informed dosing context for the prescribing clinician",
     )
-    trade_off_text: Mapped[Optional[str]] = mapped_column(
+    trade_off_text: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="'No Free Lunch' section: biological costs, conversion risks",
     )
@@ -173,7 +171,7 @@ class PeptideConditionLibrary(Base):
         Boolean, nullable=False, default=False,
         comment="True when this variant-peptide combination is contraindicated",
     )
-    contraindication_genes: Mapped[Optional[List[str]]] = mapped_column(
+    contraindication_genes: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True,
         comment="Gene symbols that render this peptide unsafe, e.g. ARRAY['TP53','BRCA1']",
     )
@@ -181,11 +179,11 @@ class PeptideConditionLibrary(Base):
     # ------------------------------------------------------------------
     # Pathway / evidence linkage
     # ------------------------------------------------------------------
-    kegg_pathways: Mapped[Optional[List[str]]] = mapped_column(
+    kegg_pathways: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True,
         comment="KEGG pathway IDs, e.g. ARRAY['hsa04915','hsa04912']",
     )
-    source_pmids: Mapped[Optional[List[str]]] = mapped_column(
+    source_pmids: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True,
         comment="PubMed IDs supporting this entry",
     )
@@ -238,7 +236,7 @@ class PeptideTradeOff(Base):
         String(100), nullable=False, unique=True,
         comment="Compound name — must match peptide_condition_library.peptide_name",
     )
-    peptide_class: Mapped[Optional[str]] = mapped_column(
+    peptide_class: Mapped[str | None] = mapped_column(
         String(50), nullable=True, index=True,
         comment="Therapeutic class (mirrors peptide_condition_library)",
     )
@@ -246,11 +244,11 @@ class PeptideTradeOff(Base):
     # ------------------------------------------------------------------
     # Regulatory & clinical context
     # ------------------------------------------------------------------
-    regulatory_status: Mapped[Optional[str]] = mapped_column(
+    regulatory_status: Mapped[str | None] = mapped_column(
         String(50), nullable=True,
         comment="FDA-approved | Compounded | Research only | FDA safety concern",
     )
-    efficacy_med_logic: Mapped[Optional[str]] = mapped_column(
+    efficacy_med_logic: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="How patient genetics modify the minimum effective dose",
     )
@@ -262,11 +260,11 @@ class PeptideTradeOff(Base):
         Text, nullable=False,
         comment="Biological costs, side effects, and conversion risks",
     )
-    hormonal_conversion_risks: Mapped[Optional[str]] = mapped_column(
+    hormonal_conversion_risks: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="Specific downstream conversion pathways (e.g. T → DHT via SRD5A2)",
     )
-    clinical_anecdotes: Mapped[Optional[str]] = mapped_column(
+    clinical_anecdotes: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="De-identified real-world observations",
     )
@@ -274,7 +272,7 @@ class PeptideTradeOff(Base):
     # ------------------------------------------------------------------
     # Contraindication genetics
     # ------------------------------------------------------------------
-    contraindication_genetics: Mapped[Optional[List[str]]] = mapped_column(
+    contraindication_genetics: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True,
         comment="Gene symbols that are absolute contraindications for this compound",
     )
@@ -282,7 +280,7 @@ class PeptideTradeOff(Base):
     # ------------------------------------------------------------------
     # Evidence
     # ------------------------------------------------------------------
-    source_pmids: Mapped[Optional[List[str]]] = mapped_column(
+    source_pmids: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True,
         comment="PubMed IDs supporting this entry",
     )
@@ -290,11 +288,11 @@ class PeptideTradeOff(Base):
     # ------------------------------------------------------------------
     # Review provenance
     # ------------------------------------------------------------------
-    last_reviewed: Mapped[Optional[date]] = mapped_column(
+    last_reviewed: Mapped[date | None] = mapped_column(
         Date, nullable=True,
         comment="Date this entry was last clinically reviewed",
     )
-    reviewed_by: Mapped[Optional[str]] = mapped_column(
+    reviewed_by: Mapped[str | None] = mapped_column(
         String(100), nullable=True,
         comment="Name or identifier of the reviewing clinician / scientist",
     )

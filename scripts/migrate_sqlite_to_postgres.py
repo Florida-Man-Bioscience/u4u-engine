@@ -26,7 +26,6 @@ Migrated databases
   data/rsid_cache.db           → rsid_cache
 """
 
-import json
 import os
 import sqlite3
 import sys

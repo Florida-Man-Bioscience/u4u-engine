@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
 from ..cache import MISS, regulatory_cache
 

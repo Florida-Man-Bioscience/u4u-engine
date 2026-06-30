@@ -8,8 +8,7 @@ import pytest
 
 from engine.tracking import evidence, evidence_update
 from engine.tracking.evidence import EvidenceError
-from engine.tracking.genetics import derive_prior, generate_synthetic_profile, PANEL_REL_SD
-
+from engine.tracking.genetics import PANEL_REL_SD, derive_prior, generate_synthetic_profile
 
 # ── The shipped registry loads and is internally honest ─────────────────────
 

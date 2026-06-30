@@ -4,14 +4,14 @@ All external HTTP calls are mocked — no network required.
 """
 
 import json
+
 import pytest
 import responses as resp_lib
 
-from engine.annotators.vep      import fetch_vep, select_canonical_consequence
-from engine.annotators.clinvar  import fetch_clinvar
-from engine.annotators.gnomad   import fetch_gnomad
+from engine.annotators.clinvar import fetch_clinvar
+from engine.annotators.gnomad import fetch_gnomad
 from engine.annotators.myvariant import fetch_myvariant
-
+from engine.annotators.vep import fetch_vep, select_canonical_consequence
 
 # ============================================================
 # VEP

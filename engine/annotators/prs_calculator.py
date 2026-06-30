@@ -27,8 +27,6 @@ Public interface
 
 from __future__ import annotations
 
-from typing import Optional
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # PRS VARIANT DATABASES
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -195,7 +193,7 @@ def calculate_single_trait_prs(
     trait: str,
     variants: list[dict],
     ancestry: str = "Unknown",
-) -> Optional[dict]:
+) -> dict | None:
     """
     Calculate PRS for a single trait.
 

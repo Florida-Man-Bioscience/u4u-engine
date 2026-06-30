@@ -36,7 +36,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .criteria import Classification, EvidenceCode, Strength, combine
+from .criteria import EvidenceCode, Strength, combine
 
 _DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "acmg"
 _LOF_GENES_PATH = os.getenv("ACMG_LOF_GENES", str(_DATA_DIR / "lof_mechanism_genes.txt"))

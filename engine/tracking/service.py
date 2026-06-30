@@ -15,8 +15,8 @@ from __future__ import annotations
 import csv
 import io
 import secrets
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from .models import Measurement, Patient, Treatment
 

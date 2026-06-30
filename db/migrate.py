@@ -10,7 +10,6 @@ already been applied.
 """
 
 import logging
-import os
 from pathlib import Path
 
 import psycopg2

@@ -34,12 +34,11 @@ This is risk-control *verification* per ISO 14971 (master plan §7, Hazard H-01)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from engine.genome_build import detect_build, plan_build_handling
 
 from .metrics import compare_categorical
-
 
 # ──────────────────────────────────────────────────────────────────────────
 # Labeled fixtures — synthetic header snippets with known ground truth.
@@ -57,7 +56,7 @@ class BuildFixture:
     liftover_available: bool = False
 
 
-def _vcf(contig_len: Optional[int] = None, reference: Optional[str] = None) -> bytes:
+def _vcf(contig_len: int | None = None, reference: str | None = None) -> bytes:
     lines = ["##fileformat=VCFv4.2"]
     if reference is not None:
         lines.append(f"##reference={reference}")
@@ -73,7 +72,7 @@ def _txt23andme(build_comment: str) -> bytes:
         f"# {build_comment}\n"
         f"rsid\tchromosome\tposition\tgenotype\n"
         f"rs4477212\t1\t82154\tAA\n"
-    ).encode("utf-8")
+    ).encode()
 
 
 FIXTURES: list[BuildFixture] = [
@@ -119,8 +118,8 @@ def _is_coordinate_authoritative(filename: str) -> bool:
 
 def run_build_validation(fixtures: list[BuildFixture] = FIXTURES) -> dict[str, Any]:
     """Run detection + gating over the fixtures and return a report dict."""
-    detected: dict[tuple[str, str], Optional[str]] = {}
-    expected_build: dict[tuple[str, str], Optional[str]] = {}
+    detected: dict[tuple[str, str], str | None] = {}
+    expected_build: dict[tuple[str, str], str | None] = {}
 
     action_results: list[dict[str, Any]] = []
     unsafe_passes: list[dict[str, Any]] = []
@@ -193,7 +192,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     gate = report["gating"]
     safety = report["safety"]
 
-    def pct(x: Optional[float]) -> str:
+    def pct(x: float | None) -> str:
         return "n/a" if x is None else f"{x * 100:.1f}%"
 
     lines = [
@@ -243,7 +242,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     import argparse
     import json
     from pathlib import Path

@@ -111,7 +111,7 @@ def load_bed_file(filename: str, data_dir: str = "data") -> dict[str, list[tuple
         return regions
 
     try:
-        with open(filepath, "rt", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) >= 3:

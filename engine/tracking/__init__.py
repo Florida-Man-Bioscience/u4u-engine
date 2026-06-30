@@ -1,7 +1,7 @@
 """Biomarker tracking subsystem: longitudinal measurements + cohort analysis."""
+from . import analysis, service
 from .db import get_conn
 from .models import Measurement, Patient, Treatment
-from . import analysis, service
 
 __all__ = [
     "Measurement",

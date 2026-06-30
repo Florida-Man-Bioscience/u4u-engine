@@ -184,11 +184,11 @@ def test_posterior_recovers_theta_without_pre_baseline(conn):
 def test_posterior_tracks_simulated_truth(conn):
     """When the seeder produces measurements that imply θ_true, the posterior
     mean should land close to θ_true — much closer than to the prior alone."""
-    from engine.tracking.seed import seed, BIOMARKER_PARAMS, _dose_factor, SCENARIOS
     from engine.tracking.genetics import (
         GeneticProfile,
         responder_strength_from_profile,
     )
+    from engine.tracking.seed import BIOMARKER_PARAMS, SCENARIOS, _dose_factor, seed
 
     seed(conn, rng=random.Random(42), n_patients=8)
 

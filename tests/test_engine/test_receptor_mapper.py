@@ -9,15 +9,15 @@ Run: pytest tests/test_engine/test_receptor_mapper.py -v
 """
 
 import pytest
+
 from engine.annotators.receptor_mapper import (
     RECEPTOR_REGISTRY,
-    predict_receptor_expression,
-    map_receptors,
-    generate_receptor_summary,
     _compute_expression_level,
     _determine_dominant_isoform,
+    generate_receptor_summary,
+    map_receptors,
+    predict_receptor_expression,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Test Registry Validation
@@ -56,7 +56,7 @@ class TestReceptorRegistry:
 
     @pytest.mark.parametrize("gene", list(RECEPTOR_REGISTRY.keys()))
     def test_modifiers_have_valid_direction(self, gene):
-        for rsid, mod in RECEPTOR_REGISTRY[gene]["expression_modifiers"].items():
+        for _rsid, mod in RECEPTOR_REGISTRY[gene]["expression_modifiers"].items():
             assert mod["direction"] in ("up", "down", "variable")
             assert mod["magnitude"] in ("strong", "moderate", "mild")
 

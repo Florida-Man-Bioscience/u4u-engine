@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from engine.peptides import PEPTIDE_BIOMARKERS, get_biomarker_panel
@@ -207,8 +207,8 @@ async def upload_csv(
     raw = await file.read()
     try:
         text = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(400, "file is not UTF-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(400, "file is not UTF-8") from exc
     records, errors = service.parse_measurement_csv(text)
     if not records:
         raise HTTPException(400, {"errors": errors})
@@ -448,6 +448,7 @@ def seed_demo_data(body: SeedIn | None = None) -> dict[str, Any]:
     exist. Pass ``{"force": true}`` to wipe (FK cascade) and reseed.
     """
     import random
+
     from .seed import seed as run_seed
 
     body = body or SeedIn()
