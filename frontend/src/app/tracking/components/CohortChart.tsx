@@ -28,12 +28,16 @@ export function CohortTrajectoryChart({ result, height = 320 }: Props) {
     x: t.weeks_since_start,
     value: t.value,
   }));
+  // IQR band as an explicit [q1, q3] range tuple. NOT a stacked-area trick:
+  // <ComposedChart> here has no chart-level `data` (each series carries its
+  // own), and recharts computes stack offsets from chart-level data — so a
+  // stacked q1-baseline + iqr area never lifts off the axis and the band
+  // collapses to 0..(q3-q1) near the x-axis. A range Area renders q1..q3
+  // directly, independent of stacking.
   const band = result.time_bins.map((b) => ({
     x: b.weeks_label,
     median: b.median,
-    q1: b.q1,
-    q3: b.q3,
-    iqr: b.q3 - b.q1,
+    range: [b.q1, b.q3] as [number, number],
   }));
 
   const xMax = Math.max(
@@ -98,24 +102,14 @@ export function CohortTrajectoryChart({ result, height = 320 }: Props) {
             }}
           />
         )}
-        {/* IQR band: q1 baseline + (q3-q1) area stacked. Stacked area = q3. */}
+        {/* IQR band drawn as a q1..q3 range area (see `band` above). */}
         <Area
           data={band}
-          dataKey="q1"
-          stroke="transparent"
-          fill="transparent"
-          stackId="iqr"
-          isAnimationActive={false}
-          legendType="none"
-        />
-        <Area
-          data={band}
-          dataKey="iqr"
+          dataKey="range"
           name="IQR (q1–q3)"
           stroke="transparent"
           fill="#0f766e"
           fillOpacity={0.18}
-          stackId="iqr"
           isAnimationActive={false}
         />
         <Line
