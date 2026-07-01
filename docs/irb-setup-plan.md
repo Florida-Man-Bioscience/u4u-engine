@@ -7,7 +7,7 @@
 
 ---
 
-> **The one-paragraph version.** "Testing the performance of this pipeline" is not a single study and does not uniformly require an IRB. It splits into three tiers of human-subjects involvement with very different burdens. **Analytical performance testing against reference materials (GIAB, GeT-RM) and de-identified public data is *not human-subjects research* and can begin now with no IRB.** Only the track that touches identifiable living people — clinical concordance on real patient samples, prospective recruitment, or return of results — needs a full IRB submission. The plan below partitions the work that way so the non-gated science can start immediately while the IRB package is assembled in parallel.
+> **The one-paragraph version.** "Testing the performance of this pipeline" is not a single study and does not uniformly require an IRB. It splits into three tiers of human-subjects involvement with very different burdens. **Analytical performance testing against reference materials (GIAB, GeT-RM) and de-identified public data is *not human-subjects research* and can begin now with no IRB.** The track that touches identifiable living people is now a defined, scoped study: a prospective, observational, multi-site cohort run in partnership with peptide-prescribing clinics, enrolling consenting adults who are *already* prescribed peptide therapy by their own clinicians (treatment-as-usual) and tracking their per-peptide biomarker trajectories over time. Because it is minimal-risk and observational, it takes the **expedited** IRB pathway (a full submission with informed consent and HIPAA authorization, reviewed by the chair/designated reviewer rather than the full board). The plan below partitions the work that way so the non-gated science can start immediately while the IRB package is assembled in parallel.
 
 ---
 
@@ -19,9 +19,9 @@ Per the Common Rule (45 CFR 46)[^commonrule], an activity needs IRB oversight on
 |---|---|---|---|---|
 | **Tier A — Analytical validation**[^analyticalval] | Does the pipeline read the genome correctly? (variant-call concordance, sensitivity/specificity/precision; star-allele diplotype concordance; STR/CAG[^strcag] length accuracy; build handling[^buildhandling]) | **Cell-line reference materials & de-identified public truth sets** — GIAB/NIST[^giab] (NA12878 et al.), GeT-RM (CDC)[^getrm] Coriell[^coriell] PGx[^pgx] diplotypes, 1000 Genomes[^kgp] / public VCFs | **Not human subjects** (45 CFR 46.102(e)) — cell lines and de-identified public data | **None.** Start now. (Maps to master plan §9) |
 | **Tier B — Secondary use of existing human data** | Does a pipeline call predict a real clinical state? (interpretation/scoring concordance, PGx phenotype concordance, PRS[^prs] calibration) using **already-collected** clinical genomes/outcomes | Banked/retrospective de-identified or coded clinical data; biobank/dbGaP[^dbgap] under a Data Use Agreement[^dua] | Often **Exempt**[^exempt] (45 CFR 46.104(d)(4) — secondary use of de-identified/recorded data) or **not-HSR**[^nhsr] | **Determination request** (fast track). DUA likely required. |
-| **Tier C — Prospective / identifiable / return-of-results** | Performance on freshly recruited participants; any study where results are returned; identifiable genomic data | New enrollment, identifiable specimens, longitudinal biomarker tracking on real people | **Human-subjects research** | **Full IRB submission** — protocol, consent, the works (§4 below). |
+| **Tier C — Prospective observational clinic-partnership study** | Does the engine's genomic response prediction track a participant's actual per-peptide biomarker trajectory over time? Enroll consenting adults *already* prescribed peptide therapy by their own clinicians (treatment-as-usual) at partner clinics, and observe their biomarker panels longitudinally | New enrollment with informed consent + HIPAA authorization; clinic-held PHI under a BAA/DUA; identifiable, longitudinal biomarker + genomic data | **Human-subjects research** — prospective, consented, but observational and minimal-risk | **Expedited IRB submission** (45 CFR 46.110)[^expedited] — full protocol + consent + HIPAA authorization, chair/designated-reviewer review, not full board (§3, §4 below). |
 
-**Actionable headline:** Tier A is the bulk of "does the pipeline compute correctly" and is **un-gated** — begin immediately. Tier B is fast and light. Tier C is the only track that needs the full machinery, and it should be scoped tightly (§3).
+**Actionable headline:** Tier A is the bulk of "does the pipeline compute correctly" and is **un-gated** — begin immediately. Tier B is fast and light. Tier C is the defined prospective study — a minimal-risk, consented, observational clinic partnership — and it takes the expedited pathway with a complete submission package (§3, §4).
 
 > Do not let the institution's IRB *self-determine* tiers for you. For Tiers A and B, submit a short **"IRB determination request"** (a.k.a. "not human subjects research" / "exempt determination") and keep the written determination on file. That letter is what protects publications and audits — "we decided it was exempt ourselves" does not.
 >
@@ -29,28 +29,30 @@ Per the Common Rule (45 CFR 46)[^commonrule], an activity needs IRB oversight on
 
 ---
 
-## 2. IRB of record — the top human decision (gating, but does not block drafting)
+## 2. IRB of record — settled: UF is the single IRB (sIRB)
 
-Everything institution-specific (forms, e-submission system, CITI[^citi] pathway, fees, reliance agreements[^reliance]) flows from **one question**:
+This question is **settled** (decided 2026-06-30): **the University of Florida IRB is the single IRB of record (sIRB)**[^sirb] for the multi-site Tier C study. This is a prospective, multi-site study conducted under UF auspices (UF investigator, UF data/resources), so UF HRPP holds review and the other participating sites — including Florida Man Bioscience and the partner clinics — **cede review to UF via reliance agreements**. No commercial/central-IRB hedging remains.
 
-> **Is this research conducted under the University of Florida's auspices** — by a UF employee or student, using UF funds, UF data, or UF resources/facilities?
+- **UF HRPP is the IRB of record.** Within UF, genomic / HIPAA[^hipaa]-protected / health-data protocols route to **IRB-01** (Gainesville Health Science Center) — IRB-01 reviews *all medical research, tissue/data banks, and anything involving HIPAA-protected data*. **Not IRB-02**, which is explicitly limited to social/behavioral/survey research and excludes clinical/tissue-bank/HIPAA studies. Submit via **myIRB**[^myirb]. *(Address submissions to the HRPP office — **not** to a named chair: the IRB-01 chair role transitions effective 2026-07-01, so a hard-coded name will go stale.)* (UF Innovate holds a patent disclosure on this pipeline — see §3.3 COI — reinforcing that this is UF-engaged research.)
+- **Other sites cede to UF as sIRB via reliance agreements**[^reliance]. The reliance vehicles: **IRB-01 *is* the OneFlorida+ consortium IRB**[^oneflorida] (the natural sIRB for multi-site Florida academic and clinic collaboration), and UF participates in **SMART IRB**[^smartirb] master reliance (SMART IAA / UF Master IAA). Each partner clinic and FMB executes a reliance agreement (SMART IRB, or OneFlorida+ where applicable) ceding review to UF; FMB and the clinics do **not** run separate boards.
+- **If any activity routes through the UF Jacksonville campus**, note the local board there is historically **IRB-03**; under the settled sIRB model that site still cedes to IRB-01 as the reviewing IRB of record for this protocol.
 
-- **If yes → UF HRPP is the IRB of record.** Within UF, this work routes to **IRB-01** (Gainesville Health Science Center) — IRB-01 reviews *all medical research, tissue/data banks, and anything involving HIPAA[^hipaa]-protected data*. **Not IRB-02**, which is explicitly limited to social/behavioral/survey research and excludes clinical/tissue-bank/HIPAA studies. (UF Innovate already holds a patent disclosure on this pipeline — see §3.3 COI — which suggests institutional entanglement worth confirming with UF's office.) *(Address submissions to the HRPP office via myIRB — **not** to a named chair: the IRB-01 chair role transitions effective 2026-07-01, so a hard-coded name will go stale.)* If any activity routes through the **UF Jacksonville** campus, the board of record there is **IRB-03**, not IRB-01.
-- **If no — purely Florida Man Bioscience (commercial) work → a commercial/central IRB** (e.g., Advarra, WCG) is the route. Companies without an internal IRB contract one.
-- **If both UF and the company are "engaged"** (UF investigator + company sponsor), expect a **single-IRB (sIRB) reliance agreement**[^sirb]. UF offers several reliance vehicles, and WCG is not the only one: **IRB-01 *is* the OneFlorida+ consortium IRB**[^oneflorida] (the natural sIRB for multi-site Florida academic collaboration); UF participates in **SMART IRB**[^smartirb] master reliance (SMART IAA / UF Master IAA); and **IRB-04 / WCG (Western IRB)**[^wcg] is the commercial-IRB cede pathway. Pick the vehicle by who the other engaged sites/sponsors are.
-
-**Decision owner:** Noah + any UF faculty sponsor. **This is a human task — confirm UF engagement before choosing the IRB.** UF is **AAHRPP-accredited**[^aahrpp] (since 2018), so expect rigorous documentation standards regardless of board. It changes submission *mechanics*, not the structure of this plan, so the rest is written IRB-agnostic.
+**Decision owner:** Noah + the UF faculty sponsor execute the reliance agreements and route the submission to IRB-01. UF is **AAHRPP-accredited**[^aahrpp] (since 2018), so expect rigorous documentation standards. This settles submission *mechanics*, not the structure of this plan.
 
 ---
 
-## 3. Scoping the Tier C study — keep it from sprawling
+## 3. Scoping the Tier C study — the prospective observational clinic partnership
 
 ### 3.1 What the study *is*
-A **diagnostic/predictive-accuracy study** of the pipeline's outputs against reference standards — observational. Report per **STARD 2015**[^stard] (diagnostic accuracy) and **TRIPOD-AI / PROBAST-AI**[^tripod] (prediction models). Primary endpoints are concordance/sensitivity/specificity/PPV-NPV[^ppvnpv]/calibration vs. an accepted reference (CPIC[^cpic] diplotypes, expert-panel ClinVar/ClinGen[^clingen], measured biomarker trajectories).
+A **prospective, observational, multi-site cohort study** run in partnership with peptide-prescribing clinics. FMB enrolls consenting adults who have **independently** been prescribed peptide therapy by their own clinicians (treatment-as-usual), and tracks their progress over time using the engine's proposed per-peptide biomarker panels. **Primary aim:** correlate the engine's genomic response predictions against observed per-peptide biomarker trajectories, to establish the analytical and clinical validity of those predictions — a **diagnostic/predictive-accuracy design**. Report per **STARD 2015**[^stard] (diagnostic accuracy) and **TRIPOD-AI / PROBAST-AI**[^tripod] (prediction models). Primary endpoints are concordance/sensitivity/specificity/PPV-NPV[^ppvnpv]/calibration of the prediction vs. an accepted reference (CPIC[^cpic] diplotypes, expert-panel ClinVar/ClinGen[^clingen], and the measured longitudinal biomarker trajectories). FMB does **not** prescribe, supply, dose, or direct any peptide — it observes whatever the partner clinic has independently prescribed.
 
-### 3.2 The peptide boundary — do not let scope creep into a therapy trial
-- **In scope:** validating the pipeline's *predictions* observationally — e.g., does a "responder" call correspond to outcomes in **already-existing** data, or in participants who are receiving peptides **independently of this study**.
-- **Out of scope (separate, much larger undertaking):** *administering* BPC-157/TB-500/etc. to participants to test response. That is an **interventional trial of an investigational compound** — likely requires an **FDA IND**[^ind], a DSMB[^dsmb], and a multi-year budget. "Test the performance of *this pipeline*" is the observational former, not the latter. (Master plan §12.4 draws the same line.)
+### 3.2 The peptide boundary — observational, treatment-as-usual, all peptides
+The line that keeps this study observational (and therefore expedited, minimal-risk, and outside the IND framework) is simple: **FMB observes; it never supplies, doses, or directs therapy.**
+
+- **In scope — all peptides the partner clinics prescribe.** The study observes participants' biomarker trajectories on **whatever peptide their own clinician has independently prescribed**, across the full engine panel — all 22 peptides in `PEPTIDE_MEASUREMENTS` (`engine/peptides/measurements.py`), **including unapproved research peptides** (BPC-157, TB-500, and the rest). GLP-1 receptor agonists (Semaglutide / Tirzepatide / Liraglutide) may be highlighted first because they carry grade-A evidence, but the design covers every peptide the clinics use. The peptide is **observed, never supplied by the study.**
+- **Outside the IND framework — even for unapproved peptides.** Because FMB does not prescribe, supply, dose, or direct any drug, the study is **not clinical investigation of a drug under an IND** (21 CFR 312.2(b))[^ind]. The treatment decision, the product, and the dosing all belong to the participant's own clinician as treatment-as-usual; the study only records outcomes.
+- **Out of scope (separate, much larger undertaking):** *administering* BPC-157 / TB-500 / etc. to participants to test response. That would be an **interventional trial of an investigational compound** — it would require an **FDA IND**, a DSMB[^dsmb], full-board review, and a multi-year budget. This study is the observational former, not the latter. (Master plan §12.4 draws the same line.)
+- **Adverse-event posture for unapproved peptides — observe and record, do not manage.** Because unapproved peptides are in scope, the protocol adopts an **AE observation/reporting** posture: investigators observe and record adverse events reported by participants and document them per IRB/HRPP reporting requirements, but they do **not** manage, adjust, or direct the participant's therapy. Clinical management stays with the prescribing clinician; safety concerns are referred back to that clinician (and to emergency care as appropriate).
 
 ### 3.3 Conflict of interest — name it up front
 Noah holds a **UF Innovate[^ufinnovate] patent disclosure on the very pipeline under study.** Investigator financial/intellectual interest in the technology being validated is the single thing IRBs and COI[^coi] committees scrutinize hardest. **Deliverable: a written COI management plan** (disclosure to the IRB and institutional COI committee; independent oversight of data analysis; disclosure in consent forms and publications). Do not submit the protocol without it.
@@ -68,6 +70,11 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 - **Genetic-specific consent language**: secondary use, data sharing/repositories (GA4GH[^ga4gh] responsible-sharing), future-use, withdrawal limits once data is de-identified/shared.
 - Consider an **NIH Certificate of Confidentiality**[^coc] (free; shields against compelled disclosure).
 
+### 3.6 Recruitment and undue-influence safeguards
+- **Recruit at partner clinics from patients already prescribed peptide therapy.** Participants are identified through the partner clinics among patients who are *already* on treatment-as-usual; the study does not solicit anyone to start peptide therapy, and enrollment is never a condition of receiving care.
+- **Avoid coercion / undue influence.** Investigators must not recruit their own students, employees, or subordinates. Recruitment materials and the consent process make clear that participation is voluntary, declining has no effect on the participant's clinical care at the clinic, and the participant may withdraw at any time.
+- **Clinic-held PHI is accessed only under authorization.** Recruitment contact and any use of clinic records proceed under HIPAA authorization and the BAA/DUA with each partner clinic (§4), not through open-ended chart mining.
+
 ---
 
 ## 4. The submission package (Tier C)
@@ -75,12 +82,13 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 | Document | Notes / owner |
 |---|---|
 | **Protocol** | Background, aims, design, reference standards, endpoints, sample size & statistical analysis plan (biostatistician), data flow, COI plan. Build from master plan §9–§12, §16. |
-| **Informed consent form(s)** | Genetic-specific language (§3.5); separate return-of-results & future-use elements; COI disclosure (§3.3). |
-| **Recruitment materials** | If prospective (Tier C only). |
+| **Informed consent form(s) + HIPAA authorization** | Genetic-specific language (§3.5); HIPAA authorization for use of clinic-held PHI (§2, §3.6); separate return-of-results & future-use elements; COI disclosure (§3.3). |
+| **Recruitment materials** | Active — the prospective study recruits at partner clinics from patients already prescribed peptide therapy (§3.6). Voluntary-participation and no-effect-on-care language. |
+| **BAA / DUA with each partner clinic** | Required — partner clinics are HIPAA covered entities. Execute a Business Associate Agreement and/or Data Use Agreement with each clinic before any PHI flows to FMB (§2, §3.6). |
 | **Data Management & Security Plan** | HIPAA/GINA; encryption, access control, retention, de-identification/coding scheme. Depends on API remediation (master plan §13, B-3). |
-| **Data Use Agreement(s)** | For banked/biobank/dbGaP data (Tier B). |
+| **Data Use Agreement(s)** | For any banked/biobank/dbGaP data (Tier B) in addition to the partner-clinic DUAs above. |
 | **COI management plan** | §3.3 — institutional COI committee + IRB. |
-| **Reliance / sIRB agreement** | If UF + company both engaged (§2). |
+| **Reliance / sIRB agreement** | UF is the single IRB of record (§2); each partner clinic and FMB executes a reliance agreement (SMART IRB / OneFlorida+) ceding review to UF. |
 | **Investigator CVs / qualifications** | PI and key personnel. |
 | **Certificate of Confidentiality application** | Optional but recommended (§3.5). |
 
@@ -93,7 +101,7 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 - [ ] **GCP training**[^gcp] — required for NIH-funded clinical trials. Note the UF module `UF_CTS904_OLT` does **not** satisfy the NIH GCP requirement; UF's NIH-compliant GCP course is **`UF_GCP100_OLT`** (GCP for Social & Behavioral Research) in myTraining — confirm the current course code there before enrolling.
 - [ ] **HIPAA training (PRV800)** — annual, via myTraining / UF Privacy Office, for anyone with HIPAA responsibilities. Relevant the moment any PHI[^phi]-linked genomic data is touched.
 - [ ] **COI disclosure** — file the patent/financial-interest disclosure with the **UF Conflicts of Interest office (coi.ufl.edu)**; HRPP integrates COI review into approval (see §3.3). This is the formal channel for the UF Innovate patent.
-- [ ] **Confirm IRB of record** (§2 decision) — IRB-01 (direct, or as the OneFlorida+ sIRB) vs. SMART IRB reliance vs. WCG/IRB-04 cede.
+- [ ] **Execute reliance under the settled UF sIRB** (§2) — route the submission to IRB-01 (direct, or as the OneFlorida+ sIRB) and have each partner clinic and FMB execute a SMART IRB / OneFlorida+ reliance agreement ceding review to UF. The IRB of record is settled; this step is execution, not a choice.
 - [ ] **Identify a qualified PI** — for a UF/clinical study this typically must be a faculty member or licensed clinician; for biostatistics and variant interpretation, the master plan §6.3 / §18 roles apply.
 - [ ] **Check ancillary committees** — Institutional Biosafety Committee (IBC)[^ibc] if biospecimens are handled; Division of Sponsored Programs if externally funded.
 - [ ] **Stand up the minimum data-security posture** so identifiable data can legally flow (API auth + encryption at rest/in transit — master plan B-3). Tier A/B on de-identified data does **not** block on this.
@@ -103,23 +111,23 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 ## 6. Sequence
 
 1. **Now (no IRB):** Begin **Tier A** analytical validation against GIAB/GeT-RM reference materials (master plan §9, Appendix C). This is the largest body of "performance" evidence and needs no approval.
-2. **Weeks 1–4:** Confirm IRB of record (§2). File **Tier B** determination/exemption request for any retrospective de-identified data. Complete CITI. Draft COI management plan.
-3. **Parallel, weeks 2–8:** Author the **Tier C** protocol + consent + data-security + DUA package (§4). Requires the intended-use decision (master plan §3) and API security remediation (B-3) to be underway.
-4. **Submit Tier C → IRB review** (expect revisions; genetic + COI studies draw scrutiny). Do not enroll or touch identifiable data until approval.
+2. **Weeks 1–4:** Execute reliance under the settled UF sIRB and route to IRB-01 (§2). File **Tier B** determination/exemption request for any retrospective de-identified data. Complete CITI. Draft COI management plan. Begin BAA/DUA negotiation with partner clinics.
+3. **Parallel, weeks 2–8:** Author the **Tier C** protocol + consent + HIPAA authorization + data-security + BAA/DUA package (§4). Requires the intended-use decision (master plan §3) and API security remediation (B-3) to be underway.
+4. **Submit Tier C for expedited IRB review** (§1; expect revisions — genetic + COI studies draw scrutiny even on the expedited track). Do not enroll, contact participants, or touch identifiable/clinic PHI until approval.
 5. **Maintain:** continuing review/renewals, amendments for any protocol change, adverse-event/unanticipated-problem reporting.
 
 ---
 
 ## 7. Human vs. delegable
 
-**🔴 Only-you / human decisions & actions**
-- Confirm **UF engagement** and choose the **IRB of record** (§2).
+**[HUMAN-ONLY] Only-you / human decisions & actions**
+- Execute the **reliance agreements** ceding review to the settled **UF sIRB** (§2), and sign the **BAA/DUA** with each partner clinic.
 - Sign the **COI disclosure** and own the management plan (§3.3).
-- Decide the **return-of-results posture** (§3.4) and the **peptide scope boundary** (§3.2).
-- Complete **CITI training**; secure a **qualified PI / faculty sponsor**.
+- Decide the **return-of-results posture** (§3.4). (The IRB of record and the observational peptide-scope boundary are settled — §2, §3.2.)
+- Complete **CITI[^citi] training**; secure a **qualified PI / faculty sponsor**.
 - All IRB submissions, signatures, and communications with the HRPP office.
 
-**🟢 I can draft / build for you**
+**[DELEGABLE] I can draft / build for you**
 - The **Tier A analytical-validation harness** — wiring GIAB/GeT-RM reference sets through the pipeline and computing concordance/sensitivity/specificity (real code, startable now; master plan §9 + Appendix C).
 - **First drafts** of the protocol, the data-management & security plan, and the genetic-specific consent language (you + IRB finalize).
 - The **API security remediation** (auth + encryption, B-3) that gates identifiable-data studies.
@@ -149,6 +157,7 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 [^dbgap]: **dbGaP** — NIH's controlled-access database of Genotypes and Phenotypes; human datasets released only under a Data Use Agreement.
 [^dua]: **DUA (Data Use Agreement)** — a contract governing how a restricted dataset may be accessed, used, and protected.
 [^exempt]: **Exempt** — research that meets a Common Rule exemption category (low-risk) and so is spared full IRB review, though a determination is still required.
+[^expedited]: **Expedited review (45 CFR 46.110)** — a review pathway for minimal-risk research in listed categories, conducted by the IRB chair or a designated reviewer rather than the full convened board. It still requires a complete submission (protocol, consent, HIPAA authorization); only the review mechanism is lighter than full-board review.
 [^nhsr]: **not-HSR / NHSR (Not Human Subjects Research)** — a determination that an activity falls outside the regulatory definition of human-subjects research entirely.
 [^irb850]: **IRB 850** — UF's lighter training course tied to the exempt/self-determination pathway; insufficient on its own for a full study.
 [^irb803]: **IRB 803** — UF's mandatory comprehensive human-subjects training required to submit a full (Tier C) study; renewed every 3 years.
@@ -159,7 +168,6 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 [^sirb]: **sIRB (single IRB)** — one IRB designated to review a multi-site study for all participating sites (now generally required for federally funded multi-site research).
 [^oneflorida]: **OneFlorida+** — a statewide clinical research consortium; IRB-01 serves as its consortium IRB for multi-site Florida academic studies.
 [^smartirb]: **SMART IRB** — a national master reliance framework (with standard agreements/IAAs) that streamlines IRB reliance across institutions.
-[^wcg]: **WCG / Western IRB (IRB-04)** — a commercial (for-profit) central IRB; the "cede" pathway lets an institution defer review to it.
 [^aahrpp]: **AAHRPP-accredited** — accredited by the Association for the Accreditation of Human Research Protection Programs, signaling high, audited standards for human-research oversight.
 [^stard]: **STARD 2015** — Standards for Reporting Diagnostic Accuracy Studies; a reporting checklist for diagnostic-test performance studies.
 [^tripod]: **TRIPOD-AI / PROBAST-AI** — reporting (TRIPOD) and risk-of-bias (PROBAST) guidelines for clinical prediction models, in their AI-specific updates.
