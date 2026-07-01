@@ -158,6 +158,63 @@ List recent jobs (status only, no results payload).
 
 ---
 
+## Biomarker tracking API (`/tracking`)
+
+Longitudinal biomarker tracking with Bayesian response prediction (`engine/tracking/`, mounted under `/tracking`). All routes return JSON.
+
+**Patients & data**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/tracking/patients` | Create a patient |
+| `GET` | `/tracking/patients` | List patients |
+| `GET` | `/tracking/patients/{id}` | Get one patient |
+| `DELETE` | `/tracking/patients/{id}` | Delete patient (cascades treatments + measurements) |
+| `POST` | `/tracking/patients/{id}/treatments` | Add a peptide treatment (peptide, dose, schedule, start date) |
+| `GET` | `/tracking/patients/{id}/treatments` | List a patient's treatments |
+| `POST` | `/tracking/measurements` | Add one biomarker measurement |
+| `POST` | `/tracking/measurements/bulk` | Add many measurements at once |
+| `POST` | `/tracking/measurements/csv` | Upload measurements as CSV |
+| `GET` | `/tracking/patients/{id}/measurements` | List a patient's measurements |
+
+**Genetics & priors**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tracking/patients/{id}/genetics` | Get the patient's genetic profile |
+| `POST` | `/tracking/patients/{id}/genetics/synthetic` | Attach a synthetic genetic profile (demo) |
+| `POST` | `/tracking/patients/from-job/{job_id}` | Create a tracking patient from a finished analysis job |
+| `GET` | `/tracking/patients/{id}/priors` | Per-peptide responder-strength priors derived from genetics |
+
+**Prediction**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tracking/patients/{id}/predictions?peptide={p}&biomarker={b}` | Bayesian posterior + 95% credible-interval predictive curve for one (patient, peptide, biomarker) |
+
+The prediction response fuses a genetics-derived prior, leave-one-out cohort pooling, and the measurement likelihood into a Normal–Normal posterior. Key fields: `posterior` (`mean_pct_change`, `credible_lo_95`, `credible_hi_95`), `posterior_predictive` / `prior_predictive` (per-week `mean`, `lo_95`, `hi_95` curves), `prior` (carries `evidence_grade` when the biomarker has a research-backed registry entry — see `docs/architecture.md`), and `expected_window`.
+
+**Catalog & demo**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tracking/peptides` | List supported peptides (includes the GLP-1 / incretin class) |
+| `GET` | `/tracking/peptides/{name}/biomarkers` | Biomarker panel for a peptide |
+| `GET` | `/tracking/cohort?peptide={p}&biomarker={b}` | Cohort trajectory (median + IQR band) |
+| `POST` | `/tracking/seed` | Populate synthetic demo data |
+
+> The generative model is documented in-app at `/tracking/model`.
+
+---
+
+## Other endpoints
+
+- `POST /jobs/{job_id}/variants/{variant_id}/acmg-signoff` — qualified human sign-out of an ACMG/AMP classification (the pipeline assembles evidence; a human makes the final call).
+- `GET /regulatory/peptides` — curated peptide FDA status merged with live sources.
+- `GET /regulatory/events` — regulatory events feed (ClinicalTrials.gov, openFDA, Federal Register); live-source failures degrade gracefully.
+
+---
+
 ## Job lifecycle
 
 ```

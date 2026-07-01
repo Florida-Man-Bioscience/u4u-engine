@@ -1,4 +1,11 @@
-# Deploying the engine
+# Deploying the engine (standalone single-host)
+
+> **Scope:** this is the **standalone Docker-Compose-on-a-VPS** path — a
+> self-contained box you provision and run yourself. It is **not** how
+> `flmanbiosci.net` is served. Production runs on the self-hosted hwcopeland
+> RKE2/Kubernetes cluster with Flux GitOps — see
+> [`server-management.md`](./server-management.md) for that, and for deployment
+> troubleshooting.
 
 This guide covers deploying the Florida Man Bioscience tracking stack
 (tracking app + API) as two Docker[^docker] containers. A TLS-terminating[^tls]
