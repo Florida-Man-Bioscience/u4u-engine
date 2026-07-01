@@ -5,7 +5,7 @@
 **Date:** [submission date]
 **Re:** Request for determination that the described analytical-validation activities are **Not Human Subjects Research**[^nhsr] (Tier A) and **Exempt**[^exempt] (Tier B) under 45 CFR 46[^cfr46]
 
-> **Purpose of this memo.** This requests a written determination for two categories of pipeline *performance-testing* activity that do **not** involve intervention/interaction with living individuals or identifiable private information. It does **not** cover any prospective enrollment, identifiable data, or return of results — those are submitted separately as a full (Tier C) protocol. A companion roadmap is on file (`docs/irb-setup-plan.md`); the underlying validation science is detailed in `docs/clinical-validation-plan.md` §9–§12.
+> **Purpose of this memo.** This requests a written determination for two categories of pipeline *performance-testing* activity that do **not** involve intervention/interaction with living individuals or identifiable private information. It does **not** cover any prospective enrollment, identifiable data, or return of results — those are submitted separately as the prospective observational clinic-partnership study (expedited review; informed consent + HIPAA authorization). A companion roadmap is on file (`docs/irb-setup-plan.md`); the underlying validation science is detailed in `docs/clinical-validation-plan.md` §9–§12.
 
 ---
 
@@ -48,7 +48,7 @@ To the extent Tier B uses existing human-derived data, it qualifies for exemptio
 - **No identifiable data** is requested, received, or generated under this determination. All inputs are de-identified, coded, or cell-line/public reference materials.
 - **No return of results.** The pipeline is **not CLIA-certified**[^clia]; no output will be returned to any individual for any clinical or personal purpose.
 - **Data handling.** De-identified files are stored on [institution-approved storage]; any Data Use Agreement terms for banked datasets will be honored.
-- **Scope boundary.** This request explicitly **excludes**: prospective recruitment, any identifiable genomic data, any administration of peptides or other interventions, and any return of results. Those activities, if pursued, will be submitted as a separate full IRB protocol (Tier C).
+- **Scope boundary.** This request explicitly **excludes**: prospective enrollment of participants, any identifiable genomic data or clinic-held PHI, and any return of results. In particular, it excludes the separate, prospective **observational** study conducted in partnership with peptide-prescribing clinics, which enrolls consenting adults already prescribed peptide therapy by their own clinicians (treatment-as-usual) and tracks their biomarker trajectories over time. That study observes only — it does not prescribe, supply, dose, or direct any peptide — and is submitted separately for **expedited review** with informed consent and HIPAA authorization (and a BAA/DUA with each partner clinic).
 
 ---
 
