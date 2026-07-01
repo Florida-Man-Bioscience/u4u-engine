@@ -158,6 +158,10 @@ export default function LandingPage() {
 
   return (
     <div className="space-y-0">
+      {/* Full-bleed black backdrop — makes the homepage read black edge-to-edge
+          over the app's default beige body, scoped to this page (other pages
+          keep the light theme). */}
+      <div className="fixed inset-0 -z-10 bg-[#08090d]" aria-hidden />
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#08090d] -mx-4 -mt-8 px-4 pt-24 pb-28">
         {/* Animated aurora field */}
@@ -243,7 +247,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Engines marquee ─────────────────────────────────────────────────── */}
-      <section className="-mx-4 overflow-hidden border-y border-[#dbd9d3] bg-white px-4 py-5">
+      <section className="-mx-4 overflow-hidden border-y border-white/10 bg-[#08090d] px-4 py-5">
         <div className="mx-auto flex max-w-5xl items-center gap-6">
           <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">
             Powered by
@@ -253,7 +257,7 @@ export default function LandingPage() {
               {[...ENGINES, ...ENGINES].map((engine, i) => (
                 <span
                   key={`${engine}-${i}`}
-                  className="inline-flex shrink-0 items-center rounded-full border border-[#e4e2dd] bg-[#f7f6f3] px-4 py-1.5 text-sm font-medium text-[#3a3f4a]"
+                  className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-medium text-zinc-300"
                 >
                   {engine}
                 </span>
@@ -264,13 +268,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it works ────────────────────────────────────────────────────── */}
-      <section id="how" className="-mx-4 px-4 py-20">
+      <section id="how" className="-mx-4 bg-[#08090d] px-4 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#2d8f61]">
               The Pipeline
             </p>
-            <h2 className="mt-2 text-3xl text-[#0d1117]" style={serif}>
+            <h2 className="mt-2 text-3xl text-white" style={serif}>
               From raw genome to peptide map
             </h2>
           </div>
@@ -278,10 +282,10 @@ export default function LandingPage() {
             {PIPELINE_STEPS.map((step, i) => (
               <div
                 key={step.icon}
-                className="group fade-up relative rounded-2xl bg-gradient-to-b from-[#e9e7e1] to-transparent p-px transition-transform hover:-translate-y-1"
+                className="group fade-up relative rounded-2xl bg-gradient-to-b from-white/10 to-transparent p-px transition-transform hover:-translate-y-1"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="relative h-full overflow-hidden rounded-2xl bg-white p-6">
+                <div className="relative h-full overflow-hidden rounded-2xl bg-[#0d1117] p-6">
                   <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#1a6b4a]/0 blur-2xl transition-all duration-500 group-hover:bg-[#2d8f61]/20" />
                   <span
                     className="bg-gradient-to-br from-[#1a6b4a] to-[#2dd4bf] bg-clip-text text-3xl text-transparent"
@@ -289,10 +293,10 @@ export default function LandingPage() {
                   >
                     {step.icon}
                   </span>
-                  <h3 className="mt-3 text-sm font-semibold text-[#0d1117]">
+                  <h3 className="mt-3 text-sm font-semibold text-zinc-100">
                     {step.title}
                   </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#6b7280]">
+                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
                     {step.desc}
                   </p>
                 </div>
@@ -516,8 +520,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="-mx-4 space-y-2 px-4 py-10 text-center">
-        <p className="text-sm text-[#3a3f4a]" style={serif}>
+      <footer className="-mx-4 space-y-2 border-t border-white/10 bg-[#08090d] px-4 py-10 text-center">
+        <p className="text-sm text-zinc-200" style={serif}>
           PeptOdyssey
         </p>
         <p className="text-xs text-[#9ca3af]">
