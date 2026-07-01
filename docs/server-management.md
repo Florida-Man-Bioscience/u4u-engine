@@ -194,6 +194,46 @@ and nothing else** (RBAC in `theswamp/rbac.yaml`). Full details in
 > **Reachability:** RBAC grants permission, not network path — the kube-apiserver must
 > be reachable from where you run `kubectl` (home LAN / VPN).
 
+## Monitoring access — the Grafana "Swamp" dashboard
+
+FMB collaborators watch tooling/genomics health through a dedicated **"Swamp"**
+folder in Grafana at **<https://grafana.hwcopeland.net>**. Full operator runbook:
+`../iac/rke2/chem/khemeia/docs/swamp-management-runbook.md`.
+
+**What FMB membership actually grants (least-privilege — state it plainly):**
+- **Editor** org-role in Grafana + **Admin** on the *Swamp folder only* → manage
+  dashboards/alerts within Swamp, touch nothing else.
+- Interactive **Khemeia web** login (browse jobs/results) via GitHub → Authentik.
+- It is **not** API-level admin over genome jobs, and does **not** grant the ability
+  to rotate the u4u API token — those stay with the platform owner by design.
+
+**How access is wired:**
+- Membership is the Authentik group **"Florida Man Bioscience"** (pinned UUID
+  `5f7efde0-fe9b-48f1-b443-e42947bf7f2e`). The group → `Editor` org-role mapping is
+  declarative (in `iac`), so no click-ops for the role itself.
+- **Admin on the Swamp folder is a one-time manual grant** — folder-scoped perms
+  can't come from an OIDC claim. A GrafanaAdmin sets it once via
+  Grafana → Dashboards → Folders → **Swamp** → Permissions → add role **Editor** =
+  **Admin**.
+
+**Onboarding a new collaborator (e.g. Curtis / Tom):**
+1. They sign up at grafana.hwcopeland.net or khemeia.net with **"Sign up with
+   GitHub"** → account is created **inactive** (pending approval).
+2. The owner **activates** them in Authentik (Directory → Users → Active) and notes
+   their exact Authentik **username**.
+3. Add that username to the FMB group's `users:` list — **in both**
+   `rke2/authentik/blueprints/groups.yaml` **and** the mirrored `groups.yaml` key in
+   `rke2/authentik/blueprints-configmap.yaml` (the ConfigMap is what Authentik
+   actually mounts; `update.sh` is only a `helm upgrade`, not a blueprint generator —
+   editing only one file silently drops the change).
+4. Apply: commit both, then `cd rke2/authentik && ./update.sh` (or let Flux
+   reconcile). No pod restart needed; blueprints reconcile on a timer.
+5. Verify: the user's Grafana **Org role** reads **Editor** and they can manage the
+   Swamp folder.
+
+> The empty group blocks nothing — the dashboard, role mapping, and folder all exist
+> regardless. Don't invent usernames before someone actually enrolls.
+
 ## Quick reference
 
 ```sh
