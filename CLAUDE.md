@@ -124,7 +124,7 @@ Tests run on both Python 3.11 and 3.12 via `ubuntu-latest` GitHub Actions. Docke
 
 ## Deployment (IAC)
 
-The infrastructure lives in `../iac`. u4u-engine deploys to a self-hosted RKE2 Kubernetes cluster:
+The infrastructure lives in `../iac` (the [`hwcopeland/iac`](https://github.com/hwcopeland/iac) repo). u4u-engine deploys to a self-hosted RKE2 Kubernetes cluster. **Full ops runbook + deployment troubleshooting: [`docs/server-management.md`](docs/server-management.md).**
 
 - **Namespace**: `theswamp` — manifests at `../iac/rke2/tooling/flux/theswamp/`
 - **Public URL**: `https://flmanbiosci.net` — `/api/v1/*` → backend API (prefix rewritten to `/`), `/*` → frontend
