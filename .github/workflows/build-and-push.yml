@@ -7,10 +7,11 @@ on:
 
 jobs:
   build-push:
-    # Self-hosted runner on the hwcopeland server — keeps deployment
-    # image builds inside our own infrastructure (registry, secrets,
-    # build cache all stay on-prem).
-    runs-on: [self-hosted, hwcopeland]
+    # GitHub-hosted runner. The self-hosted `[self-hosted, hwcopeland]` runner
+    # this org's jobs targeted was never registered to Florida-Man-Bioscience,
+    # so builds queued indefinitely (24h auto-cancel). zot.hwcopeland.net is
+    # publicly reachable + push-authenticated, so a hosted runner works fine.
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
