@@ -9,9 +9,11 @@
 
 ## Executive summary
 
-The `peptideIQ` engine ships 23 panels covering BPC‑157, TB‑500, Thymosin Beta‑4, GHK‑Cu, MOTS‑c, CJC‑1295, Ipamorelin, GHRP‑2, MGF, AOD‑9604, Thymosin Alpha‑1, Epitalon, Selank, Semax, DSIP, Dihexa, Kisspeptin, Melanotan II, LL‑37, KPV, Semaglutide, Tirzepatide, and Liraglutide.[^peptidelist] Each panel mixes (a) cheap, commoditized clinical chemistry[^clinchem], (b) mid‑cost hormone immunoassays[^immunoassay], and (c) a long tail of specialty assays, imaging, and procedure‑based readouts that drive the bulk of the per‑subject cost.
+The `peptideIQ` engine ships 23 panels covering BPC‑157, TB‑500, Thymosin Beta‑4, GHK‑Cu, MOTS‑c, CJC‑1295, Ipamorelin, GHRP‑2, MGF, AOD‑9604, Thymosin Alpha‑1, Epitalon, Selank, Semax, DSIP, Dihexa, Kisspeptin, Melanotan II, LL‑37, KPV, Semaglutide, Tirzepatide, and Liraglutide.[^peptidelist] Each panel mixes (a) cheap, commoditized clinical chemistry[^clinchem], (b) mid‑cost hormone immunoassays[^immunoassay], and (c) a long tail of specialty assays, imaging, and procedure‑based readouts that drive the bulk of the per‑participant cost.
 
-The single biggest financial lever is **tier discipline** — letting the routine safety markers fall on the LabCorp/Quest physician‑account[^physicianaccount] price sheet (single‑digit dollars per analyte[^analyte]) while reserving research‑grade ELISA[^elisa] / multiplex[^multiplex], imaging, and polysomnography[^psg] for milestone visits. A reasonable per‑subject envelope for a 12‑week monitored peptide program is roughly **\$300–\$500 (lean), \$900–\$1,800 (typical), or \$3,500–\$8,000+ (premium)** depending on imaging frequency, cytokine[^cytokine] multiplexing, and the inclusion of MRI[^mri] or PSG.
+**Study context.** These figures describe the assay, imaging, and logistics economics of a prospective, observational, multi‑site cohort study. FMB partners with peptide‑prescribing clinics and enrolls consenting adults who have already been prescribed peptide therapy by their own clinicians (treatment‑as‑usual). FMB tracks each participant's biomarker trajectory over time against the engine's genomic response predictions; it does not prescribe, supply, dose, or direct any peptide. Every cost below is an observational‑tracking cost (assays, imaging, specimen logistics, data capture), not a cost of supplying drug.
+
+The single biggest financial lever is **tier discipline** — letting the routine safety markers fall on the LabCorp/Quest physician‑account[^physicianaccount] price sheet (single‑digit dollars per analyte[^analyte]) while reserving research‑grade ELISA[^elisa] / multiplex[^multiplex], imaging, and polysomnography[^psg] for milestone visits. A reasonable per‑participant envelope for a 12‑week observational tracking program is roughly **\$300–\$500 (lean), \$900–\$1,800 (typical), or \$3,500–\$8,000+ (premium)** depending on imaging frequency, cytokine[^cytokine] multiplexing, and the inclusion of MRI[^mri] or PSG.
 
 The biggest business risks are *not* the assay costs — they are (1) the **CLIA[^clia] / LDT[^ldt] regulatory perimeter** around research markers used clinically, (2) **state-by-state direct‑to‑consumer[^dtc] lab restrictions** (NY, NJ, RI, MD, CA gating), (3) compounded‑peptide[^compounding] enforcement (the FDA's 503A/503B[^503] activity around BPC‑157, CJC‑1295, ipamorelin, MOTS‑c, etc.), and (4) **WADA[^wada] / sports anti‑doping** exposure for the GH‑axis[^ghaxis] and erythropoiesis[^erythropoiesis]‑adjacent peptides.
 
@@ -135,9 +137,9 @@ These should be flagged in any clinical product as **mechanistic markers from th
 
 ---
 
-## 3 · Per‑peptide cost profile (12‑week monitoring program)
+## 3 · Per‑peptide cost profile (12‑week observational tracking program)
 
-These envelopes assume **baseline + week 4 + week 12** sampling and physician‑account or marketplace pricing. They explicitly *exclude* the peptide itself, prescriber visits, and shipping.
+These envelopes assume **baseline + week 4 + week 12** sampling of participants already prescribed the peptide by their own clinicians (treatment‑as‑usual), at physician‑account or marketplace pricing. They explicitly *exclude* the peptide itself (which FMB never supplies), prescriber visits, and shipping.
 
 | Peptide | Lean panel cost (3 visits) | Typical | Premium (adds imaging/multiplex) | Primary cost drivers |
 |---|---|---|---|---|
@@ -176,7 +178,7 @@ These envelopes assume **baseline + week 4 + week 12** sampling and physician‑
 - Imaging via freestanding partners (DXA, MSK US, MRI).
 - Multiplex / ELISA via a CRO[^cro] biomarker core (Columbia‑style \$5–\$30 / sample plus kit).
 - **Up‑front capex[^capex]: <\$50K** (EDC, ePRO licenses, courier kits, freezer at a clinic site).
-- **Per‑subject cost: full Tier 2.7 table above.**
+- **Per‑participant cost: full Tier 2.7 table above.**
 
 ### 4.2 In‑source the high‑volume immunoassays
 - Plate reader / luminometer: \$15K–\$30K.
@@ -195,10 +197,10 @@ These envelopes assume **baseline + week 4 + week 12** sampling and physician‑
 - Polysomnography hardware: **\$15K–\$40K** for HSAT capacity; in‑lab PSG suite is a 7‑figure build.
 - MRI: **not feasible** to in‑source — pay per scan.
 
-**Recommended capital path for a peptide monitoring business:**
+**Recommended capital path for a peptide observational tracking program:**
 1. Start fully out‑sourced.
-2. At ~250–500 active subjects, in‑source DXA (covers CJC‑1295, Ipamorelin, MGF, AOD‑9604 — four of the highest‑volume panels).
-3. At ~1,000 active subjects with cytokine‑heavy panels (BPC‑157, KPV, MOTS‑c, Thymosin α1, Semax), in‑source MSD multiplex.
+2. At ~250–500 active participants, in‑source DXA (covers CJC‑1295, Ipamorelin, MGF, AOD‑9604 — four of the highest‑volume panels).
+3. At ~1,000 active participants with cytokine‑heavy panels (BPC‑157, KPV, MOTS‑c, Thymosin α1, Semax), in‑source MSD multiplex.
 4. Flow cytometry only if Thymosin α1 / immunology becomes a flagship line.
 5. Never in‑source MRI, PSG (in‑lab), or HBV/HCV PCR — they are scale‑disadvantaged.
 
@@ -224,14 +226,16 @@ These envelopes assume **baseline + week 4 + week 12** sampling and physician‑
 | Transvaginal US ovulation tracking | Yes inside a fertility benefit; cash outside. |
 | Patient‑reported scales | Bundled into E&M[^em] code (97 series); not separately billable. |
 
-**Practical implication:** essentially the *entire* off‑label peptide monitoring business is a **cash‑pay / membership** model. Insurance optionality matters only where the indication[^indication] crosses into a recognized FDA‑approved use (GLP‑1s[^glp1] for T2DM[^t2dm]/obesity; Thymosin α1 in chronic viral hepatitis ex‑US; Kisspeptin in hypogonadism[^hypogonadism] workup; ipamorelin/CJC for documented adult GHD[^ghd]).
+**Practical implication:** essentially the *entire* off‑label peptide biomarker tracking effort is a **cash‑pay / research‑funded** exercise rather than a reimbursable one. Insurance optionality matters only where the indication[^indication] crosses into a recognized FDA‑approved use (GLP‑1s[^glp1] for T2DM[^t2dm]/obesity; Thymosin α1 in chronic viral hepatitis ex‑US; Kisspeptin in hypogonadism[^hypogonadism] workup; ipamorelin/CJC for documented adult GHD[^ghd]).
 
-### 5.2 Pricing models that fit the panel structure
+### 5.2 Cost‑recovery models that fit the panel structure
 
-1. **Per‑draw cash menu** — clinic publishes \$X per analyte; user picks. Highest gross margin, lowest adherence.
-2. **Subscription / membership** — \$99–\$299 / mo gates a quarterly panel + telehealth. Best fit for the chronic peptides (CJC‑1295, MOTS‑c, Epitalon, GLP‑1s).
-3. **Outcome‑bundled package** — e.g., "12‑week BPC‑157 program: 3 panels + 2 US + telehealth = \$1,495." Cleanest gross margin storytelling.
-4. **Peptide + biomarker bundle priced as one SKU[^sku]** — the compounder ships the vial *and* the dried blood spot[^dbs] kit; the biomarker becomes a loss‑leader for compliance.
+These describe how the *tracking* cost can be structured; the peptide itself is prescribed and dispensed independently by the participant's own clinician, so none of these models involve FMB supplying or co‑selling drug.
+
+1. **Per‑draw menu** — the partner clinic publishes \$X per analyte; the participant (or study) selects. Highest per‑draw margin, lowest longitudinal completeness.
+2. **Subscription / membership tracking** — \$99–\$299 / mo gates a quarterly panel + telehealth review of results. Best fit for the chronic peptides (CJC‑1295, MOTS‑c, Epitalon, GLP‑1s).
+3. **Panel‑bundled package** — e.g., "12‑week BPC‑157 tracking package: 3 panels + 2 US + telehealth review = \$1,495." Cleanest cost storytelling.
+4. **Clinic‑bundled tracking kit** — at a partner clinic the prescription and dispensing are handled independently by the clinic (or its compounding pharmacy); FMB supplies only the biomarker / dried blood spot[^dbs] kit[^sku] alongside the participant's existing prescription, so tracking travels with the therapy they are already receiving. FMB never ships or co‑sells the vial.
 
 ### 5.3 Unit economics (representative typical‑tier package)
 - Pass‑through cost: \$550 (per §3).
@@ -297,12 +301,12 @@ The engine's `timeframe_weeks_min/max` field and the `tau_weeks`[^tau] constants
 - **Medium (τ = 3–6 weeks):** IGF‑1, IGFBP‑3, IL‑6, pain VAS, HAM‑A, GAD‑7, HOMA‑IR → baseline, 4 w, 12 w cadence is right.
 - **Slow (τ = 8–12 weeks):** HbA1c, lean body mass, hair density, MoCA → only worth measuring at baseline, 12 w, 24 w.
 
-**Cost optimization:** Drop redundant intermediate timepoints on slow markers. A 24‑week HbA1c‑heavy GLP‑1 program does not need 4‑week HbA1c (it has not moved); it needs 4‑week tolerability + 12 w / 24 w HbA1c. That single change can take a Semaglutide/Tirzepatide protocol from \$450 to \$300 per subject without losing signal.
+**Cost optimization:** Drop redundant intermediate timepoints on slow markers. A 24‑week HbA1c‑heavy GLP‑1 program does not need 4‑week HbA1c (it has not moved); it needs 4‑week tolerability + 12 w / 24 w HbA1c. That single change can take a Semaglutide/Tirzepatide protocol from \$450 to \$300 per participant without losing signal.
 
 ### 7.3 Data infrastructure
 - The engine emits structured `BiomarkerMeasurement` records with `direction`, `effect_size`[^effectsize], and `tau_weeks`. That is **already the right schema** for a Bayesian responder model[^bayes] (see [`tracking/bayes.py`](https://github.com/florida-man-bioscience/u4u-engine/blob/main/engine/tracking/bayes.py)).
-- The headline business asset is **the longitudinal database that pairs peptide + dose + biomarker trajectory + outcome**. Each enrolled subject contributing 3 timepoints is one data point in a precision‑peptide model that does not exist anywhere else outside Phase‑2/3 industry trials.
-- Plan the regulatory pathway so that this data set is usable for an eventual IND[^ind] or real‑world‑evidence[^rwe] package. That means GCP[^gcp]‑lite SOPs, signed consents that cover secondary use, and de‑identification compatible with HIPAA Safe Harbor[^safeharbor].
+- The headline research asset is **the longitudinal database that pairs peptide + dose + biomarker trajectory + outcome**. Each enrolled participant contributing 3 timepoints is one data point in a precision‑peptide model that does not exist anywhere else outside Phase‑2/3 industry trials.
+- Plan the data pathway so that this observational data set is usable as a real‑world‑evidence[^rwe] package. Because FMB only observes treatment‑as‑usual and never supplies, doses, or directs any peptide, the study sits outside IND[^ind] (21 CFR 312.2(b)) and is a minimal‑risk observational design eligible for expedited review under the UF single IRB. The operative requirements are **informed consent plus HIPAA authorization obtained at each partner clinic**, a **BAA/DUA** governing PHI flow from the clinic to FMB, GCP[^gcp]‑lite SOPs, consent language covering secondary use, and de‑identification compatible with HIPAA Safe Harbor[^safeharbor]. The captured biomarker data is **research‑grade, not CLIA[^clia] clinical‑reportable**.
 
 ### 7.4 Liability hot spots
 1. **Melanotan II** dysplastic nevus / melanoma — a single missed melanoma in a tanning user is an existential lawsuit.
@@ -311,16 +315,16 @@ The engine's `timeframe_weeks_min/max` field and the `tau_weeks`[^tau] constants
 4. **GLP‑1 class** — medullary thyroid carcinoma / MEN2[^men2] contraindication[^contraindication]; pancreatitis; gallbladder; gastroparesis under anesthesia.
 5. **Semax / Dihexa / Selank** — cognitive enhancement claims fall under FTC[^ftc]/FDA misleading‑claim risk if marketed beyond "off‑label research".
 
-The engine already encodes the right surveillance markers in its `safety_markers` tuples; the operational gap is consenting and SOPs, not measurements.
+The engine already encodes the right surveillance markers in its `safety_markers` tuples; the operational gap is informed consent, HIPAA authorization, and SOPs, not measurements. Because peptides are prescribed and dosed by the participant's own clinician, treatment‑related safety decisions remain with that clinician; FMB observes and records.
 
 ---
 
 ## 8 · Recommended scorecard for prioritizing the panels
 
-If the goal is to commercialize a subset of the 23 panels first, sort by **(signal density × reimbursement support × low capital intensity × tolerable regulatory profile)**.[^signaldensity]
+If the goal is to stand up observational tracking for a subset of the 23 panels first, sort by **(signal density × reimbursement support × low capital intensity × tolerable regulatory profile)**.[^signaldensity]
 
 **Top quartile (build first):**
-- **Semaglutide / Tirzepatide / Liraglutide** — FDA‑approved, reimbursable, cheap biomarkers, mainstream demand. Build the metabolic monitoring product here.
+- **Semaglutide / Tirzepatide / Liraglutide** — FDA‑approved, reimbursable, cheap biomarkers, mainstream prescribing. Build the metabolic tracking cohort here.
 - **CJC‑1295, Ipamorelin** — high consumer demand, well‑understood IGF‑1 readout, DXA fits in‑sourcing path, but FDA / WADA exposure.
 - **BPC‑157** — strong off‑label demand, cheap MSK ultrasound + VAS endpoints, but FDA 503A category‑2 risk.
 - **MOTS‑c** — cheap metabolic panel, growing aging market.
@@ -356,7 +360,7 @@ The peptide panels in `u4u-engine` are **mostly cheap to measure but expensive t
 ## Footnotes
 
 [^peptide]: **Peptide** — a short chain of amino acids (a small protein fragment). Therapeutic peptides mimic or modulate signaling molecules in the body.
-[^panel]: **Panel** — a predefined bundle of lab/imaging measurements ordered together to monitor one therapy (here, one per peptide).
+[^panel]: **Panel** — a predefined bundle of lab/imaging measurements tracked together for one therapy (here, one per peptide).
 [^biomarker]: **Biomarker** — a measurable biological indicator (a blood level, image metric, or score) used to track a drug's effect or safety.
 [^assay]: **Assay** — a laboratory test that detects or quantifies a specific substance in a sample.
 [^peptidelist]: **The 23 peptides** — investigational/therapeutic peptides grouped by use: tissue repair (BPC‑157, TB‑500/Thymosin β4, GHK‑Cu, MGF, LL‑37, KPV), growth-hormone axis (CJC‑1295, Ipamorelin, GHRP‑2, AOD‑9604, MOTS‑c), immune (Thymosin α1), longevity/neuro (Epitalon, Selank, Semax, DSIP, Dihexa), reproductive/cosmetic (Kisspeptin, Melanotan II), and the FDA-approved GLP‑1 metabolic drugs (Semaglutide, Tirzepatide, Liraglutide).
