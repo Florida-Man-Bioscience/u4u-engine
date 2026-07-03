@@ -25,10 +25,27 @@ services:
       # start. Idempotent: skipped on restart if patients already exist.
       # Unset (or remove this line) to keep tracking empty in production.
       SEED_DEMO_DATA: "1"
+      # HealthKit ingestion datastore. Points at the db service below. Unset to
+      # disable health ingestion (endpoints return 503).
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://u4u:u4u@db:5432/u4u}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
       - ./data:/app/data
+    depends_on:
+      - db
+    restart: unless-stopped
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: u4u
+      POSTGRES_PASSWORD: u4u
+      POSTGRES_DB: u4u
+    ports:
+      # Exposed on the host so you can run scripts/create_device_token.py and psql.
+      - "5432:5432"
+    volumes:
+      - u4u_pgdata:/var/lib/postgresql/data
     restart: unless-stopped
   frontend:
     build:
@@ -51,3 +68,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  u4u_pgdata:
