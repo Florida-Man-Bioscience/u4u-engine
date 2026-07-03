@@ -25,10 +25,45 @@ services:
       # start. Idempotent: skipped on restart if patients already exist.
       # Unset (or remove this line) to keep tracking empty in production.
       SEED_DEMO_DATA: "1"
+      # Point the engine at the local Postgres service below. The engine
+      # auto-migrates on startup (db/migrate.py) and falls back to SQLite
+      # when DATABASE_URL is unset — so removing `postgres` from this compose
+      # file reverts to the previous file-backed behavior with no code change.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://u4u:u4u_dev_password@postgres:5432/u4u?sslmode=disable}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
       - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Local development Postgres. Mirrors the production StatefulSet
+  # (postgres:16-alpine, db/user `u4u`) defined in the iac repo at
+  # rke2/tooling/flux/theswamp/postgres.yaml, so DATABASE_URL-dependent code
+  # exercises the same engine locally. NOT for production — production runs
+  # the in-cluster StatefulSet with a Bitwarden-sourced password.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: u4u
+      POSTGRES_USER: u4u
+      # Dev-only password. The production password comes from the
+      # u4u-postgres-secret ExternalSecret (Bitwarden), never hard-coded.
+      POSTGRES_PASSWORD: u4u_dev_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      # Exposed on the host so you can psql in / point a native iOS-sim build
+      # at localhost:5432 during development.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U u4u -d u4u"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
   frontend:
     build:
@@ -57,3 +92,8 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  # Persists the dev Postgres data across `docker compose down`/`up`.
+  # `docker compose down -v` wipes it for a clean slate.
+  pgdata:
