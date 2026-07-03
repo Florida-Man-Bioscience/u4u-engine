@@ -29,8 +29,8 @@ services:
       # auto-migrates on startup (db/migrate.py) and falls back to SQLite
       # when DATABASE_URL is unset — so removing `postgres` from this compose
       # file reverts to the previous file-backed behavior with no code change.
-      # The HealthKit ingestion module (engine/health) derives its async
-      # (asyncpg) URL from this same value, so both DB layers share one Postgres.
+      # The HealthKit ingestion module (engine/healthkit) uses this same sync
+      # connection via db/pool.py — one Postgres for the whole engine.
       DATABASE_URL: "${DATABASE_URL:-postgresql://u4u:u4u_dev_password@postgres:5432/u4u?sslmode=disable}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.

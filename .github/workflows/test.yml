@@ -45,10 +45,7 @@ jobs:
         # psycopg2-binary is required since the Postgres migration: db/pool.py
         # imports psycopg2 at module load and tests/conftest.py pulls it in, so
         # without it pytest errors during collection (matches requirements.txt).
-        # sqlalchemy + asyncpg back engine/health (HealthKit ingestion), which
-        # api.py imports at module load — so they're likewise needed at
-        # collection time even though the datastore only activates with a DB.
-        run: pip install pytest pytest-asyncio responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary "sqlalchemy[asyncio]>=2.0" "asyncpg>=0.29"
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
 
       - name: Run tests
         run: pytest tests/ -v
