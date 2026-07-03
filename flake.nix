@@ -17,6 +17,7 @@
           (python.withPackages (ps: with ps; [
             # Testing
             pytest
+            pytest-asyncio
             responses
             requests
             tenacity

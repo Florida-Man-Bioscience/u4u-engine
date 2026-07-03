@@ -18,7 +18,6 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -50,7 +49,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    tokens: Mapped[list["DeviceToken"]] = relationship(
+    tokens: Mapped[list[DeviceToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
