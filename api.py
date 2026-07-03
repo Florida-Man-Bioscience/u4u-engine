@@ -141,6 +141,11 @@ from engine.users.api import router as _users_router  # noqa: E402
 
 app.include_router(_users_router)
 
+# ── HealthKit ingestion (peptodyssey iOS app → healthkit_* tables) ───────────
+from engine.healthkit.api import router as _healthkit_router  # noqa: E402
+
+app.include_router(_healthkit_router)
+
 # ── Job store ─────────────────────────────────────────────────────────────────
 # Schema per job:
 #   status     : "pending" | "running" | "done" | "failed"
