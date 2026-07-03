@@ -68,3 +68,15 @@ CREATE TABLE IF NOT EXISTS healthkit_ingestions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_hk_ingestions_subject ON healthkit_ingestions(subject_id, received_at);
+
+-- Interim per-device bearer tokens (mirrors db/migrations/009_healthkit_device_tokens.sql).
+-- Raw token shown once at mint; only its SHA-256 hex is stored. Optional
+-- subject_id binding: NULL = may write any subject.
+CREATE TABLE IF NOT EXISTS healthkit_device_tokens (
+    token_hash    TEXT PRIMARY KEY,
+    label         TEXT,
+    subject_id    TEXT,
+    revoked       INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    last_used_at  TEXT
+);
