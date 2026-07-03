@@ -26,7 +26,29 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+def _normalize_url(url: str) -> str:
+    """Coerce a standard Postgres URL into an asyncpg SQLAlchemy URL.
+
+    Managed hosts (Render, Heroku, Fly) hand out ``postgres://`` or
+    ``postgresql://`` URLs, often with a psycopg2-style ``?sslmode=`` param that
+    asyncpg rejects. Normalize the driver and drop that param so the same
+    DATABASE_URL works locally and in production.
+    """
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://") and "+asyncpg" not in url.split("://", 1)[0]:
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+    # asyncpg uses `ssl`, not libpq's `sslmode` — strip it if present.
+    if "sslmode=" in url:
+        base, _, query = url.partition("?")
+        kept = "&".join(p for p in query.split("&") if not p.startswith("sslmode="))
+        url = base + (f"?{kept}" if kept else "")
+    return url
+
+
+DATABASE_URL = _normalize_url(os.getenv("DATABASE_URL", "").strip())
 HEALTH_DB_ENABLED = bool(DATABASE_URL)
 
 _engine: AsyncEngine | None = None

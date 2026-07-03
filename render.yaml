@@ -1,0 +1,49 @@
+# render.yaml — Render Blueprint for the U4U Engine + HealthKit datastore
+# ======================================================================
+# One-click-ish deploy: in the Render dashboard, New → Blueprint, point it at
+# this repo. Provisions a managed Postgres and the API from the existing
+# Dockerfile, wired together via DATABASE_URL.
+#
+# After the first deploy:
+#   1. Apply the schema (Render shell or psql):
+#        psql "$DATABASE_URL" -f db/migrations/004_healthkit_ingestion.sql
+#      (or rely on the API's create_all-on-boot, which runs when DATABASE_URL is set)
+#   2. Mint a device token:
+#        DATABASE_URL=<external db url> python scripts/create_device_token.py you@example.com --device "iPhone"
+#   3. In the app's Backend settings, set Base URL to https://<service>.onrender.com
+#      and paste the token.
+
+databases:
+  - name: u4u-db
+    databaseName: u4u
+    user: u4u
+    # Pick a plan in the dashboard if this name changes; free PG expires after 90 days.
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: u4u-engine
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Async URL is derived automatically: engine/health/db.py normalizes the
+      # postgres:// connection string Render provides into postgresql+asyncpg://.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: u4u-db
+          property: connectionString
+      # The Dockerfile binds :8000; tell Render to route to it.
+      - key: PORT
+        value: "8000"
+      # Allow the app (native client, no browser origin) — set your frontend origin(s) if needed.
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Optional secrets — set in the dashboard, not committed.
+      - key: NCBI_API_KEY
+        sync: false
+      - key: JOB_STORE_KEY
+        sync: false
