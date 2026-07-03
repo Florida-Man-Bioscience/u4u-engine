@@ -3,8 +3,7 @@ Tests for engine/genome_build.py — genome build detection and gating.
 """
 import pytest
 
-from engine.genome_build import detect_build, assert_supported_build, SUPPORTED_BUILD
-
+from engine.genome_build import SUPPORTED_BUILD, assert_supported_build, detect_build
 
 _VCF38 = (
     b"##fileformat=VCFv4.2\n"

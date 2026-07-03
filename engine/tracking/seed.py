@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import math
 import random
-import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -30,12 +29,12 @@ from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
 from . import service
-from .biomarker_params import BIOMARKER_PARAMS, Params, params_for
+from .biomarker_params import BIOMARKER_PARAMS as BIOMARKER_PARAMS  # re-export (compat)
+from .biomarker_params import Params, params_for
 from .genetics import (
     generate_synthetic_profile,
     responder_strength_from_profile,
 )
-
 
 # ── Baselines + effect knobs ────────────────────────────────────────────────
 # BIOMARKER_PARAMS / Params now live in engine/tracking/biomarker_params.py
@@ -110,7 +109,7 @@ PATIENT_DEMOGRAPHICS = [
 # ── Public entry points ─────────────────────────────────────────────────────
 
 def seed(
-    conn: sqlite3.Connection,
+    conn,
     *,
     rng: random.Random | None = None,
     n_patients: int = 12,
@@ -139,7 +138,7 @@ def seed(
         conn.commit()
 
     patients = []
-    profiles: dict[str, "GeneticProfile"] = {}  # noqa: F821 — forward use only
+    profiles: dict[str, GeneticProfile] = {}  # noqa: F821 — forward use only
     for i in range(n_patients):
         sex, byr = PATIENT_DEMOGRAPHICS[i % len(PATIENT_DEMOGRAPHICS)]
         if i >= len(PATIENT_DEMOGRAPHICS):

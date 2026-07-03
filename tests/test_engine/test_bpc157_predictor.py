@@ -8,13 +8,12 @@ assignment, biomarker selection, and summary generation.
 import pytest
 
 from engine.annotators.bpc157_predictor import (
-    predict_bpc157_response,
-    generate_bpc157_summary,
-    BPC157_PATHWAY_GENES,
-    BPC157_MODIFIER_RSIDS,
     _DISCLAIMER,
+    BPC157_MODIFIER_RSIDS,
+    BPC157_PATHWAY_GENES,
+    generate_bpc157_summary,
+    predict_bpc157_response,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -25,7 +25,6 @@ Public interface
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -35,12 +34,12 @@ class ConsumerSummary:
     consequence_plain: str
     rarity_plain:      str
     clinvar_plain:     str
-    disease_name:      Optional[str]
-    condition_key:     Optional[str]
+    disease_name:      str | None
+    condition_key:     str | None
     action_hint:       str
     tier:              str
-    zygosity_plain:    Optional[str]
-    carrier_note:      Optional[str]
+    zygosity_plain:    str | None
+    carrier_note:      str | None
     # "clinvar" when the tier is backed by a ClinVar clinical classification;
     # "heuristic_priority" when it is only an internal prioritization signal
     # (predicted molecular impact + rarity) and NOT a clinical determination.
@@ -98,7 +97,7 @@ def _consequence_to_plain(consequence: str) -> str:
 # gnomAD AF → plain English
 # ---------------------------------------------------------------------------
 
-def _af_to_rarity(af: Optional[float]) -> str:
+def _af_to_rarity(af: float | None) -> str:
     if af is None:
         return "not yet observed in large public genome databases"
     if af == 0:
@@ -118,7 +117,7 @@ def _af_to_rarity(af: Optional[float]) -> str:
 # ClinVar → plain English
 # ---------------------------------------------------------------------------
 
-def _clinvar_to_plain(clinvar: Optional[str], disease: Optional[str]) -> str:
+def _clinvar_to_plain(clinvar: str | None, disease: str | None) -> str:
     if not clinvar:
         return "has no specific clinical classification in ClinVar"
 
@@ -149,7 +148,7 @@ def _clinvar_to_plain(clinvar: Optional[str], disease: Optional[str]) -> str:
 # Zygosity → plain English
 # ---------------------------------------------------------------------------
 
-def _zygosity_to_plain(zygosity: Optional[str]) -> Optional[str]:
+def _zygosity_to_plain(zygosity: str | None) -> str | None:
     if not zygosity or zygosity == "unknown":
         return None
     if zygosity == "heterozygous":

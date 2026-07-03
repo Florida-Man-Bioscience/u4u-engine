@@ -17,7 +17,7 @@ generic stems; brand names should be normalized before lookup.
 """
 from __future__ import annotations
 
-from ..types import Phenotype, StarAlleleCall
+from ..types import StarAlleleCall
 from .phenotype import score_to_phenotype
 
 # Inhibitor strength: 1.0 = no effect, 0.5 = moderate, 0.0 = strong

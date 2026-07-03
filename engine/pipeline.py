@@ -43,27 +43,34 @@ Public interface
     annotate_variant(v: dict) -> dict   — usable alone for cache-aware workers
 """
 
-from .parsers      import parse_file
-from .validators   import validate_file_bytes
-from .genome_build import detect_build, plan_build_handling
-from .liftover     import liftover_available, lift_variants_to_grch38
-from .quality_filter import apply_quality_filter, filter_stats
-from .filters      import filter_variants, filter_variants_by_bed
-from .rsid_resolver import resolve_rsids
-from .deduplicator import deduplicate
 import concurrent.futures
-from .annotators.vep     import (
-    fetch_vep, select_canonical_consequence, select_insilico, select_protein_change,
+
+from .acmg import (
+    AcmgConfig,
+    classify_acmg,
+    load_known_pathogenic_aa,
+    load_lof_mechanism_genes,
+    summarize_acmg,
 )
 from .annotators.clinvar import fetch_clinvar
-from .annotators.gnomad  import fetch_gnomad
+from .annotators.gnomad import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
-from .scoring  import score_variant
-from .summary  import generate_summary
-from .acmg     import (
-    classify_acmg, AcmgConfig, load_lof_mechanism_genes,
-    load_known_pathogenic_aa, summarize_acmg,
+from .annotators.vep import (
+    fetch_vep,
+    select_canonical_consequence,
+    select_insilico,
+    select_protein_change,
 )
+from .deduplicator import deduplicate
+from .filters import filter_variants, filter_variants_by_bed
+from .genome_build import detect_build, plan_build_handling
+from .liftover import lift_variants_to_grch38, liftover_available
+from .parsers import parse_file
+from .quality_filter import apply_quality_filter, filter_stats
+from .rsid_resolver import resolve_rsids
+from .scoring import score_variant
+from .summary import generate_summary
+from .validators import validate_file_bytes
 
 # Built once: the curated LoF-mechanism gene set (lets PVS1 be counted) and the
 # known-pathogenic-AA reference (lets PS1/PM5 be applied). Both default to
@@ -74,17 +81,18 @@ _ACMG_CONFIG = AcmgConfig(
 )
 
 # V3 annotators
-from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
-from .annotators.receptor_mapper import map_receptors, generate_receptor_summary
-from .annotators.prs_calculator import calculate_prs
-from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary
-from .annotators.peptide_mapper import map_peptide_coverage
-from .annotators.uniprot import fetch_uniprot
-from .annotators.pharmgkb import fetch_pharmgkb
+import logging
+
+from .annotators.bpc157_predictor import predict_bpc157_response
 from .annotators.gwas_catalog import fetch_gwas
+from .annotators.kegg_mapper import generate_pathway_summary, map_variants_to_pathways
+from .annotators.peptide_mapper import map_peptide_coverage
+from .annotators.pharmgkb import fetch_pharmgkb
+from .annotators.prs_calculator import calculate_prs
+from .annotators.receptor_mapper import generate_receptor_summary, map_receptors
+from .annotators.uniprot import fetch_uniprot
 from .dossier_generator import generate_dossiers
 
-import logging
 log = logging.getLogger(__name__)
 
 # V3 STR caller (optional — requires BAM + ExpansionHunter binary)
@@ -203,19 +211,19 @@ def run_pipeline(
 
     # ── Step 4: Apply Target Filters ─────────────────────────────────────────
     _progress("Applying targeted filters", 12)
-    
+
     if not filters and not bed_filter:
         panel_filtered = quality_filtered
     else:
         var_set = set() # use id() to deduplicate refs
         panel_filtered = []
-        
+
         if filters:
             list1 = filter_variants(quality_filtered, list(filters), data_dir)
             for v in list1:
                 var_set.add(id(v))
                 panel_filtered.append(v)
-                
+
         if bed_filter:
             list2 = filter_variants_by_bed(quality_filtered, bed_filter, data_dir)
             for v in list2:
@@ -253,14 +261,14 @@ def run_pipeline(
     # Process variants in parallel due to high IO bounds
     total = len(unique_variants)
     final_results = []
-    
+
     _progress(f"Annotating {total} variants...", 30)
 
     def process_variant(v):
         annotated = annotate_variant(v)
         scored = score_variant(annotated)
         summary = generate_summary(scored)
-        
+
         combined = dict(scored)
         combined.update({
             "emoji":             summary.emoji,
@@ -279,7 +287,7 @@ def run_pipeline(
 
         if partial_results is not None:
             partial_results.append(combined)
-            
+
         return combined
 
     completed = 0

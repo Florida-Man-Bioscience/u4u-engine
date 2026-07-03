@@ -74,25 +74,29 @@ Import ONLY from this file. Internal module structure may change.
 __version__ = "1.0.0"
 
 # ── Primary entry point ──────────────────────────────────────────────────────
-from .pipeline import run_pipeline, annotate_variant
-
-# ── Individual pipeline steps ────────────────────────────────────────────────
-from .parsers        import parse_file
-from .validators     import validate_file_bytes, validate_rsid, validate_coordinates
-from .quality_filter import apply_quality_filter, filter_stats
-from .filters        import load_filter_set, filter_variants
-from .rsid_resolver  import resolve_rsid, resolve_rsids
-from .deduplicator   import deduplicate
-from .scoring        import score_variant, Tier
-from .summary        import generate_summary, ConsumerSummary
+from .annotators.bpc157_predictor import (
+    filter_bpc157_relevant,
+    generate_bpc157_summary,
+    predict_bpc157_response,
+)
+from .annotators.clinvar import fetch_clinvar
+from .annotators.gnomad import fetch_gnomad
+from .annotators.myvariant import fetch_myvariant
+from .annotators.peptide_mapper import generate_peptide_summary, map_peptide_coverage
 
 # ── Individual annotators ────────────────────────────────────────────────────
-from .annotators.vep       import fetch_vep, select_canonical_consequence
-from .annotators.clinvar   import fetch_clinvar
-from .annotators.gnomad    import fetch_gnomad
-from .annotators.myvariant import fetch_myvariant
-from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary, filter_bpc157_relevant
-from .annotators.peptide_mapper import map_peptide_coverage, generate_peptide_summary
+from .annotators.vep import fetch_vep, select_canonical_consequence
+from .deduplicator import deduplicate
+from .filters import filter_variants, load_filter_set
+
+# ── Individual pipeline steps ────────────────────────────────────────────────
+from .parsers import parse_file
+from .pipeline import annotate_variant, run_pipeline
+from .quality_filter import apply_quality_filter, filter_stats
+from .rsid_resolver import resolve_rsid, resolve_rsids
+from .scoring import Tier, score_variant
+from .summary import ConsumerSummary, generate_summary
+from .validators import validate_coordinates, validate_file_bytes, validate_rsid
 
 __all__ = [
     # Pipeline

@@ -12,8 +12,8 @@ fresh, stale, or unavailable.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable
 
 from .sources import (
     fetch_docket_summary,
@@ -26,22 +26,40 @@ from .store import engine_covered_slugs, load_events, load_peptides
 log = logging.getLogger(__name__)
 
 
-def _live_for_peptide(peptide: dict, executor: ThreadPoolExecutor) -> dict:
-    """Run the 3 per-peptide live sources in parallel."""
-    tasks: dict[str, Callable[[], dict]] = {
-        "clinicaltrials": lambda: fetch_trials(peptide["clinicaltrials_search_term"]),
-        "openfda": lambda: fetch_openfda(peptide["openfda_search_term"]),
-        "federal_register": lambda: fetch_federal_register(peptide["federal_register_search_term"]),
-    }
-    futures = {executor.submit(fn): name for name, fn in tasks.items()}
-    out: dict[str, dict] = {}
-    for fut in as_completed(futures):
-        name = futures[fut]
-        try:
-            out[name] = fut.result()
-        except Exception as exc:
-            log.warning("source %s failed for %s: %s", name, peptide["slug"], exc)
-            out[name] = {"data": None, "fetched_at": None, "status": "unavailable", "source": name}
+_SOURCE_FETCHERS: dict[str, tuple[str, Callable[[str], dict]]] = {
+    "clinicaltrials": ("clinicaltrials_search_term", fetch_trials),
+    "openfda": ("openfda_search_term", fetch_openfda),
+    "federal_register": ("federal_register_search_term", fetch_federal_register),
+}
+
+
+def _fan_out_live(peptides: list[dict], max_workers: int) -> dict[str, dict[str, dict]]:
+    """
+    Run every (peptide × source) live fetch in a single executor.
+
+    A nested per-peptide ThreadPoolExecutor would serialise across peptides
+    (one batch of 3 in flight at a time). Flattening means the dashboard's
+    cold-cache latency is roughly one upstream round-trip, not N of them.
+    """
+    out: dict[str, dict[str, dict]] = {p["slug"]: {} for p in peptides}
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures: dict = {}
+        for p in peptides:
+            for name, (term_key, fetch_fn) in _SOURCE_FETCHERS.items():
+                fut = ex.submit(fetch_fn, p[term_key])
+                futures[fut] = (p["slug"], name)
+        for fut in as_completed(futures):
+            slug, name = futures[fut]
+            try:
+                out[slug][name] = fut.result()
+            except Exception as exc:
+                log.warning("source %s failed for %s: %s", name, slug, exc)
+                out[slug][name] = {
+                    "data": None,
+                    "fetched_at": None,
+                    "status": "unavailable",
+                    "source": name,
+                }
     return out
 
 
@@ -61,27 +79,31 @@ def _summary_stats(peptides: list[dict]) -> dict:
     }
 
 
-def build_dashboard_payload(include_live: bool = True, max_workers: int = 6) -> dict:
+def build_dashboard_payload(include_live: bool = True, max_workers: int = 12) -> dict:
     """
     Build the full /regulatory/peptides response.
 
-    Set include_live=False to return only curated data (used in tests, or
-    when serving an SSR placeholder before live data hydrates).
+    Set include_live=False to return only curated data — used by the SSR
+    initial render so the dashboard paints from cached JSON without
+    blocking on any upstream calls.
     """
     data = load_peptides()
     peptides = data["peptides"]
     categories = data["categories"]
     engine_slugs = engine_covered_slugs()
 
-    enriched: list[dict] = []
-    if include_live:
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            for p in peptides:
-                live = _live_for_peptide(p, ex)
-                enriched.append({**p, "engine_covered": p["slug"] in engine_slugs, "live": live})
-    else:
-        for p in peptides:
-            enriched.append({**p, "engine_covered": p["slug"] in engine_slugs, "live": {}})
+    live_by_slug: dict[str, dict[str, dict]] = (
+        _fan_out_live(peptides, max_workers) if include_live else {}
+    )
+
+    enriched = [
+        {
+            **p,
+            "engine_covered": p["slug"] in engine_slugs,
+            "live": live_by_slug.get(p["slug"], {}),
+        }
+        for p in peptides
+    ]
 
     return {
         "categories": categories,

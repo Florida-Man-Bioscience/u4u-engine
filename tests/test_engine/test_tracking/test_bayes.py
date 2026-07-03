@@ -242,7 +242,7 @@ def test_predictive_curve_grows_with_approach():
     )
     means = [p.mean for p in curve.points]
     # Should be monotone non-decreasing for a positive posterior mean.
-    assert all(b >= a - 1e-6 for a, b in zip(means, means[1:]))
+    assert all(b >= a - 1e-6 for a, b in zip(means, means[1:], strict=False))
     # At week 0 mean equals baseline.
     assert math.isclose(means[0], 100.0)
     # At long time the mean approaches baseline * (1 + 0.3) = 130.
@@ -273,5 +273,5 @@ def test_predictive_curve_widens_when_baseline_is_uncertain():
     # New behaviour: baseline uncertainty alone produces width > 0 at w=0.
     assert loose.points[0].hi_95 - loose.points[0].lo_95 > 0
     # And the band is wider than the deterministic version everywhere.
-    for tw, lw in zip(tight.points, loose.points):
+    for tw, lw in zip(tight.points, loose.points, strict=False):
         assert (lw.hi_95 - lw.lo_95) >= (tw.hi_95 - tw.lo_95) - 1e-9

@@ -40,7 +40,6 @@ import argparse
 import os
 import sys
 import time
-from typing import Optional
 
 try:
     import requests
@@ -131,11 +130,11 @@ SLEEP_NO_KEY = 0.34  # ~3 req/s without API key
 SLEEP_WITH_KEY = 0.11  # ~10 req/s with API key
 
 
-def _sleep(api_key: Optional[str]):
+def _sleep(api_key: str | None):
     time.sleep(SLEEP_WITH_KEY if api_key else SLEEP_NO_KEY)
 
 
-def search_clinvar_gene(gene: str, api_key: Optional[str]) -> list[int]:
+def search_clinvar_gene(gene: str, api_key: str | None) -> list[int]:
     """
     Return all ClinVar variation IDs for Pathogenic / Likely Pathogenic
     variants in *gene*.
@@ -163,7 +162,7 @@ def search_clinvar_gene(gene: str, api_key: Optional[str]) -> list[int]:
     return ids
 
 
-def fetch_rsids_for_ids(var_ids: list[int], api_key: Optional[str]) -> set[str]:
+def fetch_rsids_for_ids(var_ids: list[int], api_key: str | None) -> set[str]:
     """
     Fetch ClinVar XML summaries in batches and extract rsIDs.
     """

@@ -25,9 +25,13 @@ Returns
 
 import requests
 from tenacity import (
-    retry, stop_after_attempt, wait_exponential, retry_if_exception_type,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
-from .cache import annotation_cache, MISS
+
+from .cache import MISS, annotation_cache
 
 _BASE = "https://www.ebi.ac.uk/gwas/rest/api"
 _TIMEOUT = 10
@@ -116,11 +120,8 @@ def fetch_gwas(rsid: str) -> dict | None:
             elif odds_ratio is not None:
                 effect_size = f"OR={odds_ratio}"
 
-            # PubMed ID from study link
-            pubmed_id = None
-            study_link = assoc.get("_links", {}).get("study", {}).get("href", "")
-            # We'll extract PubMed ID from the study endpoint if needed
-            # For now, use the study accession
+            # PubMed ID would come from the study endpoint; for now we use the
+            # study accession directly.
             study_accession = assoc.get("studyId")
 
             traits.append({

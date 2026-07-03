@@ -16,12 +16,12 @@ Output: list[StarAlleleCall]
 """
 from __future__ import annotations
 
-from ..types import StarAlleleCall, Phenotype
+from ..types import Phenotype, StarAlleleCall
 from .allele_definitions import (
     ALLELE_FUNCTIONS,
+    ARRAY_LIMITED_GENES,
     DEFINING_VARIANTS,
     PHENOTYPE_BINS,
-    ARRAY_LIMITED_GENES,
 )
 
 

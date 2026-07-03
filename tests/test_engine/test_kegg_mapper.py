@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -25,7 +26,6 @@ from engine.annotators.kegg_mapper import (
     generate_pathway_summary,
     map_variants_to_pathways,
 )
-
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║  TEST: Hardcoded pathway gene sets                                       ║
@@ -282,7 +282,7 @@ class TestKEGGCache:
 
         db_path = tmp_path / "test.db"
         cache = KEGGCache(db_path=db_path)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with sqlite3.connect(str(db_path)) as conn:
             conn.execute(
                 "INSERT INTO pathway_genes VALUES (?, ?, ?)",
@@ -369,7 +369,7 @@ class TestKEGGCacheAPI:
         cache = KEGGCache(db_path=db_path)
 
         # Pre-populate cache with fresh data for ALL pathways so none are stale
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with sqlite3.connect(str(db_path)) as conn:
             for pid in PRIORITY_PATHWAYS:
                 conn.execute(

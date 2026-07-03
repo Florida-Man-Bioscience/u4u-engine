@@ -12,7 +12,6 @@ from engine.regulatory.sources import (
     fetch_trials,
 )
 
-
 # ── ClinicalTrials.gov ────────────────────────────────────────────────────────
 
 _CT_URL = "https://clinicaltrials.gov/api/v2/studies"

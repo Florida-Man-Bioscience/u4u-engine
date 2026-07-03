@@ -1,3 +1,15 @@
+# Generated PDF renders of the Markdown docs (docs-pdf/) — NOT tracked.
+# Rebuild with the pandoc/xelatex batch; source of truth stays the .md files.
+docs-pdf/
+docs-pdf.zip
+docs-pdf.tar.gz
+
+# Generated architecture diagrams / HTML renders at the repo root — NOT tracked.
+/[0-9][0-9]_*.pdf
+/disclosure_flowchart.pdf
+/README.html
+/u4u-engine-internals-architecture.html
+
 # Python
 __pycache__/
 *.py[cod]
@@ -79,8 +91,23 @@ ExportBlock-*/
 one_variant.txt
 small_test.txt
 u4unotionpage.zip
-ExportBlock-*/
-one_variant.txt
-small_test.txt
-u4unotionpage.zip
 gpt-notes.md
+
+# Tier A validation reports are generated artifacts (uploaded as CI artifacts)
+validation/reports/
+
+# Tier A reference data — LOCAL-ONLY / operator-supplied policy.
+# See validation/reference/ACQUISITION.md §4. The truth sets and genome inputs
+# are NOT committed: GeT-RM/Coriell licensing + GIAB file size. What IS tracked:
+# the labeled seed placeholder (getrm_pgx_seed.tsv), the converter, the docs,
+# and the *.example.* templates. Everything below is operator-supplied locally.
+validation/reference/getrm_pgx.tsv
+validation/reference/giab_genotypes.tsv
+validation/reference/panel_sites_grch38.txt
+validation/reference/sample_inputs.tsv
+validation/reference/inputs/
+validation/reference/*.vcf
+validation/reference/*.vcf.gz
+validation/reference/*.bam
+validation/reference/*.bai
+validation/reference/*.xlsx

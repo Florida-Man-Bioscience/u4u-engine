@@ -33,9 +33,6 @@ Public interface
 
 from __future__ import annotations
 
-from typing import Optional
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # DISCLAIMER — always included in output
 # ═══════════════════════════════════════════════════════════════════════════════

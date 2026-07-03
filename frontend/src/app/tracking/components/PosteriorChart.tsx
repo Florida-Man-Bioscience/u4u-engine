@@ -46,20 +46,27 @@ export function PosteriorChart({
     );
   }
 
-  const scatter = measurements
+  const scatterAll = measurements
     .map((m) => {
       const w = toWeeks(treatmentStartIso, m.measured_at);
       return w === null ? null : { x: w, observed: m.value };
     })
     .filter((d): d is { x: number; observed: number } => d !== null)
     .sort((a, b) => a.x - b.x);
+  // X axis is "weeks since treatment start" — negative values would be
+  // pre-treatment baseline measurements. They still feed the Bayesian
+  // fit upstream of this chart, but plotting them would force Recharts
+  // to extend the visible axis below 0 (allowDataOverflow defaults to
+  // false), producing meaningless "-2w / -1w" ticks. Drop them from the
+  // plot and surface the count in the caption instead.
+  const preTreatmentCount = scatterAll.filter((p) => p.x < 0).length;
+  const scatter = scatterAll.filter((p) => p.x >= 0);
 
   const band =
     prediction?.posterior_predictive.points.map((p) => ({
       x: p.weeks_since_start,
       mean: p.mean,
-      lo: p.lo_95,
-      width: p.hi_95 - p.lo_95,
+      range: [p.lo_95, p.hi_95] as [number, number],
     })) ?? [];
 
   const priorBand =
@@ -82,7 +89,77 @@ export function PosteriorChart({
     );
   }
 
+  // ── Y-axis units & domain ─────────────────────────────────────────────
+  // Bare numeric ticks confuse the reader — "what does -0.15 mean?" — so
+  // we pull the biomarker unit off the catalog entry and attach it to
+  // every tick (short units like "%") AND to the axis title (long units
+  // like "mg/dL"), choosing whichever reads better. Concentration-like
+  // biomarkers can't physically be negative; if every observed and
+  // predicted value is ≥ 0 we clamp the lower bound so Recharts doesn't
+  // auto-fit a domain that drifts below zero and renders meaningless
+  // negative ticks under a wide credible interval.
+  const rawUnit = expected?.unit ?? null;
+  const SHORT_UNIT_RE = /^[%‰°]$/u;
+  const unitSuffix = rawUnit && SHORT_UNIT_RE.test(rawUnit) ? rawUnit : "";
+  const unitLabel = rawUnit && !unitSuffix ? rawUnit : "";
+  const formatTick = (v: number) => {
+    if (Math.abs(v) >= 100) return v.toFixed(0);
+    if (Math.abs(v) >= 10) return v.toFixed(1);
+    return v.toFixed(2);
+  };
+  // If the catalog says this marker has a directional response
+  // (concentration-style: increase or decrease) AND every observed
+  // measurement is ≥ 0, clamp the floor to 0 so a wide credible band
+  // can't drag the axis into negatives the biomarker never actually
+  // takes.
+  const observedFloor =
+    scatter.length > 0 ? Math.min(...scatter.map((p) => p.observed)) : Infinity;
+  const directional =
+    expected?.direction === "increase" || expected?.direction === "decrease";
+  const clampToZero = directional && observedFloor >= 0;
+  const yDomain: [number | string, number | string] = clampToZero
+    ? [0, "auto"]
+    : ["auto", "auto"];
+
+  // Plain-English caption for the shaded "expected window" so users
+  // don't have to flip back to the legend to know what the colour means
+  // on THIS chart (the meaning depends on direction — increase / decrease
+  // / variable — and shading colour swaps accordingly).
+  const shadingMeta = (() => {
+    const w = prediction?.expected_window;
+    const direction = w?.direction ?? expected?.direction ?? null;
+    if (!direction) return null;
+    const credible = w?.credible ?? true;
+    const asymptotePct = w
+      ? `${w.asymptote_pct_change >= 0 ? "+" : ""}${(w.asymptote_pct_change * 100).toFixed(0)}%`
+      : null;
+    if (direction === "increase") {
+      return {
+        swatch: "#bbf7d0",
+        text: asymptotePct
+          ? `Green shading: weeks during which the marker is expected to rise toward its predicted plateau (${asymptotePct}).`
+          : "Green shading: weeks during which the marker is expected to rise toward its predicted plateau.",
+        credible,
+      };
+    }
+    if (direction === "decrease") {
+      return {
+        swatch: "#fecaca",
+        text: asymptotePct
+          ? `Red shading: weeks during which the marker is expected to drop toward its predicted plateau (${asymptotePct}).`
+          : "Red shading: weeks during which the marker is expected to drop toward its predicted plateau.",
+        credible,
+      };
+    }
+    return {
+      swatch: "#e0e7ff",
+      text: "Indigo shading: weeks during which the marker is expected to change toward its predicted plateau.",
+      credible,
+    };
+  })();
+
   return (
+    <div className="space-y-2">
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -90,6 +167,7 @@ export function PosteriorChart({
           dataKey="x"
           type="number"
           domain={[0, Math.ceil(xMax)]}
+          allowDataOverflow
           tickFormatter={(v) => `${v}w`}
           stroke="#64748b"
           fontSize={11}
@@ -101,9 +179,35 @@ export function PosteriorChart({
             fill: "#64748b",
           }}
         />
-        <YAxis stroke="#64748b" fontSize={11} domain={["auto", "auto"]} />
+        <YAxis
+          stroke="#64748b"
+          fontSize={11}
+          domain={yDomain}
+          width={56}
+          tickFormatter={(v) =>
+            unitSuffix ? `${formatTick(v)}${unitSuffix}` : formatTick(v)
+          }
+          label={
+            unitLabel
+              ? {
+                  value: unitLabel,
+                  angle: -90,
+                  position: "insideLeft",
+                  offset: 6,
+                  fontSize: 11,
+                  fill: "#64748b",
+                  style: { textAnchor: "middle" },
+                }
+              : undefined
+          }
+        />
         <Tooltip
-          formatter={(value: number, name: string) => [Number(value).toFixed(2), name]}
+          formatter={(value: number, name: string) => [
+            unitSuffix
+              ? `${Number(value).toFixed(2)}${unitSuffix}`
+              : Number(value).toFixed(2),
+            name,
+          ]}
           labelFormatter={(v) => `${v} weeks`}
         />
         {(() => {
@@ -210,25 +314,19 @@ export function PosteriorChart({
           );
         })()}
 
-        {/* 95% credible band on the posterior predictive mean.
-            Implemented as stacked areas: lo (transparent) + width (translucent). */}
+        {/* 95% credible band on the posterior predictive mean, drawn as an
+            explicit [lo_95, hi_95] range Area. NOT a stacked-area trick: each
+            <Area> carries its own `data` (no chart-level data), so recharts
+            can't compute stack offsets and a stacked lo-baseline + width
+            collapses to 0..width pinned at the x-axis. A range Area positions
+            lo..hi directly. (Same fix as CohortChart's IQR band.) */}
         <Area
           data={band}
-          dataKey="lo"
-          stroke="transparent"
-          fill="transparent"
-          stackId="ci"
-          isAnimationActive={false}
-          legendType="none"
-        />
-        <Area
-          data={band}
-          dataKey="width"
+          dataKey="range"
           name="posterior 95% CI"
           stroke="transparent"
           fill="#0f766e"
           fillOpacity={0.16}
-          stackId="ci"
           isAnimationActive={false}
         />
         {/* Prior-only mean curve as a dashed line for comparison. */}
@@ -261,5 +359,53 @@ export function PosteriorChart({
         <Legend wrapperStyle={{ fontSize: 11 }} />
       </ComposedChart>
     </ResponsiveContainer>
+      <div className="space-y-1 px-1 text-xs leading-snug text-slate-600">
+        {preTreatmentCount > 0 && (
+          <p className="text-slate-500">
+            {preTreatmentCount} pre-treatment baseline measurement
+            {preTreatmentCount === 1 ? "" : "s"} not shown on the chart
+            (still applied to the Bayesian fit).
+          </p>
+        )}
+        {band.length > 0 && (
+          <p className="flex items-start gap-2">
+            <span
+              className="mt-[3px] inline-block h-3 w-4 shrink-0 rounded-sm"
+              style={{ backgroundColor: "#0f766e", opacity: 0.22 }}
+              aria-hidden
+            />
+            <span>
+              <strong>Teal band</strong> wrapping the posterior mean line:
+              the 95% credible interval — where the model thinks the next
+              measurement is likely to land at each week. When the band
+              hugs the bottom of the chart, the model is predicting little
+              to no change.
+            </span>
+          </p>
+        )}
+        {shadingMeta && (
+          <p className="flex items-start gap-2">
+            <span
+              className="mt-[3px] inline-block h-3 w-4 shrink-0 rounded-sm"
+              style={{
+                backgroundColor: shadingMeta.swatch,
+                opacity: shadingMeta.credible ? 0.7 : 0.4,
+              }}
+              aria-hidden
+            />
+            <span>
+              {shadingMeta.text}
+              {!shadingMeta.credible && (
+                <span className="text-slate-500">
+                  {" "}
+                  (lighter shade — the 95% credible interval still includes
+                  zero, so the direction itself is uncertain).
+                </span>
+              )}
+            </span>
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

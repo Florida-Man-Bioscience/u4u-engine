@@ -4,8 +4,6 @@ Tests for the engine/pgx pharmacogenomics subsystem.
 from __future__ import annotations
 
 from engine.pgx import Phenotype
-from engine.pgx.star_alleles.array_caller import call_star_alleles_from_variants
-from engine.pgx.star_alleles.hla_caller import call_hla_from_variants
 from engine.pgx.cpic import (
     apply_phenoconversion,
     generate_recommendations,
@@ -15,9 +13,11 @@ from engine.pgx.cpic.phenotype import (
     diplotype_to_phenotype,
     score_to_phenotype,
 )
-from engine.pgx.prs_pgx import calculate_pgx_prs
-from engine.pgx.hgnn import predict_drug_response, calibrate_conformal_set
+from engine.pgx.hgnn import calibrate_conformal_set, predict_drug_response
 from engine.pgx.orchestrator import pgx_stage
+from engine.pgx.prs_pgx import calculate_pgx_prs
+from engine.pgx.star_alleles.array_caller import call_star_alleles_from_variants
+from engine.pgx.star_alleles.hla_caller import call_hla_from_variants
 
 
 def _v(rsid: str, alt: str, zyg: str = "het", ref: str = "G") -> dict:

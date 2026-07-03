@@ -13,7 +13,7 @@ from ._base import cached_fetch
 
 _SOURCE = "clinicaltrials"
 _TTL = 60 * 60 * 24  # 24 hours
-_TIMEOUT = 10
+_TIMEOUT = 6
 _BASE = "https://clinicaltrials.gov/api/v2/studies"
 
 # Phases that count as "active" (recruiting or otherwise enrolling).

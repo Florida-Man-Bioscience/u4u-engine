@@ -1,7 +1,8 @@
 """Tests for engine/scoring.py"""
 
 import pytest
-from engine.scoring import score_variant, Tier
+
+from engine.scoring import Tier, score_variant
 
 
 def _a(**kwargs):
@@ -148,6 +149,7 @@ def test_carrier_note_set_for_heterozygous_recessive():
     ))
     # Pathogenic short-circuit fires first — carrier_note set to None
     # (carrier detection only applies when short-circuit doesn't trigger)
+    assert result["carrier_note"] is None
     # Test the non-short-circuit path:
     result2 = score_variant(_a(
         clinvar="uncertain significance",

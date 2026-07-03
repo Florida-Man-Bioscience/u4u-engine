@@ -1,0 +1,18 @@
+# GeT-RM PGx consensus diplotypes — SEED / EXAMPLE set
+#
+# Format: tab-separated. Required columns: sample, gene, diplotype.
+#         Optional columns: phenotype, source.
+#
+# This is a SMALL ILLUSTRATIVE SEED to exercise the harness wiring, NOT a
+# validation truth set. Before any determination/reporting, replace it with the
+# full, citable GeT-RM consensus tables (Pratt et al., CDC GeT-RM) for the
+# Coriell samples you actually run, with the exact source/version recorded in
+# the `source` column. Diplotype/phenotype values below are placeholders marked
+# accordingly and must be verified against the primary GeT-RM publication.
+#
+sample	gene	diplotype	phenotype	source
+NA12878	CYP2C19	*1/*1	NM	SEED-PLACEHOLDER-verify-against-GeT-RM
+NA12878	CYP2D6	*3/*4	PM	SEED-PLACEHOLDER-verify-against-GeT-RM
+NA12878	CYP2C9	*1/*1	NM	SEED-PLACEHOLDER-verify-against-GeT-RM
+NA18563	CYP2D6	*1/*1	NM	SEED-PLACEHOLDER-verify-against-GeT-RM
+NA18563	CYP2C19	*2/*2	PM	SEED-PLACEHOLDER-verify-against-GeT-RM

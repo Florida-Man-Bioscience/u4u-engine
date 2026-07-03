@@ -147,3 +147,62 @@ export async function getRegulatoryEvents(
   const qs = includeLive ? "" : "?include_live=false";
   return apiFetch<RegulatoryEventsPayload>(`/regulatory/events${qs}`);
 }
+
+// ── Tracking — bridge from /analyze job to a tracking patient ────────────
+
+export interface VariantEvidenceCitation {
+  pharmgkb_level: string;
+  pmid: string;
+  summary: string;
+}
+
+export interface VariantCarried {
+  rsid: string;
+  gene: string;
+  genotype: "hom_ref" | "het" | "hom_alt";
+  dosage: number;
+  evidence: VariantEvidenceCitation | null;
+}
+
+export interface EngineRecommendation {
+  peptide_name: string;
+  category: string | null;
+  predicted_tier: string | null;
+  prediction_description: string | null;
+  has_pharmgkb_evidence: boolean;
+  has_patient_signal: boolean;
+}
+
+export interface PatientFromJobResponse {
+  patient: {
+    id: string;
+    label: string;
+    sex: string | null;
+    birth_year: number | null;
+    notes: string | null;
+    created_at: string;
+  };
+  profile: unknown;
+  source: string;
+  peptides_with_evidence: string[];
+  peptides_with_patient_signal: string[];
+  variants_carried: VariantCarried[];
+  engine_recommendations: EngineRecommendation[];
+}
+
+/**
+ * Create a tracking patient pre-populated with a real-data
+ * GeneticProfile derived from a finished /analyze job. The returned
+ * payload tells the UI which peptides actually have evidence-based
+ * priors for THIS patient's genotypes (vs. the catalog at large),
+ * so we can give an honest "we found priors for K of N peptides" line.
+ */
+export async function createPatientFromJob(
+  jobId: string,
+  body?: { label?: string; sex?: string; birth_year?: number; notes?: string },
+): Promise<PatientFromJobResponse> {
+  return apiFetch<PatientFromJobResponse>(`/tracking/patients/from-job/${jobId}`, {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+}

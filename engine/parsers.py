@@ -68,7 +68,7 @@ def parse_file(file_bytes: bytes, filename: str) -> list[dict]:
     name = filename.lower()
     start_time = time.time()
     log.info("Starting to parse file: %s", filename)
-    
+
     result = None
     if name.endswith(".vcf") or name.endswith(".vcf.gz"):
         result = _parse_vcf_bytes(file_bytes, filename)
@@ -85,7 +85,7 @@ def parse_file(file_bytes: bytes, filename: str) -> list[dict]:
             f"Unsupported file format: {filename!r}. "
             "Accepted formats: .vcf, .vcf.gz, .txt, .csv"
         )
-        
+
     duration = time.time() - start_time
     log.info("Finished parsing file: %s in %.2fs. Total variants parsed: %d", filename, duration, len(result) if result else 0)
     return result
@@ -130,7 +130,8 @@ def _parse_vcf_bytes(file_bytes: bytes, filename: str) -> list[dict]:
             "pysam is required to parse VCF files. "
             "Install it with: pip install pysam  (Linux/Mac only)"
         )
-    import tempfile, os
+    import os
+    import tempfile
     suffix = ".vcf.gz" if filename.lower().endswith(".gz") else ".vcf"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(file_bytes)
@@ -271,11 +272,11 @@ def _parse_23andme_text(text: str) -> list[dict]:
     lines = text.splitlines()
     total_lines = len(lines)
     log.info("Parsing 23andMe text file with %d lines...", total_lines)
-    
+
     for i, line in enumerate(lines):
         if i > 0 and i % 100000 == 0:
             log.info("Parsed %d / %d lines of 23andMe file...", i, total_lines)
-            
+
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue

@@ -59,11 +59,11 @@ def validate_file_bytes(data: bytes, filename: str) -> None:
     if name.endswith(".txt") or name.endswith(".csv"):
         try:
             data[:4096].decode("utf-8")
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc:
             raise ValueError(
                 "File does not appear to be valid UTF-8 text. "
                 "Please save your file as UTF-8 and try again."
-            )
+            ) from exc
 
 
 def validate_rsid(rsid: str) -> str:

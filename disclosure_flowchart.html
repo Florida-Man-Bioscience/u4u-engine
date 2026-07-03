@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>U4U Engine — System Flowchart | Patent Disclosure</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    max-width: 1350px;
+    margin: 0 auto;
+    padding: 2rem 2.5rem;
+    background: #f0f4f9;
+    color: #1a202c;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  h1 {
+    color: #003087;
+    font-size: 1.7rem;
+    border-bottom: 3px solid #003087;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.4rem;
+  }
+  h2 {
+    color: #003087;
+    font-size: 1.15rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .meta {
+    background: #dbeafe;
+    border-left: 5px solid #1d4ed8;
+    padding: 1rem 1.5rem;
+    margin: 0.75rem 0 2rem;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.92rem;
+  }
+  .meta p { margin: 0.25rem 0; }
+  .meta strong { color: #1e3a8a; }
+  .chart-box {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 2rem;
+    margin: 1rem 0 0.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    overflow-x: auto;
+    text-align: center;
+  }
+  .caption {
+    font-size: 0.82rem;
+    color: #4a5568;
+    font-style: italic;
+    margin: 0.4rem 0 2rem 0.5rem;
+    max-width: 900px;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #cbd5e1;
+    font-size: 0.78rem;
+    color: #718096;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>U4U Engine: Personalized Genomic Analysis Platform</h1>
+
+<div class="meta">
+  <p><strong>Document Type:</strong> Technical Flowchart — Innovation / Patent Disclosure</p>
+  <p><strong>Prepared for:</strong> UF Innovate — University of Florida Technology Transfer Office</p>
+  <p><strong>Date:</strong> June 16, 2026</p>
+  <p><strong>Inventors:</strong> Noah Thomas Jones, Curtis Dearing</p>
+  <p><strong>Technology Summary:</strong>
+     A multi-layer software system that ingests raw genomic data (VCF, 23andMe, CSV, or rsID lists),
+     performs automated parallel variant annotation against seven curated external biomedical databases,
+     applies ACMG/AMP evidence-based pathogenicity classification, generates pharmacogenomic star-allele
+     phenotype predictions with Mondrian conformal confidence sets, estimates ancestry-adjusted polygenic
+     risk scores, maps peptide therapy candidates to discovered gene variants, and surfaces curated plus
+     live FDA regulatory status — all via a REST API with an asynchronous job queue, Fernet-encrypted
+     job persistence, and longitudinal Bayesian biomarker tracking.
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<h2>Diagram 1 — System Architecture Overview</h2>
+<!-- ============================================================ -->
+<div class="chart-box">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "14px", "primaryColor": "#dbeafe", "primaryBorderColor": "#3b82f6", "lineColor": "#374151", "secondaryColor": "#f0fdf4", "tertiaryColor": "#fef3c7", "clusterBkg": "#f8fafc"}}}%%
+flowchart LR
+    USER(["Clinician / User\nBrowser"])
+
+    subgraph FRONT["Next.js Frontend  (port 3000)"]
+        F1["File Upload\n/"]
+        F2["Results Viewer\n/jobs/{id}/results"]
+        F3["PGx Dashboard"]
+        F4["Regulatory Dashboard\n/regulatory"]
+        F5["Biomarker Tracking\n/tracking"]
+    end
+
+    subgraph BACK["FastAPI REST API  (api.py)"]
+        B1["POST /analyze"]
+        B2["GET  /jobs/{id}"]
+        B3["GET  /regulatory/*"]
+        B4["GET  /tracking/*"]
+        B5["POST .../acmg-signoff"]
+    end
+
+    subgraph ENGINE["Analysis Engine  (engine/)"]
+        E1["Core Pipeline\npipeline.py"]
+        E2["Annotator Suite\n7 sources, 8 threads"]
+        E3["V3 Enrichments\nPathway, PRS, PGx, Peptide"]
+        E4["ACMG/AMP Classifier\nEvidence assembly"]
+        E5["Regulatory Module\nFDA + live source aggregation"]
+        E6["Biomarker Tracker\nLongitudinal Bayesian updates"]
+    end
+
+    DB1[("PostgreSQL\nJobs, Variants\nBiomarkers")]
+    DB2[("SQLite\nfallback / dev")]
+    DB3[("Annotation Cache\nsource x lookup_key")]
+
+    subgraph EXTAPI["External Biomedical Data APIs  (HTTP / GraphQL)"]
+        X1["Ensembl VEP"]
+        X2["NCBI ClinVar"]
+        X3["gnomAD GraphQL"]
+        X4["MyVariant.info"]
+        X5["UniProt"]
+        X6["PharmGKB"]
+        X7["GWAS Catalog"]
+        X8["KEGG"]
+        X9["ClinicalTrials.gov"]
+        X10["openFDA"]
+        X11["Federal Register"]
+    end
+
+    USER <-->|HTTPS| FRONT
+    FRONT <-->|REST / JSON| BACK
+    BACK -->|"async dispatch via\nThreadPoolExecutor"| ENGINE
+    ENGINE -->|annotator HTTP calls| EXTAPI
+    ENGINE <-->|"cache reads / writes"| DB3
+    ENGINE -->|persist jobs + variants| DB1
+    DB2 -. "DATABASE_URL absent\n(local dev / tests)" .-> ENGINE
+    ENGINE -->|annotated results| BACK
+    BACK <-->|poll + display| FRONT
+</pre>
+</div>
+<p class="caption">
+  Figure 1. High-level system architecture. Users upload genome files through the Next.js browser frontend.
+  The FastAPI backend enqueues each job and responds immediately with a job ID (HTTP 202); the client polls
+  until analysis completes. The analysis engine runs in a thread pool to keep the async event loop free during
+  long-running external API calls. All annotation calls are backed by a shared cache (SQLite in development,
+  PostgreSQL in production). Completed results are Fernet-encrypted and persisted to PostgreSQL.
+</p>
+
+<!-- ============================================================ -->
+<h2>Diagram 2 — Core Analysis Pipeline Detail  (engine/pipeline.py)</h2>
+<!-- ============================================================ -->
+<div class="chart-box">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "13px", "primaryColor": "#dbeafe", "primaryBorderColor": "#3b82f6", "lineColor": "#374151", "secondaryColor": "#f0fdf4", "tertiaryColor": "#fef3c7", "clusterBkg": "#f8fafc"}}}%%
+flowchart TD
+    INPUT(["Input: Raw Genome File Bytes\n.vcf  |  .vcf.gz  |  23andMe .txt  |  .csv  |  rsID list\nOptional: current medication list"])
+
+    INPUT --> STEP1["Step 1 - Validate\nFile size limit  |  magic bytes  |  UTF-8 encoding check"]
+
+    STEP1 --> STEP2{"Step 2 - Detect\nGenome Build"}
+    STEP2 -->|"GRCh38 confirmed"| STEP3
+    STEP2 -->|"GRCh37 + ENABLE_LIFTOVER=1"| LIFTOVER["Liftover GRCh37 to GRCh38\npyliftover  |  unmapped coords logged"]
+    STEP2 -->|"Other or unknown build"| REJECTED(["Rejected\nIncompatible genome build"])
+    LIFTOVER --> STEP3
+
+    STEP3["Step 3 - Parse File\nFormat auto-detect: VCF, 23andMe TXT, CSV, rsID list\nOutput: variant dicts  {chrom, pos, ref, alt, rsid, genotype, zygosity}"]
+    STEP3 --> STEP4["Step 4 - Quality Filter\nDrop: hom-ref calls  |  low GQ/DP  |  FILTER-failed calls  |  indels"]
+    STEP4 --> STEP5["Step 5 - Panel Filter\nrsID whitelist lookup: ACMG 81 genes, pharma panel, carrier panel\nOptional: BED-file coordinate restriction"]
+    STEP5 --> STEP6["Step 6 - rsID Resolution\nEnsembl REST API: rsid-only variants resolved to genomic coordinates\nResults cached in rsID cache (SQLite / PostgreSQL)"]
+    STEP6 --> STEP7["Step 7 - Deduplicate\nCollapse identical variants keyed by chr : pos : ref : alt"]
+
+    STEP7 --> PVEP
+    STEP7 --> PCV
+    STEP7 --> PGNOM
+    STEP7 --> PMV
+    STEP7 --> PUP
+    STEP7 --> PPK
+    STEP7 --> PGW
+
+    subgraph ANNOT_BOX["Step 8 - Parallel Annotation   (8-thread ThreadPoolExecutor, per variant)"]
+        PVEP["Ensembl VEP\nConsequence class\nSIFT, PolyPhen,\nprotein change"]
+        PCV["NCBI ClinVar\nClinical significance\nDisease name\nCondition key\n(OMIM / MedGen)"]
+        PGNOM["gnomAD GraphQL\nAllele frequency\nPopulation-max AF\nHomozygote count"]
+        PMV["MyVariant.info\nFallback annotator\nUsed when ClinVar\nor gnomAD absent"]
+        PUP["UniProt\nProtein function\nper affected gene"]
+        PPK["PharmGKB\nDrug-gene\ninteractions"]
+        PGW["NHGRI-EBI\nGWAS Catalog\nTrait associations\nfor rsID"]
+    end
+
+    PVEP --> STEP9
+    PCV --> STEP9
+    PGNOM --> STEP9
+    PMV --> STEP9
+    PUP --> STEP9
+    PPK --> STEP9
+    PGW --> STEP9
+
+    STEP9["Step 9 - ACMG / AMP Evidence Assembly  (per variant)\nCriteria scored: PVS1  |  PS1  |  PM2  |  PM5  |  PP3  |  BA1  |  BS1  |  BP1  |  BP4\nDraft classification — requires qualified human reviewer sign-out\nvia  POST /jobs/{id}/variants/{variant_id}/acmg-signoff"]
+
+    STEP9 --> STEP10["Step 10 - Clinical Score and Tier\nWeighted from: consequence severity, ClinVar significance,\ngnomAD population rarity, zygosity, carrier status, GWAS evidence\nOutput tier:   HIGH  |  MEDIUM  |  LOW  |  CARRIER"]
+
+    STEP10 --> STEP11["Step 11 - Plain-English Summary  (per variant)\nEmoji, headline, consequence text, rarity text,\nClinVar text, action hint, zygosity note, tier basis"]
+
+    STEP11 --> EN_KEGG
+    STEP11 --> EN_REC
+    STEP11 --> EN_PRS
+    STEP11 --> EN_BPC
+    STEP11 --> EN_PMAP
+    STEP11 --> EN_PGX
+    STEP11 --> EN_STR
+
+    subgraph ENRICH_BOX["V3 Enrichment Stage  (post-annotation, whole-cohort inputs)"]
+        EN_KEGG["KEGG Pathway Mapping\nGene symbols mapped to\nbiochemical pathways\npathway_summary text"]
+        EN_REC["Receptor Expression\nPrediction\nIsoform analysis per gene\nreceptor_profiles"]
+        EN_PRS["Polygenic Risk Scores\nAncestry-adjusted\ncomparison to population\nMultiple complex trait panels\nprs_profile"]
+        EN_BPC["BPC-157 Response\nPrediction\nPathway-based mechanistic\nmodel, responder tier\nbpc157_prediction"]
+        EN_PMAP["Peptide Therapy\nCoverage Mapping\nGene hits matched to\npeptide therapy candidates\npeptide_recommendations"]
+        EN_PGX["PGx Pipeline\n(pgx/orchestrator.py)\n1. Star-allele calls\n   array / BAM / long-read\n2. HLA tag-SNP calls\n3. CPIC phenoconversion\n4. Drug recommendations\n5. PGx PRS scoring\n6. HGNN conformal sets\npgx_profile"]
+        EN_STR["AR CAG Repeat\nCalling\nExpansionHunter binary\nBAM/CRAM input required\nDegrades gracefully\nar_cag_repeat"]
+    end
+
+    EN_KEGG --> SORT
+    EN_REC --> SORT
+    EN_PRS --> SORT
+    EN_BPC --> SORT
+    EN_PMAP --> SORT
+    EN_PGX --> SORT
+    EN_STR --> SORT
+
+    SORT["Sort All Variants by Clinical Score  (descending)"]
+    SORT --> ACMG_SUM["ACMG Result Summary\nClassification counts by tier\nClinVar concordance and discordance audit\nacmg_summary"]
+    ACMG_SUM --> DOSS["Dossier Generation\nPer-peptide HTML evidence reports\ndossier_generator.py"]
+
+    DOSS --> OUTPUT(["Result Dict  (returned to API layer)\nvariants  |  pathway_summary  |  receptor_genetics  |  prs_profile\npgx_profile  |  peptide_recommendations  |  dossiers\nacmg_summary  |  genome_build  |  analysis_status"])
+
+    CACHE[("Annotation Cache\nSQLite or PostgreSQL\nKeyed by source + lookup_key\nCaches results and no-data-found\nShared across all jobs")]
+    PVEP <-->|"read on hit / write on miss"| CACHE
+    PCV <-->|"read / write"| CACHE
+    PGNOM <-->|"read / write"| CACHE
+    PMV <-->|"read / write"| CACHE
+</pre>
+</div>
+<p class="caption">
+  Figure 2. Detailed core analysis pipeline (engine/pipeline.py). Raw genome file bytes enter at top and pass through
+  eleven sequential processing steps. Step 8 (annotation) runs in an 8-thread pool — each variant is independently
+  annotated against Ensembl VEP, NCBI ClinVar, gnomAD, MyVariant.info (fallback), UniProt, PharmGKB, and the GWAS Catalog,
+  with all results backed by a shared cache. The V3 enrichment stage runs after the per-variant loop and operates on
+  the full variant cohort to produce pathway, receptor, PRS, PGx, BPC-157, and peptide outputs. The ACMG/AMP
+  classification in Step 9 is an automated evidence-assembly aid and must not serve as a final clinical determination
+  without a qualified reviewer's countersignature via the dedicated API endpoint.
+</p>
+
+<!-- ============================================================ -->
+<h2>Diagram 3 — Pharmacogenomics Sub-Pipeline  (engine/pgx/)</h2>
+<!-- ============================================================ -->
+<div class="chart-box">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "13px", "primaryColor": "#f0fdf4", "primaryBorderColor": "#16a34a", "lineColor": "#374151", "clusterBkg": "#f8fafc"}}}%%
+flowchart TD
+    PGX_IN(["Input: Annotated variant list\n+ optional BAM/CRAM path\n+ current medication list\n+ confidence threshold (default 0.90)"])
+
+    PGX_IN --> DETECT["Detect Input Type\narray  |  BAM short-read  |  BAM long-read"]
+
+    DETECT -->|"Array / genotyping chip"| ARRAY["Star-Allele Calling\nfrom Variant Array\ncall_star_alleles_from_variants()"]
+    DETECT -->|"Short-read BAM"| BAM["Star-Allele Calling\nfrom BAM\ncall_star_alleles_from_bam()"]
+    DETECT -->|"Long-read BAM"| LR["Star-Allele Calling\nfrom Long-Read\ncall_star_alleles_from_long_read()"]
+
+    ARRAY --> MERGE["Merge Calls\nBAM calls take precedence\nover array calls per gene"]
+    BAM --> MERGE
+    LR --> MERGE
+
+    MERGE --> HLA["HLA Tag-SNP Calling\ncall_hla_from_variants()\nHLA-A, HLA-B, HLA-C alleles\nfor drug hypersensitivity screening"]
+
+    HLA --> PHENO["CPIC Phenotype Conversion\napply_phenoconversion()\nDiplotype + activity score to:\nNormal Metabolizer  |  Intermediate Metabolizer\nPoor Metabolizer  |  Ultrarapid Metabolizer\nIncorporates CYP inhibitor co-medication effects"]
+
+    PHENO --> RECS["CPIC Drug Recommendations\ngenerate_recommendations()\nDrug-gene pairs matched to CPIC guidelines\nActionable dosing guidance per phenotype\n+ HLA drug-hypersensitivity warnings"]
+
+    RECS --> PRS_PGX["Pharmacogenomic PRS Scoring\ncalculate_pgx_prs()\nVariant-level contribution to\ndrug-specific polygenic risk scores"]
+
+    PRS_PGX --> HGNN["HGNN Drug Response Prediction\npredict_drug_response()\nHypergraph neural network\nrule-based ensemble model"]
+
+    HGNN --> CONF["Mondrian Conformal\nPrediction Sets\ncalibrate_conformal_set()\nConfidence-bounded prediction sets\nat user-specified coverage level\nLabeled: calibrated | uncalibrated"]
+
+    CONF --> PGX_OUT(["PGx Profile Output\nstar_alleles  |  hla_calls\nrecommendations  |  prs_results\ndrug_predictions  |  phenoconversion_notes\nsummary_text"])
+
+    PGKB_CAT[("PharmGKB Evidence\nCatalog\nCurated drug-gene\nevidence pairs")]
+    CPIC_CAT[("CPIC Guideline\nLookup Tables\nDiplotype-phenotype\nconversion tables")]
+
+    PHENO <-->|"diplotype lookup"| CPIC_CAT
+    RECS <-->|"evidence lookup"| PGKB_CAT
+</pre>
+</div>
+<p class="caption">
+  Figure 3. Pharmacogenomics (PGx) sub-pipeline (engine/pgx/orchestrator.py). Star-allele calls are derived from
+  array genotypes, short-read BAM, or long-read BAM (BAM calls override array calls for the same gene). HLA
+  tag-SNPs are called independently to screen for drug hypersensitivity risk. CPIC phenoconversion translates
+  star-allele diplotypes into metabolizer phenotypes, accounting for co-medication CYP inhibitor effects.
+  A hypergraph neural network (HGNN) ensemble produces drug-response predictions bounded by Mondrian conformal
+  prediction sets at a user-specified confidence level. Without a validated calibration set, predictions are
+  labeled "uncalibrated."
+</p>
+
+<!-- ============================================================ -->
+<h2>Diagram 4 — Regulatory Dashboard Module  (engine/regulatory/)</h2>
+<!-- ============================================================ -->
+<div class="chart-box">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "13px", "primaryColor": "#fef3c7", "primaryBorderColor": "#d97706", "lineColor": "#374151", "clusterBkg": "#f8fafc"}}}%%
+flowchart LR
+    API_REQ(["GET /regulatory/peptides\nor\nGET /regulatory/events"])
+
+    API_REQ --> CURATED["Curated Peptide\nFDA Status Store\nengine/regulatory/store.py\nStatically curated categorization\nper peptide therapy candidate"]
+
+    API_REQ -->|"include_live=true\n(default)"| LIVE
+
+    subgraph LIVE["Live External Source Augmentation"]
+        CT["ClinicalTrials.gov API\nActive trial count per peptide"]
+        OFDA["openFDA API\nRecall and adverse event\ndata per compound"]
+        FR["Federal Register API\nRegulatory notices and\ncomment dockets"]
+        RG["Regulations.gov API\nPublic comment count\nfor FDA-2025-N-6895"]
+    end
+
+    CURATED --> MERGE2["Merge Curated + Live\nEach live source carries\nstatus: fresh | stale | unavailable\nLive failures degrade gracefully"]
+    LIVE --> MERGE2
+
+    MERGE2 --> RESP(["Response\nPer-peptide regulatory status\nTrial counts, recall history\nFederal Register notices\nSource freshness metadata"])
+</pre>
+</div>
+<p class="caption">
+  Figure 4. Regulatory dashboard module (engine/regulatory/). A curated static store of FDA regulatory status
+  for each peptide therapy candidate is merged at request time with live data from four external government APIs.
+  Each live source independently reports its own freshness status; failures in any live source degrade gracefully
+  and do not fail the request.
+</p>
+
+<!-- ============================================================ -->
+<h2>Diagram 5 — Bayesian Biomarker Inference Model  (engine/tracking/)</h2>
+<!-- ============================================================ -->
+<div class="chart-box">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "13px", "primaryColor": "#f5f3ff", "primaryBorderColor": "#7c3aed", "lineColor": "#374151", "clusterBkg": "#f8fafc"}}}%%
+flowchart TD
+    BAY_IN(["Input\nCompleted genome analysis job (job_id)\n+ patient biomarker measurements\n(timestamp, biomarker name, value, unit)"])
+
+    BAY_IN --> GP_SRC{"Genetic Profile\nSource"}
+    GP_SRC -->|"Genome job complete"| GP_REAL["Derive from Job Results\nprofile_from_job.py\nExtract pharmacogenomically relevant\nvariants from pipeline output"]
+    GP_SRC -->|"No job linked"| GP_SYN["Synthetic Profile\ngenerate_synthetic_profile()\nSample genotypes under Hardy-Weinberg\nequilibrium for 25 catalog SNPs"]
+
+    subgraph CATALOG["SNP Effect Catalog  (engine/tracking/genetics.py)\n25 pharmacogenomically relevant SNPs"]
+        CAT1["NOS3, VEGFA, COL1A1, MMP1\nVascular repair, angiogenesis, collagen synthesis\n(BPC-157, TB-500, GHK-Cu targets)"]
+        CAT2["IL6, TNF, IL10, TLR9, VDR\nInflammation and immune axis\n(KPV, Thymosin Alpha-1, LL-37 targets)"]
+        CAT3["IGFBP3, IGF1, GHR\nGrowth hormone / IGF axis\n(CJC-1295, Ipamorelin, GHRP-2 targets)"]
+        CAT4["PPARG, TCF7L2, FTO, MC4R\nMetabolic and insulin axis\n(MOTS-c, AOD-9604, Melanotan II targets)"]
+        CAT5["BDNF, ANKK1, MTHFR, CLOCK\nNeuro-cognitive and circadian\n(Semax, Selank, Dihexa, Epitalon targets)"]
+    end
+
+    GP_REAL --> PRIOR_STEP
+    GP_SYN --> PRIOR_STEP
+
+    subgraph PRIOR_STEP["Prior Derivation  (genetics.py  derive_prior)"]
+        AGG["Aggregate Variant Weight\ng = sum of dosage x effect_weight\nper peptide across all relevant SNPs\ndosage: hom_ref=0, het=1, hom_alt=2"]
+        RESP_PRIOR["Responder Strength Prior\nr ~ Normal(1 + 0.72 x tanh(g), sigma_r)\nsigma_r = max(0.06, 0.18 / sqrt(1 + 0.5n))\nr=1.0 is average responder, r=0 is non-responder"]
+        BM_PRIOR["Biomarker Prior on theta\ntheta = fractional change at panel timeframe\nmu_prior = r_mean x expected_pct_panel\nsigma_prior = hypot(sigma_r x |expected_pct|,\n               0.20 x |expected_pct|)\nfloor: sigma >= 0.04"]
+        AGG --> RESP_PRIOR --> BM_PRIOR
+    end
+
+    BM_PRIOR --> LIKE_STEP
+
+    subgraph LIKE_STEP["Likelihood Computation from Measurements  (bayes.py)"]
+        APPROACH["Exponential Approach Factor\na(w) = 1 - exp(-w / tau)\ntau = panel time constant (weeks)\na(w) represents fraction of asymptotic\nresponse achieved at week w"]
+        JOINT["Joint Bayesian Linear Regression\njoint_fit_likelihood()\nModel: y_i = b + phi x a(w_i) + epsilon_i\nwhere phi = b x theta\nPrior on b: Normal(baseline_panel, sigma_b)\nWeak prior on phi to prevent singularity\nIterates up to 4 rounds refining sigma^2\nfrom residuals when n >= 3"]
+        DELTA["Delta Method Recovery\ntheta_hat = phi_hat / b_hat\nVar(theta) via delta method:\nVar(phi)/b^2 + Var(b) x phi^2/b^4\n- 2 x Cov(b,phi) x phi/b^3\nStudent-t inflation correction:\nsd_theta x= t_0.975(df) / z_0.975\n(prevents under-coverage at small n)"]
+        POOL["Fallback: Inverse-Variance Pooling\neffective_observation()\ntheta_hat_i = (y_i/baseline - 1) / a(w_i)\nsigma_i = noise_pct / a(w_i)\nPooled: tau_total = sum(1/sigma_i^2)\nmu_pool = sum(theta_hat_i / sigma_i^2) / tau_total"]
+        APPROACH --> JOINT --> DELTA
+        APPROACH --> POOL
+    end
+
+    DELTA --> CONJ_UPDATE
+    POOL --> CONJ_UPDATE
+
+    subgraph CONJ_UPDATE["Normal-Normal Conjugate Posterior Update  (bayes.py  update)"]
+        PREC["Precision Combination\ntau_prior = 1 / sigma_prior^2\ntau_like  = 1 / sigma_like^2\ntau_post  = tau_prior + tau_like"]
+        POST_MU["Posterior Mean\nmu_post = (tau_prior x mu_prior\n          + tau_like x mu_like) / tau_post\n(weighted average toward data as n grows)"]
+        POST_SD["Posterior SD and Credible Interval\nsigma_post = sqrt(1 / tau_post)\n95% CI: mu_post +/- 1.96 x sigma_post\ncredible = True if CI excludes zero"]
+        PREC --> POST_MU --> POST_SD
+    end
+
+    POST_SD --> PRED_CURVE
+
+    subgraph PRED_CURVE["Posterior Predictive Trajectory  (bayes.py  predictive_curve)"]
+        TRAJ["Mean Trajectory\nV(w) = baseline x (1 + mu_post x a(w))\nProjected over a fine week grid"]
+        BAND["95% Credible Band\nVar(V) = sigma_b^2 x (1 + mu_theta x a)^2\n       + baseline^2 x a^2 x sigma_theta^2\nBand = mean +/- 1.96 x sqrt(Var(V))\nBaseline uncertainty propagated when\nno pre-treatment sample is available"]
+        TRAJ --> BAND
+    end
+
+    POST_SD --> EXP_WIN
+
+    subgraph EXP_WIN["Expected Change Window  (bayes.py  expected_window)"]
+        WMIN["weeks_min  (detection threshold crossing)\nSolve: |theta_post| x a(w) = detection_noise_pct\nweeks_min = -tau x ln(1 - detection_pct / |theta_post|)"]
+        WMAX["weeks_max  (plateau)\nweeks_max = -tau x ln(1 - 0.95)  (~3 x tau)"]
+        DIR["Direction\nincrease | decrease | inconclusive\nInconclusive when 95% CI includes zero\nor |theta_post| <= detection threshold"]
+        WMIN --> DIR
+        WMAX --> DIR
+    end
+
+    PRED_CURVE --> BAY_OUT
+    EXP_WIN --> BAY_OUT
+    POST_SD --> BAY_OUT
+
+    BAY_OUT(["Output per (patient, peptide, biomarker)\nPosterior: mu_post, sigma_post, 95% CI, n_effective\nPredictive curve: mean + credible band over week grid\nExpected window: weeks_min, weeks_max, direction\nAll stored in PostgreSQL / SQLite tracking database"])
+
+    TRACK_DB[("Tracking Database\nSQLite / PostgreSQL\nPatients, measurements\nposteriors, cohort data")]
+    BAY_OUT <-->|"read history\nwrite posterior"| TRACK_DB
+    CATALOG -.->|"effect weights\nfor prior"| AGG
+</pre>
+</div>
+<p class="caption">
+  Figure 5. Bayesian biomarker inference model (engine/tracking/bayes.py and genetics.py). For each (patient, peptide, biomarker)
+  triple the model maintains a Normal prior on theta — the expected fractional change from baseline — derived from the patient's
+  genotype at 25 pharmacogenomically curated SNPs. As timestamped biomarker measurements arrive, a joint Bayesian linear
+  regression simultaneously estimates the pre-treatment baseline and the effect slope (phi = baseline x theta) against the
+  peptide's exponential approach curve a(w) = 1 - exp(-w/tau). The delta method recovers theta with appropriate uncertainty,
+  inflated by the Student-t factor for small samples. A Normal-Normal conjugate update then combines the genetic prior with
+  the measurement-derived likelihood, producing a closed-form posterior. The posterior is projected forward through the approach
+  curve to generate a mean predictive trajectory with a 95% credible band, and an expected-change window (weeks_min to weeks_max)
+  is derived from when the posterior effect first crosses the measurement noise floor. No external ML libraries are used — the
+  inference is implemented analytically from the conjugate update equations using Python's standard math library.
+</p>
+
+<footer>
+  <p>
+    <strong>U4U Engine</strong> &mdash; Confidential Technical Disclosure &nbsp;|&nbsp;
+    Florida Man Bioscience &nbsp;|&nbsp;
+    Prepared for UF Innovate &nbsp;|&nbsp;
+    2026-06-16
+  </p>
+  <p>This document contains proprietary technical information. Do not distribute without authorization from Florida Man Bioscience.</p>
+</footer>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  flowchart: { curve: 'basis', rankSpacing: 55, nodeSpacing: 20 },
+  securityLevel: 'loose'
+});
+</script>
+</body>
+</html>

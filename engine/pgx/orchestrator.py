@@ -17,21 +17,21 @@ Composes the four PGx phases:
 """
 from __future__ import annotations
 
-from .types import PGxProfile, Phenotype
-from .star_alleles import (
-    call_star_alleles_from_variants,
-    call_hla_from_variants,
-    detect_input_type,
-)
-from .star_alleles.bam_caller import call_star_alleles_from_bam
-from .star_alleles.lr_caller import call_star_alleles_from_long_read
 from .cpic import (
     apply_phenoconversion,
     generate_recommendations,
 )
-from .cpic.phenotype import diplotype_to_phenotype, activity_score
+from .cpic.phenotype import activity_score, diplotype_to_phenotype
+from .hgnn import calibrate_conformal_set, predict_drug_response
 from .prs_pgx import calculate_pgx_prs
-from .hgnn import predict_drug_response, calibrate_conformal_set
+from .star_alleles import (
+    call_hla_from_variants,
+    call_star_alleles_from_variants,
+    detect_input_type,
+)
+from .star_alleles.bam_caller import call_star_alleles_from_bam
+from .star_alleles.lr_caller import call_star_alleles_from_long_read
+from .types import PGxProfile, Phenotype
 
 
 def _enrich_bam_calls_with_phenotype(calls):

@@ -67,6 +67,20 @@ BIOMARKER_PARAMS: dict[str, Params] = {
     "Waist circumference":      Params(96.0, -0.05, 0.02, 8.0),
     "Serum leptin":             Params(18.0, -0.30, 0.10, 6.0),
 
+    # GLP-1 / incretin class (Semaglutide / Tirzepatide / Liraglutide).
+    # Class-qualified marker names carry GLP-1-magnitude effects so they do NOT
+    # overwrite the much smaller generic "Body weight" / "HbA1c" markers above
+    # (which are tuned for AOD-9604 / MOTS-c). Magnitudes are a class-level
+    # approximation across the three agents (e.g. weight loss ranges ~8% for
+    # liraglutide to ~21% for tirzepatide; ~13% is a representative class mean).
+    "Body weight (GLP-1 RA)":        Params(95.0, -0.13, 0.02, 8.0),
+    "Waist circumference (GLP-1 RA)": Params(110.0, -0.09, 0.02, 8.0),
+    "HbA1c (GLP-1 RA)":              Params(7.8,  -0.18, 0.02, 12.0),
+    "HOMA-IR (GLP-1 RA)":            Params(4.0,  -0.40, 0.08, 6.0),
+    "Fasting plasma glucose":        Params(160.0, -0.22, 0.05, 6.0),
+    "Serum lipase":                  Params(30.0,  0.0,  0.10, 4.0),
+    "Resting heart rate":            Params(72.0,  0.04, 0.03, 4.0),
+
     # Skin (GHK-Cu)
     "Wrinkle depth (imaging)":  Params(40.0, -0.25, 0.06, 6.0),
     "Skin thickness (ultrasound)": Params(1.4, 0.15, 0.05, 6.0),

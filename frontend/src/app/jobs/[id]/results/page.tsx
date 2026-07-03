@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getJobStatus } from "../../../lib/api";
+import {
+  createPatientFromJob,
+  getJobStatus,
+  type PatientFromJobResponse,
+} from "../../../lib/api";
 import type {
   VariantResult,
   Tier,
@@ -45,6 +49,30 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
   const [viewMode, setViewMode] = useState<ViewMode>("pgx");
+  const [creatingProfile, setCreatingProfile] = useState(false);
+  const [profileResult, setProfileResult] =
+    useState<PatientFromJobResponse | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const handleCreateTrackingProfile = useCallback(async () => {
+    setCreatingProfile(true);
+    setProfileError(null);
+    try {
+      const res = await createPatientFromJob(jobId);
+      setProfileResult(res);
+      // Drop the user straight into the onboarding wizard with the
+      // job id preserved so the page can show engine recommendations.
+      router.push(
+        `/tracking/patients/${res.patient.id}/onboard?from_job=${jobId}`,
+      );
+    } catch (err) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to create profile.",
+      );
+    } finally {
+      setCreatingProfile(false);
+    }
+  }, [jobId, router]);
 
   useEffect(() => {
     getJobStatus(jobId)
@@ -157,13 +185,72 @@ export default function ResultsPage() {
           <h1 className="text-2xl font-bold text-zinc-900">Variant Report</h1>
           <p className="text-sm text-zinc-500 font-mono mt-0.5">{jobId}</p>
         </div>
-        <button
-          onClick={downloadCsv}
-          className="rounded-lg border border-zinc-200 bg-white text-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-50 transition-colors"
-        >
-          ⬇ Download CSV
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {!profileResult && (
+            <button
+              onClick={handleCreateTrackingProfile}
+              disabled={creatingProfile}
+              className="rounded-lg bg-teal-700 text-white px-4 py-2 text-sm font-medium hover:bg-teal-800 transition-colors disabled:opacity-50"
+              title="Create a tracking patient seeded with real PharmGKB-evidence priors derived from this analysis."
+            >
+              {creatingProfile ? "Creating…" : "Create tracking profile"}
+            </button>
+          )}
+          <button
+            onClick={downloadCsv}
+            className="rounded-lg border border-zinc-200 bg-white text-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-50 transition-colors"
+          >
+            ⬇ Download CSV
+          </button>
+        </div>
       </div>
+
+      {/* ── Tracking-profile creation result ─────────────────────────── */}
+      {profileError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Could not create tracking profile: {profileError}
+        </div>
+      )}
+      {profileResult && (
+        <div className="space-y-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+          <p>
+            <strong>Tracking profile created.</strong>{" "}
+            <button
+              onClick={() =>
+                router.push(`/tracking/patients/${profileResult.patient.id}`)
+              }
+              className="underline font-medium hover:text-teal-700"
+            >
+              Open “{profileResult.patient.label}” in tracking →
+            </button>
+          </p>
+          {profileResult.peptides_with_patient_signal.length > 0 ? (
+            <p className="text-xs text-teal-800">
+              Found PharmGKB-evidence priors for{" "}
+              <strong>
+                {profileResult.peptides_with_patient_signal.length}
+              </strong>{" "}
+              of {profileResult.peptides_with_evidence.length} covered peptides
+              for this genotype:{" "}
+              <span className="italic">
+                {profileResult.peptides_with_patient_signal.join(", ")}
+              </span>
+              . Carried variants:{" "}
+              {profileResult.variants_carried
+                .map((v) => `${v.rsid} (${v.gene}, ${v.genotype})`)
+                .join("; ")}
+              .
+            </p>
+          ) : (
+            <p className="text-xs text-teal-800">
+              No PharmGKB-evidence variants carried — the tracking model
+              will use panel-only priors. PharmGKB coverage today is
+              limited to the GLP-1 receptor agonist class; other
+              peptides have no validated genetic predictor.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Summary metrics */}
       <SummaryMetrics results={results} />

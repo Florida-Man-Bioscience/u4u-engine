@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "description": "Research-backed evidence registry for peptide -> biomarker response magnitudes. Curated, citation-anchored overrides for the informal defaults in engine/tracking/biomarker_params.py. Each entry records the documented effect magnitude, the evidence GRADE, an explicit relative_sd (uncertainty in the magnitude, as a fraction of the magnitude), and the real, retrieved citations that back it. The loader (engine/tracking/evidence.py) merges these over BIOMARKER_PARAMS; the Bayesian prior (engine/tracking/genetics.derive_prior) uses relative_sd in place of the flat PANEL_REL_SD when an entry exists, so well-studied markers get tighter priors and sparsely-evidenced ones get wider priors. Update this file with engine/tracking/evidence_update.py; never hand-edit a citation you have not actually retrieved.",
+  "grade_definitions": {
+    "A": "Multiple human RCTs or a meta-analysis; magnitude well established.",
+    "B": "At least one human RCT; magnitude directionally firm but class- or dose-approximate.",
+    "C": "Human observational, open-label, or mechanistic-only; direction supported, magnitude soft.",
+    "D": "Preclinical only (animal / in vitro); human magnitude is an extrapolation."
+  },
+  "grade_default_relative_sd": {
+    "A": 0.10,
+    "B": 0.15,
+    "C": 0.22,
+    "D": 0.30
+  },
+  "uncited_relative_sd": 0.20,
+  "entries": {
+    "Serum IGF-1": {
+      "max_pct_change": 0.55,
+      "relative_sd": 0.15,
+      "grade": "B",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin", "GHRP-2"],
+      "rationale": "GH-axis secretagogues robustly raise circulating IGF-1 in humans. Tesamorelin's pivotal RCT in HIV-associated lipodystrophy showed a large, sustained IGF-1 rise (roughly a doubling from baseline). Direction is firm from human RCTs; the +55% panel magnitude is a class-level, dose-dependent approximation (hence grade B, not A), so relative_sd is tightened to 0.15 from the 0.20 default but not to the 0.10 A-tier.",
+      "citations": [
+        {
+          "doi": "10.1056/nejmoa072375",
+          "title": "Metabolic Effects of a Growth Hormone-Releasing Factor in Patients with HIV",
+          "authors": "Falutz et al.",
+          "year": 2007,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1001/jama.292.2.210",
+          "title": "Growth Hormone-Releasing Hormone in HIV-Infected Men With Lipodystrophy",
+          "authors": "Falutz et al.",
+          "year": 2004,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    },
+    "Serum VEGF": {
+      "max_pct_change": 0.45,
+      "relative_sd": 0.30,
+      "grade": "D",
+      "peptides": ["BPC-157"],
+      "rationale": "BPC-157 promotes angiogenesis and upregulates VEGF/VEGFR2 signaling in animal wound-healing and endothelial models. Evidence is preclinical only; the human serum-VEGF magnitude is an extrapolation, so relative_sd is widened to 0.30 (grade D) rather than the 0.20 default.",
+      "citations": [
+        {
+          "doi": "10.3389/fphar.2021.627533",
+          "title": "Stable Gastric Pentadecapeptide BPC 157 and Wound Healing",
+          "authors": "Seiwerth et al.",
+          "year": 2021,
+          "journal": "Frontiers in Pharmacology",
+          "design": "Review",
+          "evidence": "preclinical"
+        },
+        {
+          "doi": "10.2147/dddt.s82030",
+          "title": "Body protective compound-157 enhances alkali-burn wound healing in vivo and promotes proliferation, migration, and angiogenesis in vitro",
+          "authors": "Huang et al.",
+          "year": 2015,
+          "journal": "Drug Design, Development and Therapy",
+          "design": "Animal/in vitro",
+          "evidence": "preclinical"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    },
+    "Plasma nitrite/nitrate (NOx)": {
+      "max_pct_change": 0.50,
+      "relative_sd": 0.30,
+      "grade": "D",
+      "peptides": ["BPC-157"],
+      "rationale": "BPC-157 modulates vasomotor tone via the Src-Caveolin-1-eNOS pathway, raising NO production in endothelial/animal models. Preclinical only; human plasma NOx magnitude is an extrapolation (grade D, relative_sd 0.30).",
+      "citations": [
+        {
+          "doi": "10.1038/s41598-020-74022-y",
+          "title": "Modulatory effects of BPC 157 on vasomotor tone and the activation of Src-Caveolin-1-endothelial nitric oxide synthase pathway",
+          "authors": "Hsieh et al.",
+          "year": 2020,
+          "journal": "Scientific Reports",
+          "design": "Animal/in vitro",
+          "evidence": "preclinical"
+        }
+      ],
+      "last_reviewed": "2026-06-29"
+    },
+    "Serum IGFBP-3": {
+      "max_pct_change": 0.40,
+      "relative_sd": 0.15,
+      "grade": "B",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin", "GHRP-2"],
+      "rationale": "IGFBP-3 is the principal GH-dependent carrier of circulating IGF-1, so GH-axis secretagogues that raise GH/IGF-1 raise IGFBP-3 in parallel. Supraphysiological GH administration measurably increases the IGF axis including IGFBP-3 in healthy adults (Dall 2000), and an oral GH secretagogue (NN703) stimulated the GH/IGF axis in adults (Svensson 2003). Direction is firm from human data; the specific IGFBP-3 magnitude for these secretagogues is a class-level, dose-dependent inference (grade B, not A), so relative_sd is tightened to 0.15 rather than the 0.10 A-tier.",
+      "citations": [
+        {
+          "doi": "10.1210/jcem.85.11.6964",
+          "title": "The Effect of Four Weeks of Supraphysiological Growth Hormone Administration on the Insulin-Like Growth Factor Axis in Women and Men",
+          "authors": "Dall et al.",
+          "year": 2000,
+          "journal": "Journal of Clinical Endocrinology & Metabolism",
+          "design": "Controlled trial",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1046/j.1365-2265.2003.01754.x",
+          "title": "Oral administration of the growth hormone secretagogue NN703 in adult patients with growth hormone deficiency",
+          "authors": "Svensson et al.",
+          "year": 2003,
+          "journal": "Clinical Endocrinology",
+          "design": "Clinical trial",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "Lean body mass (DXA)": {
+      "max_pct_change": 0.05,
+      "relative_sd": 0.22,
+      "grade": "C",
+      "peptides": ["Tesamorelin", "CJC-1295", "Ipamorelin"],
+      "rationale": "GH-axis stimulation is anabolic, and the tesamorelin pivotal RCT in HIV-associated lipodystrophy assessed body composition. The trial's primary endpoint was visceral adipose tissue; lean-body-mass / fat-free-mass change is a SECONDARY body-composition endpoint and the effect is small (the panel magnitude is only +5%). That makes the magnitude soft and partly an anabolic-class extrapolation (grade C, relative_sd 0.22), not a firm RCT-derived effect size.",
+      "citations": [
+        {
+          "doi": "10.1056/nejmoa072375",
+          "title": "Metabolic Effects of a Growth Hormone-Releasing Factor in Patients with HIV",
+          "authors": "Falutz et al.",
+          "year": 2007,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "Absolute CD4+ T-lymphocyte count": {
+      "max_pct_change": 0.55,
+      "relative_sd": 0.22,
+      "grade": "C",
+      "peptides": ["Thymosin Alpha-1"],
+      "rationale": "Thymosin Alpha-1 promotes T-cell maturation and immune reconstitution. A randomized pilot in HIV patients with low CD4 counts on HAART measured CD4 reconstitution directly (Chadwick 2003), and the multicenter ETASS sepsis RCT showed immune restoration with Tα1 (Wu 2013) — though ETASS's primary immune marker was monocyte HLA-DR rather than absolute CD4 count, so it supports direction more than the CD4-count magnitude. The direct CD4-count evidence is a small pilot and the response is strongly population-dependent (HIV vs sepsis vs healthy), so this is graded C with relative_sd 0.22.",
+      "citations": [
+        {
+          "doi": "10.1111/j.1365-2249.2003.02331.x",
+          "title": "A pilot study of the safety and efficacy of thymosin alpha 1 in augmenting immune reconstitution in HIV-infected patients with low CD4 counts taking highly active antiretroviral therapy",
+          "authors": "Chadwick et al.",
+          "year": 2003,
+          "journal": "Clinical and Experimental Immunology",
+          "design": "Pilot RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1186/cc11932",
+          "title": "The efficacy of thymosin alpha 1 for severe sepsis (ETASS): a multicenter, single-blind, randomized and controlled trial",
+          "authors": "Wu et al.",
+          "year": 2013,
+          "journal": "Critical Care",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "Body weight (GLP-1 RA)": {
+      "max_pct_change": -0.13,
+      "relative_sd": 0.10,
+      "grade": "A",
+      "peptides": ["Semaglutide", "Tirzepatide", "Liraglutide"],
+      "rationale": "GLP-1 receptor agonists produce large, sustained weight loss in multiple pivotal RCTs and head-to-head trials: semaglutide 2.4 mg ~15% (STEP program; Wadden 2021 STEP 3), semaglutide vs liraglutide head-to-head (Rubino 2022 STEP 8), and tirzepatide vs semaglutide (Frías 2021 SURPASS-2). Direction and approximate magnitude are firmly established across the class (grade A); the panel magnitude (-13%) is a representative class mean spanning ~8% (liraglutide) to ~21% (tirzepatide), so relative_sd is the tight A-tier 0.10. This is a class-qualified marker that does NOT apply to the generic 'Body weight' marker used by weaker peptides.",
+      "citations": [
+        {
+          "doi": "10.1001/jama.2021.1831",
+          "title": "Effect of Subcutaneous Semaglutide vs Placebo as an Adjunct to Intensive Behavioral Therapy on Body Weight in Adults With Overweight or Obesity (STEP 3)",
+          "authors": "Wadden et al.",
+          "year": 2021,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1001/jama.2021.23619",
+          "title": "Effect of Weekly Subcutaneous Semaglutide vs Daily Liraglutide on Body Weight in Adults With Overweight or Obesity Without Diabetes (STEP 8)",
+          "authors": "Rubino et al.",
+          "year": 2022,
+          "journal": "JAMA",
+          "design": "RCT",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1056/nejmoa2107519",
+          "title": "Tirzepatide versus Semaglutide Once Weekly in Patients with Type 2 Diabetes (SURPASS-2)",
+          "authors": "Frías et al.",
+          "year": 2021,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    },
+    "HbA1c (GLP-1 RA)": {
+      "max_pct_change": -0.18,
+      "relative_sd": 0.10,
+      "grade": "A",
+      "peptides": ["Semaglutide", "Tirzepatide", "Liraglutide"],
+      "rationale": "GLP-1 receptor agonists lower HbA1c substantially and consistently across the class, established by a meta-analysis of GLP-1 RA cardiovascular-outcome trials (Bethel 2021) and the tirzepatide-vs-semaglutide SURPASS-2 RCT (Frías 2021), where reductions reach ~1.5-2.0 percentage points. Direction and magnitude are well established (grade A), relative_sd 0.10. Class-qualified marker; does not apply to the generic 'HbA1c' used by weaker metabolic peptides.",
+      "citations": [
+        {
+          "doi": "10.2337/dc20-1815",
+          "title": "HbA1c Change and Diabetic Retinopathy During GLP-1 Receptor Agonist Cardiovascular Outcome Trials: A Meta-analysis and Meta-regression",
+          "authors": "Bethel et al.",
+          "year": 2021,
+          "journal": "Diabetes Care",
+          "design": "Meta-analysis",
+          "evidence": "human"
+        },
+        {
+          "doi": "10.1056/nejmoa2107519",
+          "title": "Tirzepatide versus Semaglutide Once Weekly in Patients with Type 2 Diabetes (SURPASS-2)",
+          "authors": "Frías et al.",
+          "year": 2021,
+          "journal": "New England Journal of Medicine",
+          "design": "RCT",
+          "evidence": "human"
+        }
+      ],
+      "last_reviewed": "2026-06-30"
+    }
+  }
+}

@@ -15,9 +15,10 @@ The client polls /jobs/{job_id} until status is "done" or "failed".
 
 Job storage
 -----------
-Jobs are cached in memory and mirrored to a small JSON file so completed
-results survive an API process restart.  Raw uploaded genome files are still
-processed from memory and are never written to disk by this wrapper.
+Jobs are persisted to Postgres when DATABASE_URL is set; in dev (no
+DATABASE_URL) they live only in the in-memory ``_jobs`` dict and are
+lost on restart. Raw uploaded genome files are still processed from
+memory and are never written to disk by this wrapper.
 
 Environment variables
 ---------------------
@@ -28,27 +29,29 @@ FILTERS         — comma-separated filter filenames (default: "acmg81_rsids.txt
 WORKERS         — thread pool size — set to CPU count of host (default: 4)
 MAX_UPLOAD_MB   — file size limit in megabytes (default: 100)
 JOB_TTL_HOURS   — hours to keep completed jobs in the job store (default: 24)
-JOB_STORE_PATH  — JSON job store path (default: "${DATA_DIR}/jobs.json")
 ALLOWED_ORIGINS — comma-separated CORS origins for browser clients
 """
 
 import asyncio
-import json
 import logging
 import os
-from pathlib import Path
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, UploadFile, File
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from engine import run_pipeline
 from engine.acmg import apply_signoff
+from engine.users.deps import current_user
+from engine.users.models import User
+
+# ── Database (Postgres when DATABASE_URL is set, in-memory fallback otherwise) ─
+_DB_URL = os.getenv("DATABASE_URL", "").strip()
 
 
 class AcmgSignoffRequest(BaseModel):
@@ -63,7 +66,6 @@ DATA_DIR      = os.getenv("DATA_DIR", "data")
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "100"))
 WORKERS       = int(os.getenv("WORKERS", "4"))
 JOB_TTL_HOURS = int(os.getenv("JOB_TTL_HOURS", "24"))
-JOB_STORE_PATH = os.getenv("JOB_STORE_PATH", os.path.join(DATA_DIR, "jobs.json"))
 
 _raw_filters = os.getenv("FILTERS", "acmg81_rsids.txt").strip()
 FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw_filters else []
@@ -71,38 +73,21 @@ FILTERS      = [f.strip() for f in _raw_filters.split(",") if f.strip()] if _raw
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-# ── Job-store encryption ───────────────────────────────────────────────────
-# Completed job results are derived from the user's genome (variants,
-# genotypes, conditions) and are therefore sensitive. They are only persisted
-# to disk when encrypted with a configured Fernet key (JOB_STORE_KEY). With no
-# key, disk persistence is DISABLED (in-memory only) rather than writing
-# plaintext PHI to disk.
-JOB_STORE_KEY = os.getenv("JOB_STORE_KEY", "").strip()
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("u4u.api")
 
-try:
-    from cryptography.fernet import Fernet, InvalidToken
-    _CRYPTO_AVAILABLE = True
-except Exception:  # ImportError, or a broken/incomplete crypto backend
-    _CRYPTO_AVAILABLE = False
-    InvalidToken = Exception  # type: ignore
-
-_fernet = None
-if JOB_STORE_KEY and _CRYPTO_AVAILABLE:
-    try:
-        _fernet = Fernet(JOB_STORE_KEY.encode())
-    except Exception:
-        log.error("JOB_STORE_KEY is not a valid Fernet key — disk persistence disabled.")
-        _fernet = None
-
-PERSIST_ENABLED = _fernet is not None
-if not PERSIST_ENABLED:
+# JOB_STORE_KEY used to drive a Fernet-encrypted JSON snapshot at
+# data/jobs.json for deployments without a database. With Postgres now
+# the canonical backend (and dev runs intentionally ephemeral), the
+# snapshot path was removed in Phase 4 of the storage architecture
+# rollout. We still read the env var so existing deploys don't see an
+# "unknown variable" error — just a one-line deprecation warning. Drop
+# the read entirely on the next release.
+if os.getenv("JOB_STORE_KEY", "").strip():
     log.warning(
-        "Job-store disk persistence DISABLED (no valid JOB_STORE_KEY or cryptography "
-        "unavailable). Genomic-derived results are kept in memory only and lost on "
-        "restart. Set JOB_STORE_KEY to a Fernet key to enable encrypted persistence."
+        "JOB_STORE_KEY is deprecated and no longer used — jobs persist "
+        "to Postgres when DATABASE_URL is set and are in-memory only "
+        "otherwise. Remove this env var on the next deploy."
     )
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -113,7 +98,8 @@ from contextlib import asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Startup + shutdown hooks. Replaces the deprecated
     ``@app.on_event("startup")`` pattern."""
-    _load_jobs_from_disk()
+    _run_db_migrations()
+    _load_jobs_from_store()
     # Create HealthKit tables if DATABASE_URL is set (no-op otherwise).
     from engine.health.db import dispose as _dispose_health_db, init_models as _init_health_db
     await _init_health_db()
@@ -151,7 +137,13 @@ _executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
 from engine.tracking.api import router as _tracking_router  # noqa: E402
+
 app.include_router(_tracking_router)
+
+# ── App user accounts (Authentik-backed) ────────────────────────────────────
+from engine.users.api import router as _users_router  # noqa: E402
+
+app.include_router(_users_router)
 
 # ── HealthKit ingestion router (peptodyssey iOS app → Postgres) ──────────────
 from engine.health.api import router as _health_router  # noqa: E402
@@ -174,8 +166,39 @@ _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 
 
+def get_completed_job_results(job_id: str) -> dict | None:
+    """Return the ``results`` dict for a completed job, or None.
+
+    Public accessor used by the tracking module (engine/tracking/api.py)
+    to derive a real-data ``GeneticProfile`` from a finished /analyze
+    run without taking a circular import on this file. Returns None for
+    pending/running/failed jobs and for unknown ids; the caller decides
+    whether that's a 404 or a 409.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job.get("status") != "done":
+            return None
+        results = job.get("results")
+        return dict(results) if isinstance(results, dict) else None
+
+
+def get_job_filename(job_id: str) -> str | None:
+    """Return the original upload filename for a job, or None.
+
+    Lets the tracking endpoint label an auto-created patient with the
+    source file ("Patient from chr1.vcf.gz") instead of an opaque uuid.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        fname = job.get("filename")
+        return fname if isinstance(fname, str) and fname else None
+
+
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
@@ -210,29 +233,159 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
     return response
 
 
-def _serializable_job(job: dict) -> dict:
-    """Strip process-local fields before writing a job to disk."""
-    payload = dict(job)
-    payload["partial_results"] = list(job.get("partial_results") or [])
-    return payload
+def _run_db_migrations() -> None:
+    """Run pending SQL migrations at startup (no-op when DATABASE_URL is absent)."""
+    if not _DB_URL:
+        return
+    try:
+        from db.migrate import run_migrations
+        run_migrations(_DB_URL)
+        log.info("Database migrations complete")
+    except Exception:
+        log.exception("Database migration failed — proceeding with in-memory job store")
+
+
+def _pg_insert_results(job_id: str, variants: list[dict]) -> None:
+    """Insert per-variant result rows. Called after pipeline completes."""
+    if not _DB_URL or not variants:
+        return
+    try:
+        import psycopg2.extras
+
+        from db.pool import get_conn as pg_conn
+
+        rows = []
+        for v in variants:
+            genes = v.get("genes") or []
+            reasons = v.get("reasons") or []
+            rows.append({
+                "job_id": job_id,
+                "variant_id": v.get("variant_id") or v.get("rsid") or f"{v.get('chrom')}:{v.get('pos')}",
+                "rsid": v.get("rsid"),
+                "location": v.get("location"),
+                "chrom": v.get("chrom"),
+                "pos": v.get("pos"),
+                "ref": v.get("ref"),
+                "alt": v.get("alt"),
+                "zygosity": v.get("zygosity"),
+                "consequence": v.get("consequence"),
+                "genes": genes if isinstance(genes, list) else [genes],
+                "clinvar": v.get("clinvar"),
+                "clinvar_raw": v.get("clinvar_raw"),
+                "disease_name": v.get("disease_name"),
+                "condition_key": v.get("condition_key"),
+                "gnomad_af": v.get("gnomad_af"),
+                "gnomad_popmax": v.get("gnomad_popmax"),
+                "gnomad_homozygote_count": v.get("gnomad_homozygote_count"),
+                "score": v.get("score", 0),
+                "tier": v.get("tier", "low"),
+                "reasons": reasons if isinstance(reasons, list) else [reasons],
+                "frequency_derived_label": v.get("frequency_derived_label"),
+                "carrier_note": v.get("carrier_note"),
+                "emoji": v.get("emoji"),
+                "headline": v.get("headline"),
+                "consequence_plain": v.get("consequence_plain"),
+                "rarity_plain": v.get("rarity_plain"),
+                "clinvar_plain": v.get("clinvar_plain"),
+                "action_hint": v.get("action_hint"),
+                "zygosity_plain": v.get("zygosity_plain"),
+                "full_json": psycopg2.extras.Json(v),
+            })
+
+        with pg_conn() as conn:
+            cur = conn.cursor()  # raw psycopg2 cursor via wrapper
+            psycopg2.extras.execute_batch(
+                cur,
+                """
+                INSERT INTO results (
+                    job_id, variant_id, rsid, location, chrom, pos, ref, alt,
+                    zygosity, consequence, genes, clinvar, clinvar_raw,
+                    disease_name, condition_key, gnomad_af, gnomad_popmax,
+                    gnomad_homozygote_count, score, tier, reasons,
+                    frequency_derived_label, carrier_note, emoji, headline,
+                    consequence_plain, rarity_plain, clinvar_plain, action_hint,
+                    zygosity_plain, full_json
+                ) VALUES (
+                    %(job_id)s, %(variant_id)s, %(rsid)s, %(location)s,
+                    %(chrom)s, %(pos)s, %(ref)s, %(alt)s, %(zygosity)s,
+                    %(consequence)s, %(genes)s, %(clinvar)s, %(clinvar_raw)s,
+                    %(disease_name)s, %(condition_key)s, %(gnomad_af)s,
+                    %(gnomad_popmax)s, %(gnomad_homozygote_count)s, %(score)s,
+                    %(tier)s, %(reasons)s, %(frequency_derived_label)s,
+                    %(carrier_note)s, %(emoji)s, %(headline)s,
+                    %(consequence_plain)s, %(rarity_plain)s, %(clinvar_plain)s,
+                    %(action_hint)s, %(zygosity_plain)s, %(full_json)s
+                )
+                ON CONFLICT DO NOTHING
+                """,
+                rows,
+                page_size=200,
+            )
+    except Exception:
+        log.exception("failed to insert results for job %s into Postgres", job_id)
 
 
 def _persist_jobs_locked() -> None:
-    """Atomically mirror the in-memory job store to disk, encrypted at rest."""
-    if not PERSIST_ENABLED:
-        return  # in-memory only — never write plaintext genomic-derived data
-    path = Path(JOB_STORE_PATH)
+    """Persist the current job store state.
+
+    Postgres when DATABASE_URL is set; otherwise no-op — dev mode keeps
+    jobs only in the in-memory ``_jobs`` dict and they're lost on
+    restart, which is intentional. The pre-Phase-4 Fernet snapshot at
+    data/jobs.json is gone.
+    """
+    if not _DB_URL:
+        return
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(
-            {jid: _serializable_job(job) for jid, job in _jobs.items()}
-        ).encode("utf-8")
-        token = _fernet.encrypt(payload)
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        tmp_path.write_bytes(token)
-        tmp_path.replace(path)
+        import psycopg2.extras
+
+        from db.pool import get_conn as pg_conn
+        with pg_conn() as conn:
+            for job_id, job in _jobs.items():
+                pipeline_output = job.get("results")
+                conn.execute(
+                    """
+                    INSERT INTO jobs (id, status, filename, file_size_bytes,
+                        progress_step, progress_pct, variant_count, error_message,
+                        pipeline_output_json, created_at, started_at, finished_at,
+                        created_by_user_id)
+                    VALUES (%(id)s, %(status)s, %(filename)s, %(file_size_bytes)s,
+                        %(progress_step)s, %(progress_pct)s, %(variant_count)s,
+                        %(error_message)s, %(pipeline_output_json)s,
+                        %(created_at)s, %(started_at)s, %(finished_at)s,
+                        %(created_by_user_id)s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        status               = EXCLUDED.status,
+                        progress_step        = EXCLUDED.progress_step,
+                        progress_pct         = EXCLUDED.progress_pct,
+                        variant_count        = EXCLUDED.variant_count,
+                        error_message        = EXCLUDED.error_message,
+                        pipeline_output_json = EXCLUDED.pipeline_output_json,
+                        started_at           = EXCLUDED.started_at,
+                        finished_at          = EXCLUDED.finished_at
+                        -- created_by_user_id is provenance and is
+                        -- never updated after the initial insert.
+                    """,
+                    {
+                        "id": job_id,
+                        "status": job.get("status", "pending"),
+                        "filename": job.get("filename", ""),
+                        "file_size_bytes": job.get("file_size", 0),
+                        "progress_step": (job.get("progress") or {}).get("step"),
+                        "progress_pct": (job.get("progress") or {}).get("pct", 0),
+                        "variant_count": job.get("count"),
+                        "error_message": job.get("error"),
+                        "pipeline_output_json": (
+                            psycopg2.extras.Json(pipeline_output)
+                            if pipeline_output is not None else None
+                        ),
+                        "created_at": job.get("created_at"),
+                        "started_at": job.get("started_at"),
+                        "finished_at": job.get("finished_at"),
+                        "created_by_user_id": job.get("created_by_user_id"),
+                    },
+                )
     except Exception:
-        log.exception("failed to persist job store to %s", JOB_STORE_PATH)
+        log.exception("failed to persist jobs to Postgres")
 
 
 def _persist_jobs() -> None:
@@ -240,53 +393,72 @@ def _persist_jobs() -> None:
         _persist_jobs_locked()
 
 
-def _load_jobs_from_disk() -> None:
-    """Load persisted jobs, marking interrupted pending/running jobs failed."""
-    if not PERSIST_ENABLED:
-        return
-    path = Path(JOB_STORE_PATH)
-    if not path.exists():
-        return
+def _load_jobs_from_store() -> None:
+    """Populate _jobs from Postgres if configured; no-op otherwise."""
+    if _DB_URL:
+        _load_jobs_from_pg()
 
+
+def _load_jobs_from_pg() -> None:
+    """Load recent jobs from Postgres into the in-memory store."""
     try:
-        token = path.read_bytes()
-        data = json.loads(_fernet.decrypt(token).decode("utf-8"))
-    except InvalidToken:
-        log.error(
-            "job store at %s could not be decrypted (wrong JOB_STORE_KEY?) — ignoring",
-            JOB_STORE_PATH,
-        )
-        return
+        from db.pool import get_conn as pg_conn
+        cutoff = datetime.now(UTC) - timedelta(hours=JOB_TTL_HOURS)
+        now = _now_iso()
+        restored = 0
+
+        with pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id::text, status, filename, file_size_bytes,
+                       progress_step, progress_pct, variant_count, error_message,
+                       pipeline_output_json, created_at, started_at, finished_at,
+                       created_by_user_id::text AS created_by_user_id
+                FROM jobs
+                WHERE created_at > %s
+                ORDER BY created_at DESC
+                LIMIT 500
+                """,
+                (cutoff,),
+            )
+            rows = cur.fetchall()
+
+        with _jobs_lock:
+            for row in rows:
+                job_id = row["id"]
+                status = row["status"]
+                if status in {"pending", "running"}:
+                    status = "failed"
+                    error = "Job was interrupted by an API restart. Please upload again."
+                    finished_at = now
+                else:
+                    error = row.get("error_message")
+                    finished_at = row["finished_at"].isoformat() if row.get("finished_at") else None
+
+                created_at = row["created_at"].isoformat() if row.get("created_at") else now
+                started_at = row["started_at"].isoformat() if row.get("started_at") else None
+                pipeline_output = row.get("pipeline_output_json")
+
+                _jobs[job_id] = {
+                    "status":          status,
+                    "progress":        {"step": row.get("progress_step") or "Restored", "pct": row.get("progress_pct") or 0},
+                    "count":           row.get("variant_count"),
+                    "results":         pipeline_output,
+                    "partial_results": [],
+                    "error":           error,
+                    "filename":        row.get("filename", ""),
+                    "file_size":       row.get("file_size_bytes", 0),
+                    "created_at":      created_at,
+                    "started_at":      started_at,
+                    "finished_at":     finished_at,
+                    "created_by_user_id": row.get("created_by_user_id"),
+                }
+                restored += 1
+
+        log.info("loaded %d jobs from Postgres", restored)
     except Exception:
-        log.exception("failed to read job store from %s", JOB_STORE_PATH)
-        return
-
-    if not isinstance(data, dict):
-        log.warning("ignoring invalid job store at %s", JOB_STORE_PATH)
-        return
-
-    now = _now_iso()
-    restored = 0
-    with _jobs_lock:
-        for job_id, job in data.items():
-            if not isinstance(job, dict):
-                continue
-            job.setdefault("progress", {"step": "Restored", "pct": 0})
-            job.setdefault("count", None)
-            job.setdefault("results", None)
-            job.setdefault("partial_results", [])
-            job.setdefault("error", None)
-            job.setdefault("started_at", None)
-            job.setdefault("finished_at", None)
-            if job.get("status") in {"pending", "running"}:
-                job.update({
-                    "status": "failed",
-                    "error": "Job was interrupted by an API restart. Please upload again.",
-                    "finished_at": now,
-                })
-            _jobs[str(job_id)] = job
-            restored += 1
-    log.info("loaded %d jobs from %s", restored, JOB_STORE_PATH)
+        log.exception("failed to load jobs from Postgres — starting with empty job store")
 
 
 # ── Background job runner ─────────────────────────────────────────────────────
@@ -341,6 +513,8 @@ def _run_pipeline_task(
                 "finished_at": _now_iso(),
             })
             _persist_jobs_locked()
+        # Insert per-variant rows into results table (outside lock — can be slow)
+        _pg_insert_results(job_id, variants)
         log.info("job=%s done variants=%d", job_id, len(variants))
 
     except ValueError as exc:
@@ -353,7 +527,7 @@ def _run_pipeline_task(
             _persist_jobs_locked()
         log.warning("job=%s validation error: %s", job_id, exc)
 
-    except Exception as exc:
+    except Exception:
         with _jobs_lock:
             _jobs[job_id].update({
                 "status":      "failed",
@@ -370,7 +544,7 @@ async def _cleanup_old_jobs():
     """Remove completed/failed jobs older than JOB_TTL_HOURS to prevent memory leak."""
     while True:
         await asyncio.sleep(3600)  # run hourly
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=JOB_TTL_HOURS)
+        cutoff = datetime.now(UTC) - timedelta(hours=JOB_TTL_HOURS)
         with _jobs_lock:
             expired = [
                 jid for jid, j in _jobs.items()
@@ -408,6 +582,10 @@ async def analyze(
     # Medications are PHI — accept them as a multipart form field, never as a
     # URL query parameter (which would land in access logs / browser history).
     current_medications: str = Form(""),
+    # Soft auth: in prod the Authentik proxy stamps headers and this is
+    # the operator who created the job; in dev (no proxy) it's None and
+    # we record NULL ownership rather than 401-ing.
+    user: User | None = Depends(current_user),
 ):
     """
     Upload a genome file and receive a job_id.
@@ -460,6 +638,10 @@ async def analyze(
             "created_at":  _now_iso(),
             "started_at":  None,
             "finished_at": None,
+            # NULL in dev (no Authentik headers); the Authentik subject id
+            # in prod. Stamped once at job creation and not touched on
+            # subsequent _persist_jobs_locked() updates.
+            "created_by_user_id": user.id if user is not None else None,
         }
         _persist_jobs_locked()
 
@@ -657,7 +839,7 @@ def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest):
                 notes=req.notes,
             )
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
         _persist_jobs_locked()
         return target["acmg"]

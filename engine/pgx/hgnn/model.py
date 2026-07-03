@@ -21,9 +21,8 @@ from __future__ import annotations
 
 import math
 
-from ..types import DrugPrediction, StarAlleleCall, HLACall, PRSResult, Phenotype
-from .graph_build import build_graph, PGxGraph
-
+from ..types import DrugPrediction, HLACall, Phenotype, PRSResult, StarAlleleCall
+from .graph_build import PGxGraph, build_graph
 
 # Penalize phenotypes that move further from "normal" — informs responder probability
 _PHENO_DEVIATION = {
@@ -81,8 +80,8 @@ def _rule_based_score(
 
 def _torch_path_available() -> bool:
     try:  # noqa: SIM105 — optional dep
+        import torch  # type: ignore  # noqa: F401
         import torch_geometric  # type: ignore  # noqa: F401
-        import torch             # type: ignore  # noqa: F401
         return True
     except Exception:
         return False

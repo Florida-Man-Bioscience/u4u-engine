@@ -13,6 +13,7 @@ class Patient:
     birth_year: int | None
     notes: str | None
     created_at: str
+    created_by_user_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -31,6 +32,7 @@ class Treatment:
     end_date: str | None
     notes: str | None
     created_at: str
+    created_by_user_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -48,6 +50,7 @@ class Measurement:
     measured_at: str
     notes: str | None
     created_at: str
+    created_by_user_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -25,27 +25,47 @@ services:
       # start. Idempotent: skipped on restart if patients already exist.
       # Unset (or remove this line) to keep tracking empty in production.
       SEED_DEMO_DATA: "1"
-      # HealthKit ingestion datastore. Points at the db service below. Unset to
-      # disable health ingestion (endpoints return 503).
-      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://u4u:u4u@db:5432/u4u}"
+      # Point the engine at the local Postgres service below. The engine
+      # auto-migrates on startup (db/migrate.py) and falls back to SQLite
+      # when DATABASE_URL is unset — so removing `postgres` from this compose
+      # file reverts to the previous file-backed behavior with no code change.
+      # The HealthKit ingestion module (engine/health) derives its async
+      # (asyncpg) URL from this same value, so both DB layers share one Postgres.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://u4u:u4u_dev_password@postgres:5432/u4u?sslmode=disable}"
     volumes:
       # Mount data/ so you can update filter files without rebuilding the image.
       # Remove this volume mount in production — bake data/ into the image instead.
       - ./data:/app/data
     depends_on:
-      - db
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
-  db:
+
+  # Local development Postgres. Mirrors the production StatefulSet
+  # (postgres:16-alpine, db/user `u4u`) defined in the iac repo at
+  # rke2/tooling/flux/theswamp/postgres.yaml, so DATABASE_URL-dependent code
+  # exercises the same engine locally. NOT for production — production runs
+  # the in-cluster StatefulSet with a Bitwarden-sourced password.
+  postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: u4u
-      POSTGRES_PASSWORD: u4u
       POSTGRES_DB: u4u
+      POSTGRES_USER: u4u
+      # Dev-only password. The production password comes from the
+      # u4u-postgres-secret ExternalSecret (Bitwarden), never hard-coded.
+      POSTGRES_PASSWORD: u4u_dev_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      # Exposed on the host so you can run scripts/create_device_token.py and psql.
+      # Exposed on the host so you can psql in / point a native iOS-sim build
+      # at localhost:5432 during development.
       - "5432:5432"
     volumes:
-      - u4u_pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U u4u -d u4u"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
   frontend:
     build:
@@ -63,6 +83,12 @@ services:
         # (bypassing any proxy), set NEXT_PUBLIC_API_BASE=http://localhost:8000
         # in .env to point the bundle at the api container's host port.
         NEXT_PUBLIC_API_BASE: "${NEXT_PUBLIC_API_BASE:-/api/v1}"
+    environment:
+      # Server-side base URL used by Next SSR to prefetch the curated
+      # regulatory baseline (paired with NEXT_PUBLIC_API_BASE above —
+      # NEXT_PUBLIC_* is for the browser bundle and is usually relative,
+      # which the Next server cannot fetch).
+      INTERNAL_API_BASE: "${INTERNAL_API_BASE:-http://api:8000}"
     ports:
       - "3000:3000"
     depends_on:
@@ -70,4 +96,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  u4u_pgdata:
+  # Persists the dev Postgres data across `docker compose down`/`up`.
+  # `docker compose down -v` wipes it for a clean slate.
+  pgdata:

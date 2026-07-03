@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..cpic.recommendations import REC_TABLE, HLA_DRUG_RULES
+from ..cpic.recommendations import HLA_DRUG_RULES, REC_TABLE
 from ..prs_pgx.scorer import PRS_DEFINITIONS
 
 

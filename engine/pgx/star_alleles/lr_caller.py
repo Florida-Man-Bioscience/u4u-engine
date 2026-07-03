@@ -14,7 +14,7 @@ import logging
 import shutil
 import subprocess
 
-from ..types import StarAlleleCall, Phenotype
+from ..types import Phenotype, StarAlleleCall
 
 log = logging.getLogger(__name__)
 

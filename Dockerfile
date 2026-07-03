@@ -20,6 +20,9 @@ COPY engine/ engine/
 RUN pip install --no-cache-dir --prefix=/install "engine/[vcf]"
 
 # Install FastAPI, uvicorn, Celery, Redis on top of the engine install.
+# psycopg2-binary backs the Postgres pool in db/pool.py (loaded at import
+# time even with the SQLite fallback active, so it must be present in
+# the runtime image, not just the dev shell's flake.nix).
 RUN pip install --no-cache-dir --prefix=/install \
     "fastapi>=0.110" \
     "uvicorn[standard]>=0.29" \
@@ -29,7 +32,8 @@ RUN pip install --no-cache-dir --prefix=/install \
     "reportlab>=4.1" \
     "sqlalchemy[asyncio]>=2.0" \
     "asyncpg>=0.29" \
-    "pydantic>=2.6"
+    "pydantic>=2.6" \
+    "psycopg2-binary>=2.9"
 
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
@@ -60,6 +64,7 @@ WORKDIR /app
 
 # Copy application code
 COPY engine/  engine/
+COPY db/      db/
 COPY scripts/ scripts/
 COPY api.py   api.py
 

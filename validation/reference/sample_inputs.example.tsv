@@ -1,0 +1,15 @@
+# Tier A sample map — EXAMPLE / TEMPLATE (committed).
+#
+# Copy this to `sample_inputs.tsv` (gitignored, operator-supplied) and edit the
+# paths to point at the genome input file for each reference sample you score.
+# Format: <sample-id><TAB><path-to-genome-input>. The sample-id MUST match the
+# `sample` column in your getrm_pgx.tsv / giab_genotypes.tsv truth sets.
+#
+# Paths may be absolute or relative to the repo root. Keep the real inputs under
+# validation/reference/inputs/ (gitignored) so they are never committed.
+#
+# Lines starting with '#' and blank lines are ignored by load_sample_map().
+#
+# sample          path
+NA12878           validation/reference/inputs/HG001_GRCh38.vcf.gz
+NA24385           validation/reference/inputs/HG002_GRCh38.vcf.gz

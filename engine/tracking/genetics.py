@@ -26,9 +26,12 @@ from __future__ import annotations
 import json
 import math
 import random
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Iterable, Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
+
+from .evidence import evidence_for
 
 Genotype = Literal["hom_ref", "het", "hom_alt"]
 
@@ -84,7 +87,7 @@ class GeneticProfile:
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, raw: str) -> "GeneticProfile":
+    def from_json(cls, raw: str) -> GeneticProfile:
         d = json.loads(raw)
         variants = [
             GeneticVariant(
@@ -290,7 +293,7 @@ def generate_synthetic_profile(
         ))
     return GeneticProfile(
         variants=variants,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         source=source,
     )
 
@@ -357,6 +360,8 @@ class GeneticPrior:
     expected_pct_panel: float       # the panel's documented effect for this marker
     responder_mean: float           # latent r prior mean
     responder_sd: float
+    panel_rel_sd: float             # relative SD applied to the panel effect
+    evidence_grade: str | None      # research grade backing panel_rel_sd, or None if uncited
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -369,6 +374,8 @@ class GeneticPrior:
             "expected_pct_panel": round(self.expected_pct_panel, 4),
             "responder_mean": round(self.responder_mean, 4),
             "responder_sd": round(self.responder_sd, 4),
+            "panel_rel_sd": round(self.panel_rel_sd, 4),
+            "evidence_grade": self.evidence_grade,
         }
 
 
@@ -405,8 +412,18 @@ def derive_prior(
     mean_pct = r.mean * expected_pct
     # σ_pct combines two sources: uncertainty in r and uncertainty in the
     # panel's expected_pct itself (both multiplicative on the same scale).
+    #
+    # The second term's relative size is research-driven when we have a
+    # curated, cited evidence entry for this biomarker: a marker backed by
+    # human RCTs gets a tighter relative SD, a preclinical-only marker a
+    # wider one. Uncited markers — most of the panel — fall back to the
+    # legacy flat PANEL_REL_SD, so their priors are unchanged.
+    evidence = evidence_for(biomarker_name)
+    panel_rel_sd = evidence.relative_sd if evidence is not None else PANEL_REL_SD
+    evidence_grade = evidence.grade if evidence is not None else None
+
     sd_from_r = r.sd * abs(expected_pct)
-    sd_from_panel = PANEL_REL_SD * abs(expected_pct)
+    sd_from_panel = panel_rel_sd * abs(expected_pct)
     sd_pct = max(PRIOR_MIN_SD, math.hypot(sd_from_r, sd_from_panel))
     return GeneticPrior(
         peptide=peptide_name,
@@ -418,6 +435,8 @@ def derive_prior(
         expected_pct_panel=expected_pct,
         responder_mean=r.mean,
         responder_sd=r.sd,
+        panel_rel_sd=panel_rel_sd,
+        evidence_grade=evidence_grade,
     )
 
 

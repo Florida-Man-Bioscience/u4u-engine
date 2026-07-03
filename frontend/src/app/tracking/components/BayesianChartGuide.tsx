@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * Explanatory callout + visual key for the per-biomarker posterior charts.
  *
@@ -40,6 +42,17 @@ export function BayesianChartGuide() {
           As measurements come in, the posterior shifts toward what the
           trajectory actually shows; the gap between the dashed prior line and
           the solid posterior line is the update.
+        </p>
+        <p>
+          For the full formalization — the generative model, the conjugate
+          update, and how the evidence grade sets each prior&apos;s width — see{" "}
+          <Link
+            href="/tracking/model"
+            className="font-medium text-[#1a6b4a] underline underline-offset-2"
+          >
+            how the response prediction works
+          </Link>
+          .
         </p>
       </div>
 

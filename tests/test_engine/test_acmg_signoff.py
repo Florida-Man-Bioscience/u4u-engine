@@ -50,6 +50,7 @@ def test_amend_requires_valid_classification():
 fastapi = pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 from fastapi.testclient import TestClient  # noqa: E402
+
 import api  # noqa: E402
 
 
