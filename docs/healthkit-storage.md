@@ -28,7 +28,7 @@ writes to a local SQLite file.
 
 ```
 POST /healthkit/samples
-  Authorization: (see Authentication — currently soft/optional)
+  Authorization: Bearer <device token>   # required in prod (see Authentication)
   { "subjectId": "<app-generated opaque id>",
     "samples": [ { "uuid": "…", "class": "quantity",
                    "type": "HKQuantityTypeIdentifierHeartRate",
@@ -57,26 +57,33 @@ study needs mutable/soft-deleted samples.
 
 ## Authentication
 
-Two models are in play. **What ships today is the soft forward-auth path; the
-device-code flow is the target.** Get the config values (issuer, client_id) from
-[Authentik provisioning](#authentik-configuration--provisioning) — they do not
-exist yet.
+### Current — interim per-device bearer token (enforced in prod)
 
-### Current — Authentik forward-auth (soft)
+The endpoint requires a per-device bearer token (`engine/healthkit/auth.py`):
+`Authorization: Bearer <token>`, stored as SHA-256 hex in
+`healthkit_device_tokens` (migration 009). Mint one with
+`python scripts/create_healthkit_token.py --label "Curtis iPhone" [--subject <id>]`
+— the raw token is shown once. A token may optionally be **bound to one
+`subject_id`** (then it may write only that subject); unbound tokens may write
+any subject.
 
-The endpoint depends on `current_user`, which reads Authentik proxy headers
-(`X-Authentik-Uid`, …). If present, the operator is recorded in the ingestion
-audit; **it does not gate ingestion**.
+**Fail-closed in prod, open in local dev** — a token is required whenever a real
+database is configured (`DATABASE_URL` set) or `HEALTHKIT_REQUIRE_TOKEN=1`; the
+SQLite dev/test fallback stays open unless you force it. So in production
+(post iac PR #82, `DATABASE_URL` is wired) an unauthenticated `POST` gets **401**.
+`current_user` (Authentik forward-auth headers) is still recorded in the audit
+when present, but the token is what gates the write.
 
-> ⚠️ **Open write endpoint (known gap).** There is **no Authentik forward-auth
-> proxy in front of `flmanbiosci.net/api/v1` today**, so those headers are never
-> injected and the endpoint accepts **unauthenticated** writes. This is fine
-> pre-prod — HealthKit ingestion is not live (no `DATABASE_URL` until iac PR #82
-> merges) — but **must be hardened before public exposure**. The code logs a
-> one-time warning when an unauthenticated request lands (so it is not silent).
-> To close it, pick one: (a) deploy an Authentik forward-auth proxy in front of
-> `/api/v1/healthkit/*`; (b) switch to the device-code flow below; or (c) an
-> interim per-device bearer token.
+> This closes the earlier open-endpoint gap. It is deliberately *interim*: the
+> longer-term target is Authentik (below), which also gives per-user identity
+> rather than a shared device secret.
+
+### Target — Authentik forward-auth or device-code flow
+
+The endpoint also reads `current_user` (Authentik proxy headers), but there is
+**no Authentik forward-auth proxy in front of `flmanbiosci.net/api/v1` today**,
+so that path is not yet load-bearing. The cleaner long-term option for a native
+app is the device-code flow below.
 
 ### App-generated opaque `subjectId`
 
@@ -131,12 +138,11 @@ Application (slug `peptodyssey`), then fill the TBD values above.
 
 ## Production path
 
-The in-cluster Postgres (`u4u-postgres`, iac **PR #82**) is the production home.
-That PR is ready (clean 3-file diff, real Bitwarden UUID in place,
-`mergeable=CLEAN`); the merge is the repo owner's (hwcopeland's) call since it
-deploys to the live cluster. On merge, Flux wires `DATABASE_URL` into the backend
-and this datastore activates — **at which point the open-endpoint gap above
-becomes live**, so harden auth before/with that.
+The in-cluster Postgres (`u4u-postgres`) was added by iac **PR #82** (merged).
+`DATABASE_URL` is now wired into the backend, so this datastore is live in prod —
+which also means the [device-token auth](#authentication) is **enforced** there
+(unauthenticated `POST` → 401). Mint a token with
+`scripts/create_healthkit_token.py` and give it to the app before it can ingest.
 
 ## Anonymization
 

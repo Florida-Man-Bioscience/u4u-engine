@@ -85,3 +85,75 @@ def test_audit_row_written(tmp_path):
         audit = conn.execute("SELECT * FROM healthkit_ingestions WHERE subject_id = 'S-3'").fetchone()
     assert dict(audit)["sample_count"] == 2
     assert dict(audit)["inserted_count"] == 2
+
+
+# ── Device-token auth ─────────────────────────────────────────────────────────
+
+def _mint(db, raw, *, label=None, subject_id=None):
+    with get_conn(path=db) as conn:
+        from engine.healthkit.auth import hash_token
+        conn.execute(
+            "INSERT INTO healthkit_device_tokens (token_hash, label, subject_id) VALUES (?,?,?)",
+            (hash_token(raw), label, subject_id),
+        )
+        conn.commit()
+
+
+def test_token_required_respects_env(monkeypatch):
+    from engine.healthkit import auth
+    monkeypatch.delenv("HEALTHKIT_REQUIRE_TOKEN", raising=False)
+    monkeypatch.delenv("HEALTHKIT_ALLOW_ANONYMOUS", raising=False)
+    monkeypatch.setattr("db.pool.DATABASE_URL", "", raising=False)
+    assert auth.token_required() is False            # no DB, no flags → open (dev)
+    monkeypatch.setattr("db.pool.DATABASE_URL", "postgresql://x", raising=False)
+    assert auth.token_required() is True             # DB set → fail-closed (prod)
+    monkeypatch.setenv("HEALTHKIT_ALLOW_ANONYMOUS", "1")
+    assert auth.token_required() is False             # explicit override wins
+
+
+def test_require_device_token(tmp_path, monkeypatch):
+    reset_initialized()
+    db = str(tmp_path / "hk.db")
+    import pytest
+    from fastapi import HTTPException
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    from engine.healthkit import auth
+
+    # Route the dependency's connection at our temp SQLite DB.
+    monkeypatch.setattr(auth, "get_conn", lambda: get_conn(path=db))
+    monkeypatch.setenv("HEALTHKIT_REQUIRE_TOKEN", "1")
+
+    raw = "pep_hk_valid"
+    _mint(db, raw, label="iPhone")
+
+    def creds(tok):
+        return HTTPAuthorizationCredentials(scheme="Bearer", credentials=tok)
+
+    assert auth.require_device_token(creds(raw))["label"] == "iPhone"          # valid
+    with pytest.raises(HTTPException) as e1:
+        auth.require_device_token(creds("nope"))                               # invalid → 401
+    assert e1.value.status_code == 401
+    with pytest.raises(HTTPException) as e2:
+        auth.require_device_token(None)                                        # missing+required → 401
+    assert e2.value.status_code == 401
+
+
+def test_require_device_token_anon_when_open(tmp_path, monkeypatch):
+    from engine.healthkit import auth
+    monkeypatch.setattr(auth, "get_conn", lambda: get_conn(path=str(tmp_path / "hk.db")))
+    monkeypatch.setenv("HEALTHKIT_ALLOW_ANONYMOUS", "1")
+    assert auth.require_device_token(None) is None    # open → anonymous allowed
+
+
+def test_enforce_subject_binding():
+    import pytest
+    from fastapi import HTTPException
+
+    from engine.healthkit.auth import enforce_subject
+    enforce_subject(None, "S-1")                           # no token → ok (dev)
+    enforce_subject({"subject_id": None}, "S-1")           # unbound token → ok
+    enforce_subject({"subject_id": "S-1"}, "S-1")          # bound match → ok
+    with pytest.raises(HTTPException) as e:
+        enforce_subject({"subject_id": "S-2"}, "S-1")      # bound mismatch → 403
+    assert e.value.status_code == 403
