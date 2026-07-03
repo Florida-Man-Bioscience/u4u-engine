@@ -39,6 +39,5 @@ ignore = ["E501", "UP042", "UP047"]
 "api.py" = ["B008", "E402"]
 "engine/tracking/api.py" = ["B008"]
 # Same FastAPI Depends()-in-defaults idiom in the HealthKit ingestion routes.
-"engine/health/api.py" = ["B008"]
-"engine/health/auth.py" = ["B008"]
+"engine/healthkit/api.py" = ["B008"]
 "engine/pipeline.py" = ["E402"]

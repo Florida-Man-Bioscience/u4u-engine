@@ -100,10 +100,8 @@ async def _lifespan(app: FastAPI):
     ``@app.on_event("startup")`` pattern."""
     _run_db_migrations()
     _load_jobs_from_store()
-    # Create HealthKit tables if DATABASE_URL is set (no-op otherwise).
-    from engine.health.db import dispose as _dispose_health_db
-    from engine.health.db import init_models as _init_health_db
-    await _init_health_db()
+    # HealthKit tables (healthkit_*) are created by db/migrate.py (Postgres) or
+    # lazily on first use (SQLite dev) — no lifespan hook needed.
     cleanup_task = asyncio.create_task(_cleanup_old_jobs())
     try:
         yield
@@ -116,7 +114,6 @@ async def _lifespan(app: FastAPI):
             await cleanup_task
         except (asyncio.CancelledError, Exception):
             pass
-        await _dispose_health_db()
 
 
 app      = FastAPI(
@@ -146,10 +143,10 @@ from engine.users.api import router as _users_router  # noqa: E402
 
 app.include_router(_users_router)
 
-# ── HealthKit ingestion router (peptodyssey iOS app → Postgres) ──────────────
-from engine.health.api import router as _health_router  # noqa: E402
+# ── HealthKit ingestion (peptodyssey iOS app → healthkit_* tables) ───────────
+from engine.healthkit.api import router as _healthkit_router  # noqa: E402
 
-app.include_router(_health_router)
+app.include_router(_healthkit_router)
 
 # ── Job store ─────────────────────────────────────────────────────────────────
 # Schema per job:
