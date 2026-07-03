@@ -1,16 +1,22 @@
--- db/migrations/004_healthkit_ingestion.sql
+-- db/migrations/008_healthkit_ingestion.sql
 -- ==========================================
 -- HealthKit ingestion tables for the peptodyssey iOS app.
 -- Apply once against the Postgres database:
---   psql $DATABASE_URL -f db/migrations/004_healthkit_ingestion.sql
+--   psql $DATABASE_URL -f db/migrations/008_healthkit_ingestion.sql
 --
 -- Mirrors engine/health/models.py. The API also create_all()s these on boot
 -- when DATABASE_URL is set, so this file is primarily for production/manual use.
+--
+-- NOTE: the iOS app's end-users live in `app_users`, a SEPARATE table from the
+-- platform's `users` (Authentik-backed operators, migration 004_users.sql).
+-- They are distinct populations; do not merge them.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
 
--- ── users ─────────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS users (
+-- ── app_users ─────────────────────────────────────────────────────────────────
+-- One row per peptodyssey app account (email identity for now). Distinct from
+-- the operator `users` table created by 004_users.sql.
+CREATE TABLE IF NOT EXISTS app_users (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     email       TEXT        NOT NULL UNIQUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -21,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- shown once at creation (scripts/create_device_token.py).
 CREATE TABLE IF NOT EXISTS device_tokens (
     id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id      UUID        NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
     token_hash   CHAR(64)    NOT NULL UNIQUE,
     device_name  TEXT,
     revoked      BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -35,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens (user_id);
 -- One row per HealthKit sample. Composite PK (user_id, uuid) makes re-delivered
 -- samples an idempotent upsert (the client is at-least-once).
 CREATE TABLE IF NOT EXISTS health_samples (
-    user_id                  UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id                  UUID        NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
     uuid                     UUID        NOT NULL,
 
     type_identifier          TEXT        NOT NULL,

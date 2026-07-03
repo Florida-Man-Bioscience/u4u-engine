@@ -10,14 +10,20 @@ the whole feature no-ops when DATABASE_URL is unset.
 
 Environment
 -----------
-DATABASE_URL  async SQLAlchemy URL, e.g.
-              postgresql+asyncpg://u4u:u4u@db:5432/u4u
+DATABASE_URL  Postgres URL shared with the rest of the engine. The canonical
+              form is the SYNC (psycopg2) URL the migrations + connection pool
+              use, e.g. postgresql://u4u:pw@host:5432/u4u?sslmode=disable. This
+              module derives an async (asyncpg) URL from it — swapping the driver
+              and dropping libpq-only query params (sslmode, …) — so a single
+              DATABASE_URL drives both the sync stack and this async datastore
+              against one Postgres. An already-async URL is accepted unchanged.
               When empty, health ingestion is disabled (endpoints return 503).
 """
 from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -26,8 +32,34 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+# libpq/psycopg2 query params that asyncpg's connection URL does not accept.
+_DROP_QUERY_KEYS = {"sslmode", "channel_binding", "gssencmode", "target_session_attrs"}
+
+
+def _to_async_url(raw: str) -> str:
+    """Derive an asyncpg SQLAlchemy URL from the (usually sync) DATABASE_URL.
+
+    Swaps any postgres driver to ``postgresql+asyncpg`` and strips libpq-only
+    query params (e.g. ``sslmode``) that asyncpg rejects. Idempotent on a URL
+    that is already ``postgresql+asyncpg://``.
+    """
+    parts = urlsplit(raw)
+    scheme = parts.scheme
+    if scheme in ("postgres", "postgresql") or scheme.startswith("postgresql+"):
+        scheme = "postgresql+asyncpg"
+    query = urlencode(
+        [
+            (k, v)
+            for k, v in parse_qsl(parts.query, keep_blank_values=True)
+            if k.lower() not in _DROP_QUERY_KEYS
+        ]
+    )
+    return urlunsplit((scheme, parts.netloc, parts.path, query, parts.fragment))
+
+
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 HEALTH_DB_ENABLED = bool(DATABASE_URL)
+ASYNC_DATABASE_URL = _to_async_url(DATABASE_URL) if DATABASE_URL else ""
 
 _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
@@ -38,7 +70,7 @@ def _init() -> None:
     global _engine, _sessionmaker
     if not HEALTH_DB_ENABLED or _engine is not None:
         return
-    _engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+    _engine = create_async_engine(ASYNC_DATABASE_URL, pool_pre_ping=True)
     _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
 
 
@@ -54,7 +86,7 @@ async def init_models() -> None:
     """Create tables if they don't exist. Called from the API lifespan.
 
     Idempotent and safe to run every boot; for production, prefer applying
-    db/migrations/004_health_ingestion.sql via psql and treat this as a no-op.
+    db/migrations/008_healthkit_ingestion.sql via psql and treat this as a no-op.
     """
     _init()
     if _engine is None:

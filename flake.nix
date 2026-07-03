@@ -29,6 +29,11 @@
 
             # Database
             psycopg2
+            # Async stack for the HealthKit ingestion datastore (engine/health).
+            # api.py imports engine.health.api at module load, so these must be
+            # present for the test suite to import under `nix develop`.
+            sqlalchemy
+            asyncpg
 
             # API surface (required by api.py and engine/users/deps.py;
             # the in-process test suite doesn't spin up uvicorn but does

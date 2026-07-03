@@ -3,8 +3,9 @@ engine/health/models.py
 =======================
 SQLAlchemy 2.0 ORM models for HealthKit ingestion.
 
-    users           — one row per account (email identity for now)
-    device_tokens   — long-lived opaque bearer tokens (stored hashed) → user
+    app_users       — one row per app account (email identity for now); distinct
+                      from the platform operator `users` table (engine/users)
+    device_tokens   — long-lived opaque bearer tokens (stored hashed) → app_user
     health_samples  — one row per HealthKit sample, mirroring the iOS app's
                       PendingSamplePayload. Composite PK (user_id, uuid) makes
                       re-delivered samples an idempotent upsert.
@@ -36,7 +37,10 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    __tablename__ = "users"
+    # NOTE: table is `app_users`, NOT `users`. The platform's `users` table
+    # (engine/users, Authentik-backed operators) is a different population;
+    # this is the peptodyssey app's end-user accounts.
+    __tablename__ = "app_users"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -58,7 +62,7 @@ class DeviceToken(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("app_users.id", ondelete="CASCADE"), nullable=False
     )
     # SHA-256 hex of the raw token — the raw value is shown once at creation.
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
@@ -78,7 +82,7 @@ class HealthSample(Base):
     # Composite PK: a sample UUID is unique per user, so re-delivery upserts.
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("app_users.id", ondelete="CASCADE"),
         primary_key=True,
     )
     uuid: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
