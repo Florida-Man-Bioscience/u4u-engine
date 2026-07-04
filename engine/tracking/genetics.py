@@ -380,18 +380,26 @@ class GeneticPrior:
 
 
 def derive_responder_prior(profile: GeneticProfile, peptide_name: str) -> ResponderPrior:
-    """Per-peptide prior on responder strength r."""
+    """Per-peptide prior on responder strength r.
+
+    Routes through the generalised Hierarchical Bayesian Responder Index
+    (:func:`engine.tracking.responder_index.responder_index`). With only the
+    genetics adapter registered — the default — ``η`` and ``Var(η)`` reduce
+    exactly to the legacy ``1 + Δ·tanh(w)`` / ``max(R_MIN_SD, R_BASE_SD/√(1 +
+    0.5·n))`` numbers (see the backward-compat golden test). The import is
+    lazy to keep module-load order cycle-free (responder_index imports Δ from
+    this module).
+    """
+    from .responder_index import ResponderContext, responder_index
+
+    idx = responder_index(ResponderContext(profile=profile, peptide_name=peptide_name))
     summary = profile.peptide_effect_summary(peptide_name)
-    n = summary["n_relevant_variants"]
-    w = summary["total_weight"]
-    mean = 1.0 + R_DELTA_SCALE * math.tanh(w)
-    sd = max(R_MIN_SD, R_BASE_SD / math.sqrt(1 + 0.5 * n))
     return ResponderPrior(
         peptide=peptide_name,
-        mean=mean,
-        sd=sd,
-        n_relevant_variants=n,
-        aggregate_weight=w,
+        mean=idx.eta,
+        sd=idx.sd,
+        n_relevant_variants=summary["n_relevant_variants"],
+        aggregate_weight=summary["total_weight"],
     )
 
 
