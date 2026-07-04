@@ -80,3 +80,16 @@ CREATE TABLE IF NOT EXISTS healthkit_device_tokens (
     created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
     last_used_at  TEXT
 );
+
+-- Identity bridge: de-identified HealthKit subject_id ↔ tracking patient_id
+-- (mirrors db/migrations/010_healthkit_subject_map.sql). No cross-file FKs:
+-- in dev the healthkit and tracking tables live in separate SQLite files, so a
+-- REFERENCES here would break inserts under PRAGMA foreign_keys=ON. Resolver:
+-- engine/tracking/healthkit_identity.py.
+CREATE TABLE IF NOT EXISTS healthkit_subject_map (
+    subject_id  TEXT PRIMARY KEY,
+    patient_id  TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_hk_subject_map_patient ON healthkit_subject_map(patient_id);

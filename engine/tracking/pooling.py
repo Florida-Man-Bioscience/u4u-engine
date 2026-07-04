@@ -263,3 +263,51 @@ def combine_priors(
     ) / tau_combined
     sd_combined = math.sqrt(1.0 / tau_combined)
     return mean_combined, sd_combined
+
+
+# ── Fused-precision cap (genetics × cohort double-counting mitigation) ───────
+
+# The precision-weighted fusion in ``combine_priors`` adds τ_g + τ_p as if the
+# genetic and population priors were *independent* sources of information about
+# θ. They are not: a patient's cohort response is itself partly a function of
+# their genetics, so the two priors share signal and their summed precision
+# overstates how much we actually know. That over-confidence is small for the
+# genetics-only default (one weak scalar prior) but grows once a *rich* feature
+# vector (multiple genetic/covariate features) is fused with a real donor
+# cohort. This cap bounds the combined precision so it can never exceed a fixed
+# multiple of the larger single-source precision.
+#
+# ``FUSED_PRECISION_CAP_MULT = 2.0`` means: after fusion we never claim more
+# than twice the information of the better of the two independent sources — a
+# documented, conservative ceiling, not a derived quantity. The caller
+# (:func:`engine.tracking.analysis.predict_response`) applies it ONLY when a
+# rich feature vector (≥1 non-genetic feature) AND ≥ ``MIN_DONORS`` donors are
+# both present, so the genetics-only path — and therefore all existing
+# behaviour — is untouched.
+FUSED_PRECISION_CAP_MULT = 2.0
+
+
+def cap_combined_precision(
+    *,
+    combined_sd: float,
+    genetic_sd: float,
+    population: PopulationPrior | None,
+    cap_mult: float = FUSED_PRECISION_CAP_MULT,
+) -> float:
+    """Widen ``combined_sd`` if its precision exceeds the double-counting cap.
+
+    Returns ``combined_sd`` unchanged when the cap does not bind (or when the
+    inputs are degenerate). Precision ``1/σ²`` is capped at
+    ``cap_mult · max(τ_genetic, τ_population)``.
+    """
+    if population is None or population.sd_pct_change <= 0:
+        return combined_sd
+    if genetic_sd <= 0 or combined_sd <= 0:
+        return combined_sd
+    tau_g = 1.0 / (genetic_sd ** 2)
+    tau_p = 1.0 / (population.sd_pct_change ** 2)
+    cap = cap_mult * max(tau_g, tau_p)
+    tau_combined = 1.0 / (combined_sd ** 2)
+    if tau_combined <= cap:
+        return combined_sd
+    return math.sqrt(1.0 / cap)

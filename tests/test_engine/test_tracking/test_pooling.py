@@ -252,3 +252,50 @@ def test_pooling_shrinks_prior_toward_strong_responder_cohort(conn):
     pp = pred["population_prior"]
     assert pp is not None and pp["n_donors"] == 5
     assert 0.65 < pp["mean_pct_change"] < 0.75
+
+
+# ── Fused-precision cap (genetics × cohort double-counting mitigation) ───────
+
+def _pop(mean: float, sd: float, n: int = 5) -> pooling.PopulationPrior:
+    return pooling.PopulationPrior(
+        peptide="X", biomarker="Y", n_donors=n,
+        mean_pct_change=mean, sd_pct_change=sd,
+        raw_total_sd=sd, mean_within_sd=0.01,
+    )
+
+
+def test_cap_is_noop_when_precision_below_ceiling():
+    # Wide combined_sd → low precision → cap does not bind.
+    pop = _pop(0.30, 0.10)
+    out = pooling.cap_combined_precision(
+        combined_sd=0.09, genetic_sd=0.10, population=pop,
+    )
+    assert out == 0.09
+
+
+def test_cap_widens_when_precision_exceeds_ceiling():
+    # τ_g = τ_p = 100 → cap = 2·100 = 200 → σ_cap = 1/√200 ≈ 0.0707.
+    pop = _pop(0.30, 0.10)
+    # A too-tight fused σ (precision 400 > cap 200) must be widened to the cap.
+    out = pooling.cap_combined_precision(
+        combined_sd=0.05, genetic_sd=0.10, population=pop,
+    )
+    assert math.isclose(out, math.sqrt(1.0 / 200.0), rel_tol=1e-9)
+    # Widened, never tightened.
+    assert out > 0.05
+
+
+def test_cap_noop_without_population():
+    assert pooling.cap_combined_precision(
+        combined_sd=0.02, genetic_sd=0.10, population=None,
+    ) == 0.02
+
+
+def test_cap_ceiling_uses_larger_single_source_precision():
+    # Genetics much tighter than population: cap keyed on max(τ_g, τ_p) = τ_g.
+    pop = _pop(0.30, 0.20)          # τ_p = 25
+    gsd = 0.05                       # τ_g = 400 → cap = 800 → σ = 1/√800
+    out = pooling.cap_combined_precision(
+        combined_sd=0.01, genetic_sd=gsd, population=pop,
+    )
+    assert math.isclose(out, math.sqrt(1.0 / 800.0), rel_tol=1e-9)
