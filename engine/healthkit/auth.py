@@ -5,14 +5,15 @@ Interim per-device bearer-token auth for HealthKit ingestion, so the endpoint is
 not an open write endpoint in production.
 
 Enforcement is fail-closed in prod, open in local dev:
-  * A token is REQUIRED when a real database is configured (DATABASE_URL set) or
-    when HEALTHKIT_REQUIRE_TOKEN is truthy.
-  * Anonymous ingestion is allowed only in the SQLite dev/test fallback (no
-    DATABASE_URL) — or forced open with HEALTHKIT_ALLOW_ANONYMOUS=1.
+  * When a real database is configured (DATABASE_URL set) a token is ALWAYS
+    required — no env var can open a Postgres-backed deployment.
+  * Only the local SQLite dev/test fallback (no DATABASE_URL) is open, and even
+    that closes with HEALTHKIT_REQUIRE_TOKEN=1.
 
 Tokens are opaque (`pep_hk_…`), stored only as SHA-256 hex (see
 scripts/create_healthkit_token.py). A token may optionally be bound to a single
-`subject_id`; when bound, it may only write that subject.
+`subject_id`; a bound token may only touch that subject, and read endpoints
+require a bound token so a shared token can't read every subject's data.
 
 This is the interim closure of the auth gap. The documented longer-term target
 is Authentik (device-code flow / forward-auth) — see docs/healthkit-storage.md.
@@ -38,13 +39,17 @@ def hash_token(raw: str) -> str:
 
 
 def token_required() -> bool:
-    """Whether a valid device token is required for ingestion (fail-closed in prod)."""
-    if os.getenv("HEALTHKIT_ALLOW_ANONYMOUS", "").strip().lower() in _TRUTHY:
-        return False
-    if os.getenv("HEALTHKIT_REQUIRE_TOKEN", "").strip().lower() in _TRUTHY:
-        return True
+    """Whether a valid device token is required for ingestion.
+
+    Fail-closed in prod: when a real database is configured (DATABASE_URL set) a
+    token is ALWAYS required and cannot be turned off — no env var opens a
+    Postgres-backed deployment. Only the local SQLite dev/test fallback (no
+    DATABASE_URL) is open, and even that closes with HEALTHKIT_REQUIRE_TOKEN=1.
+    """
     from db.pool import DATABASE_URL
-    return bool(DATABASE_URL)
+    if DATABASE_URL:
+        return True
+    return os.getenv("HEALTHKIT_REQUIRE_TOKEN", "").strip().lower() in _TRUTHY
 
 
 def require_device_token(
@@ -80,9 +85,25 @@ def require_device_token(
         return dict(row)
 
 
-def enforce_subject(token: dict | None, subject_id: str) -> None:
-    """If the token is bound to a subject, reject writes to any other subject."""
-    if token is not None and token.get("subject_id") and token["subject_id"] != subject_id:
+def enforce_subject(token: dict | None, subject_id: str, *, require_bound: bool = False) -> None:
+    """Authorize a token for `subject_id`.
+
+    A `None` token is the open dev/test path (no scoping). For a real token:
+    - if it is bound to a subject (``subject_id IS NOT NULL``, tested with
+      ``is not None`` so an empty-string binding is NOT treated as unbound), it
+      may only touch that subject;
+    - if `require_bound` is set (read endpoints), an *unbound* token is rejected
+      so a shared device token can't read every subject's data.
+    """
+    if token is None:
+        return
+    bound = token.get("subject_id")
+    if require_bound and bound is None:
+        raise HTTPException(
+            status_code=403,
+            detail="This endpoint requires a subject-bound device token.",
+        )
+    if bound is not None and bound != subject_id:
         raise HTTPException(
             status_code=403,
             detail="Device token is bound to a different subject_id.",

@@ -39,8 +39,10 @@ def ingest_samples(
     enforce_subject(token, body.subject_id)
 
     note_parts = []
-    if token and token.get("label"):
-        note_parts.append(f"token={token['label']}")
+    if token is not None:
+        # Always attribute an authenticated write: label if set, else a token
+        # hash prefix so the audit row is never anonymous when a token was used.
+        note_parts.append(f"token={token.get('label') or token['token_hash'][:12]}")
     if user is not None:
         note_parts.append(f"authentik_uid={user.authentik_uid}")
     notes = "; ".join(note_parts) or None
@@ -72,7 +74,9 @@ def read_samples(
     token: dict | None = Depends(require_device_token),
 ) -> list[dict]:
     """Read back a subject's samples (optionally filtered by type / since)."""
-    enforce_subject(token, subject_id)
+    # Reads require a subject-bound token: an unbound token must not be able to
+    # read arbitrary subjects' data.
+    enforce_subject(token, subject_id, require_bound=True)
     with get_conn() as conn:
         return service.read_samples(
             conn,

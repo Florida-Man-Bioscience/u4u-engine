@@ -99,16 +99,19 @@ def _mint(db, raw, *, label=None, subject_id=None):
         conn.commit()
 
 
-def test_token_required_respects_env(monkeypatch):
+def test_token_required_fail_closed_in_prod(monkeypatch):
     from engine.healthkit import auth
     monkeypatch.delenv("HEALTHKIT_REQUIRE_TOKEN", raising=False)
-    monkeypatch.delenv("HEALTHKIT_ALLOW_ANONYMOUS", raising=False)
     monkeypatch.setattr("db.pool.DATABASE_URL", "", raising=False)
-    assert auth.token_required() is False            # no DB, no flags → open (dev)
+    assert auth.token_required() is False            # no DB, no flag → open (dev)
+    monkeypatch.setenv("HEALTHKIT_REQUIRE_TOKEN", "1")
+    assert auth.token_required() is True             # dev can be forced closed
+    monkeypatch.delenv("HEALTHKIT_REQUIRE_TOKEN", raising=False)
     monkeypatch.setattr("db.pool.DATABASE_URL", "postgresql://x", raising=False)
-    assert auth.token_required() is True             # DB set → fail-closed (prod)
+    assert auth.token_required() is True             # DB set → always required (prod)
+    # No env var can open a Postgres-backed deployment (fail-closed footgun fixed).
     monkeypatch.setenv("HEALTHKIT_ALLOW_ANONYMOUS", "1")
-    assert auth.token_required() is False             # explicit override wins
+    assert auth.token_required() is True
 
 
 def test_require_device_token(tmp_path, monkeypatch):
@@ -142,8 +145,9 @@ def test_require_device_token(tmp_path, monkeypatch):
 def test_require_device_token_anon_when_open(tmp_path, monkeypatch):
     from engine.healthkit import auth
     monkeypatch.setattr(auth, "get_conn", lambda: get_conn(path=str(tmp_path / "hk.db")))
-    monkeypatch.setenv("HEALTHKIT_ALLOW_ANONYMOUS", "1")
-    assert auth.require_device_token(None) is None    # open → anonymous allowed
+    monkeypatch.delenv("HEALTHKIT_REQUIRE_TOKEN", raising=False)
+    monkeypatch.setattr("db.pool.DATABASE_URL", "", raising=False)
+    assert auth.require_device_token(None) is None    # no DB, no flag → anonymous allowed
 
 
 def test_enforce_subject_binding():
@@ -152,8 +156,24 @@ def test_enforce_subject_binding():
 
     from engine.healthkit.auth import enforce_subject
     enforce_subject(None, "S-1")                           # no token → ok (dev)
-    enforce_subject({"subject_id": None}, "S-1")           # unbound token → ok
+    enforce_subject({"subject_id": None}, "S-1")           # unbound token → ok for writes
     enforce_subject({"subject_id": "S-1"}, "S-1")          # bound match → ok
     with pytest.raises(HTTPException) as e:
         enforce_subject({"subject_id": "S-2"}, "S-1")      # bound mismatch → 403
+    assert e.value.status_code == 403
+    # Empty-string binding must NOT be treated as unbound (was a silent bypass).
+    with pytest.raises(HTTPException) as e_empty:
+        enforce_subject({"subject_id": ""}, "S-1")
+    assert e_empty.value.status_code == 403
+
+
+def test_enforce_subject_read_requires_bound_token():
+    import pytest
+    from fastapi import HTTPException
+
+    from engine.healthkit.auth import enforce_subject
+    enforce_subject(None, "S-1", require_bound=True)              # dev open → ok
+    enforce_subject({"subject_id": "S-1"}, "S-1", require_bound=True)  # bound match → ok
+    with pytest.raises(HTTPException) as e:                       # unbound token → 403 on read
+        enforce_subject({"subject_id": None}, "S-1", require_bound=True)
     assert e.value.status_code == 403
