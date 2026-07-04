@@ -174,4 +174,64 @@ double-counted as evidence of the effect it predicts.
   work — gated.
 - **Dose-response.** Replace θ with an effective `θ_eff = θ · s(dose)` for a
   saturating dose function `s`. Requires dose-stratified data the cohort does
-  not yet have — gated behind data volume.
+  not yet have — gated behind data volume. Designed and stubbed in §6.
+
+---
+
+## 6. Dose–response (gated)
+
+**Status: design-only stub, feature-gated OFF.** Implemented in
+`engine/tracking/dose_response.py` behind the module constant
+`DOSE_RESPONSE_ENABLED = False`. Nothing in `predict_response` (or anywhere
+else in `engine/`) imports it, so it is inert with respect to every live
+prediction — the test suite, including the calibration backtest, is unaffected.
+Unit tests for the maths live in
+`tests/test_engine/test_tracking/test_dose_response.py`.
+
+### 6.1 The model
+
+θ (§1) is the fractional change from baseline *at plateau under a peptide's
+reference dose*. Away from that reference, we scale θ by a saturating
+Emax/EC50 response. With Hill coefficient fixed at 1, the raw response is
+
+$$\text{emax}(d) = \frac{d}{d + \text{EC}_{50}}\qquad(\text{monotone}\uparrow,\ \to 1\text{ as }d\to\infty)$$
+
+Because θ is *defined at the reference dose* `d_ref`, we normalise against it so
+the multiplier is exactly 1 there:
+
+$$s(d) = \frac{\text{emax}(d)}{\text{emax}(d_\text{ref})}
+      = \frac{d/(d+\text{EC}_{50})}{d_\text{ref}/(d_\text{ref}+\text{EC}_{50})}$$
+
+Properties (asserted in the unit tests):
+
+- `s(d_ref) = 1` — the reference dose is the anchor.
+- `s` is strictly increasing in `d`.
+- `s` saturates at the finite plateau `s(∞) = 1 + EC₅₀/d_ref` (**> 1** — the raw
+  Emax tops out at 1, but dividing by `emax(d_ref) < 1` lifts the normalised
+  plateau above 1).
+
+The dose-scaled latent effect is
+
+$$\theta_\text{eff} = \theta \cdot \frac{s(d)}{s(d_\text{ref})} = \theta\cdot s(d),$$
+
+where the `/ s(d_ref)` term is identically 1 by construction (kept explicit in
+`effective_theta` to mirror the spec and make `θ_eff = θ` at the reference dose
+self-evident). Per-peptide `(EC₅₀, d_ref)` are **placeholders** in
+`PEPTIDE_PARAMS` — illustrative anchors, not calibrated values.
+
+### 6.2 Intended wiring point
+
+When enabled, `θ_eff` replaces θ exactly where the latent effect enters the
+prior in `predict_response`: the prior mean `μ₀ = η · expected_pct` (§1–§2)
+becomes `μ₀ = η · expected_pct · s(dose)`, applied **before** the conjugate
+update. Nothing downstream of the prior changes — the likelihood, kinetics
+`a(w)`, and posterior update are untouched.
+
+### 6.3 Why it is gated
+
+The current tracking cohort is effectively **single-dose per peptide**, so
+`EC₅₀` is unidentifiable: with no dose variation there is no signal to separate
+the dose curve from the baseline effect, and fitting `EC₅₀` against single-dose
+data would fit noise. That would inflate confidence and **break the calibrated
+95% coverage** the backtest guards. The gate stays OFF until dose-varied cohort
+data exists to identify and validate `EC₅₀` per peptide.
