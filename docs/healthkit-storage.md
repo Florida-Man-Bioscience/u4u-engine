@@ -64,12 +64,14 @@ The endpoint requires a per-device bearer token (`engine/healthkit/auth.py`):
 `healthkit_device_tokens` (migration 009). Mint one with
 `python scripts/create_healthkit_token.py --label "Curtis iPhone" [--subject <id>]`
 — the raw token is shown once. A token may optionally be **bound to one
-`subject_id`** (then it may write only that subject); unbound tokens may write
-any subject.
+`subject_id`**: a bound token may only touch that subject, and **read endpoints
+require a bound token** (an unbound token gets `403` on `GET`, so a shared token
+can't read every subject's data). Unbound tokens may still write any subject.
 
-**Fail-closed in prod, open in local dev** — a token is required whenever a real
-database is configured (`DATABASE_URL` set) or `HEALTHKIT_REQUIRE_TOKEN=1`; the
-SQLite dev/test fallback stays open unless you force it. So in production
+**Fail-closed in prod, open in local dev** — when a real database is configured
+(`DATABASE_URL` set) a token is **always** required; **no env var can open a
+Postgres-backed deployment**. Only the local SQLite dev/test fallback is open,
+and even that closes with `HEALTHKIT_REQUIRE_TOKEN=1`. So in production
 (post iac PR #82, `DATABASE_URL` is wired) an unauthenticated `POST` gets **401**.
 `current_user` (Authentik forward-auth headers) is still recorded in the audit
 when present, but the token is what gates the write.

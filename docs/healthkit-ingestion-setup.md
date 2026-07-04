@@ -57,13 +57,22 @@ tables automatically when `DATABASE_URL` is set.
 
 ---
 
-## 2. Send data (dev)
+## 2. Send data
 
-In dev there's no Authentik proxy, so `current_user` is `None` and ingestion is
-accepted with `created_by`/`notes` unset (same soft-auth pattern as `/analyze`).
+Ingestion requires a per-device bearer token whenever a real database is
+configured (prod, or `HEALTHKIT_REQUIRE_TOKEN=1`). Mint one and send it as
+`Authorization: Bearer <token>`:
+
+```bash
+python scripts/create_healthkit_token.py --label "dev laptop"   # prints the raw token once
+```
+
+The local SQLite dev fallback (no `DATABASE_URL`) is open, so the header is
+optional there; against Postgres it is required (a token-less call gets `401`).
 
 ```bash
 curl -X POST http://localhost:8000/healthkit/samples \
+  -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{
         "subject_id": "subj_DEMO",
@@ -79,25 +88,29 @@ curl -X POST http://localhost:8000/healthkit/samples \
       }'
 # → {"received":1,"inserted":1}   (re-send the same uuid → inserted:0)
 
-curl 'http://localhost:8000/healthkit/samples?subject_id=subj_DEMO'
+# reads require a subject-BOUND token (mint with --subject subj_DEMO):
+curl 'http://localhost:8000/healthkit/samples?subject_id=subj_DEMO' \
+  -H 'Authorization: Bearer <token bound to subj_DEMO>'
 ```
 
 ---
 
-## 3. Authentication (Authentik)
+## 3. Authentication
 
-The endpoint uses the engine's existing **Authentik forward-auth** dependency
-(`engine/users/deps.py`): in prod the Authentik proxy stamps `X-authentik-*`
-headers and the operator is recorded in the ingestion audit; in dev (no proxy)
-it's `None` and ingestion still works. Health data stays de-identified — the
-subject is the app-assigned `subject_id`, never the Authentik user.
+**Current: per-device bearer token** (`engine/healthkit/auth.py`). Mint with
+`scripts/create_healthkit_token.py` (optionally `--subject <id>` to bind it), send
+it as `Authorization: Bearer <token>`. Required whenever `DATABASE_URL` is set
+(prod) — no env var opens a Postgres-backed deployment; the local SQLite fallback
+is open unless `HEALTHKIT_REQUIRE_TOKEN=1`. A bound token may only touch its
+subject, and `GET` requires a bound token. Health data stays de-identified — the
+subject is the app-assigned `subject_id`, never an Authentik user. `current_user`
+(Authentik headers) is recorded in the audit when a proxy is present, but does
+not gate the request.
 
-**For the iOS app to authenticate in prod**, register an **OAuth2/OIDC
-application** in Authentik with the **Device Code** grant enabled, then give the
-app the **issuer URL** (`https://auth.<domain>/application/o/<slug>/`) and
-**client ID**. The app does the device-code flow, stores the token in the
-Keychain, and sends it as `Authorization: Bearer …` through the proxy. (App side:
-Account → Authentik settings, "Sign in with Authentik".)
+**Target: Authentik** (forward-auth or OAuth2 device-code flow) — see
+[`healthkit-storage.md`](healthkit-storage.md#authentication). Register an OAuth2
+application with the Device Code grant, give the app the issuer URL + client ID;
+the app does the device-code flow and sends the resulting token as a bearer.
 
 ---
 
