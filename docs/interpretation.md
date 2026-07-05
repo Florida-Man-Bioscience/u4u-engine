@@ -18,13 +18,17 @@ Low-tier findings hidden by default. Users can toggle on.
 
 ## Consumer categories
 
-| Category | V1 |
-|----------|----|
+| Category | Shipped |
+|----------|---------|
 | Hereditary Conditions — pathogenic + likely pathogenic | Yes |
 | Uncertain Findings — VUS with population + functional data | Yes |
 | Carrier Status — heterozygous in recessive genes | Yes |
-| Medication Response — CYP2C19, CYP2D6, VKORC1, etc.[^pgxgenes] | No (V2) |
-| Wellness Insights — trait associations | No (V2) |
+| Medication Response — CYP2C19, CYP2D6, VKORC1, etc.[^pgxgenes] | Yes |
+| Wellness Insights — trait associations (PRS) | Yes |
+
+**Medication Response (PGx)** is live. The PGx pipeline (`engine/pgx/`, orchestrated by `pgx/orchestrator.py`) runs star-allele calling → CPIC phenoconversion → drug recommendations with HGNN conformal prediction sets, emitting the `pgx_profile` key from `run_pipeline()`. It is surfaced in the results UI via the **default `pgx` tab** (`frontend/src/app/jobs/[id]/results/page.tsx`) rendered by `PGxReport.tsx`.
+
+**Wellness Insights (PRS)** is live. Polygenic risk scores for complex traits are computed at pipeline step 8e (`calculate_prs` in `engine/annotators/prs_calculator.py`), emitting the `prs_profile` key from `run_pipeline()`.
 
 ---
 
