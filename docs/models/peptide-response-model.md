@@ -167,18 +167,111 @@ double-counted as evidence of the effect it predicts.
 
 ## 5. Gated-later extensions (not in this PR)
 
-- **Cross-biomarker covariance over a shared η.** Multiple biomarkers for one
-  (patient, peptide) share the same responder index; modelling them jointly
-  with a covariance over the shared η would let a strong signal in one marker
-  inform another. Requires a multivariate prior and careful identifiability
-  work — gated.
+- **Cross-biomarker covariance over a shared η.** See §6 — a design stub ships
+  in this PR (inert, off-by-default); the wiring is gated.
 - **Dose-response.** Replace θ with an effective `θ_eff = θ · s(dose)` for a
   saturating dose function `s`. Requires dose-stratified data the cohort does
-  not yet have — gated behind data volume. Designed and stubbed in §6.
+  not yet have — gated behind data volume. Designed and stubbed in §7.
 
 ---
 
-## 6. Dose–response (gated)
+## 6. Cross-biomarker covariance (gated)
+
+**Status: DESIGN STUB — `engine/tracking/cross_biomarker.py`, off by default
+(`CROSS_BIOMARKER_ENABLED = False`), not wired into any prediction.** The module
+ships pure, unit-tested matrix helpers and this specification; it does not touch
+the posterior.
+
+### 6.1 The model
+
+Today each biomarker `k` for a (patient, peptide) is fit with its **own
+independent** scalar θ_k and a 1-D Normal–Normal update (§1). Biomarkers within
+a peptide's *mechanism cluster* are not independent, though: GLP-1's body
+weight, HbA1c, waist and HOMA-IR co-move because they are downstream of the same
+incretin response. Model a cluster's latents jointly as a multivariate normal:
+
+$$\theta = (\theta_{k_1},\dots,\theta_{k_K}) \sim \mathcal N(\mu_0,\ \Sigma),\qquad
+\mu_0 = \eta\, e,\quad e = (\text{expected\_pct}_{k_1},\dots)$$
+
+$$\Sigma = D\,R\,D,\qquad D = \operatorname{diag}(\sigma_{0,k_1},\dots,\sigma_{0,k_K}),$$
+
+with `R` a symmetric, unit-diagonal, **PSD** correlation matrix — the empirical
+correlation of the *standardised* per-marker responses `z_k = (θ_k − μ0_k)/σ0_k`
+across the cohort. Because `D = diag(σ0_k)` already carries the shared-η
+magnitude (§6.2), `R` is **not** η-partialled: a shared η shows up precisely as
+a nonzero off-diagonal in `R` (sign `sign(e_j e_k)`, attenuated by the panel
+term), and residual physiology adds to it.
+
+### 6.2 A shared η already induces positive coupling
+
+The Phase-0 responder index η (`responder_index.py`) is a single scalar
+**shared by every biomarker** of a (patient, peptide), and it is itself
+uncertain (`Var(η)`). Because each prior mean is a linear image of that one
+shared, uncertain η, the biomarkers are **already coupled** before any full Σ:
+
+$$\operatorname{Cov}(\theta_j,\theta_k) = \text{expected\_pct}_j\cdot\text{expected\_pct}_k\cdot\operatorname{Var}(\eta),$$
+
+a **rank-1** term `Var(η)·e eᵀ` (`shared_eta_covariance`) whose sign is
+`sign(expected_pct_j · expected_pct_k)` — same-direction markers positively
+coupled, opposite-direction negatively, with no new parameters.
+
+Crucially, **Phase 0's own per-marker variance is already the diagonal of that
+rank-1 matrix.** The prior SD is `σ0_k = hypot(sd(η)·|e_k|, panel_rel_sd·|e_k|)`
+(`genetics.derive_prior`), so
+
+$$\sigma_{0,k}^2 = \operatorname{Var}(\eta)\,e_k^2 \;+\; \text{panel\_rel\_sd}^2\, e_k^2,$$
+
+whose first summand is exactly the `k`-th diagonal entry of `Var(η)·e eᵀ`. Phase
+0 keeps that shared-η term **only on the diagonal** and pins the off-diagonal
+(the cross-marker correlation) to zero.
+
+The gated extension therefore does **not** add a covariance on top of `σ0²` —
+that would double-count the shared-η variance already inside `σ0²`. It replaces
+the diagonal-only prior with a **single** joint covariance `Σ = D R D` reusing
+the *same* per-marker SDs `D = diag(σ0_k)`, turning on the off-diagonal via a
+residual correlation `R`. `R = I` recovers Phase 0 exactly
+(`assemble_cluster_covariance` returns `diag(σ0_k²)`); a positive off-diagonal
+restores the coupling a shared η already implies. The rank-1 `Var(η)·e eᵀ` is
+the *justification* for the sign pattern of `R`'s off-diagonals, not a term
+summed alongside `D R D`.
+
+### 6.3 Joint posterior
+
+With prior `θ ~ N(μ0, Σ)` and observation vector `ȳ` with covariance `Σ_obs`,
+the conjugate update is the multivariate Normal–Normal step in precision form:
+
+$$\Lambda_{\text{post}} = \Sigma^{-1} + \Sigma_{\text{obs}}^{-1},\qquad
+\mu_{\text{post}} = \Lambda_{\text{post}}^{-1}\big(\Sigma^{-1}\mu_0 + \Sigma_{\text{obs}}^{-1}\bar y\big).$$
+
+Off-diagonal entries of `Λ_post` are the channel by which a strong, well-measured
+marker sharpens a coupled, sparsely-measured one. **If `Σ` and `Σ_obs` are both
+diagonal (`R = I`) this decouples into `K` independent scalar updates
+`τ_post = τ0 + τy` — byte-for-byte today's `bayes.update`.** That is the
+inert-by-construction guarantee.
+
+### 6.4 Why it's gated
+
+- **Σ is unidentifiable without cohort volume.** A K×K correlation needs O(K²)
+  residual pairs per cluster to estimate stably; the tracking cohort is far too
+  small today. A plugged-in Σ would be mostly sampling noise.
+- **It breaks the coverage contract.** Off-diagonal precision *narrows* credible
+  intervals. Wrong correlations ⇒ overconfident intervals ⇒ the calibration
+  backtest's coverage guarantee (the honesty contract for this subsystem)
+  silently fails. Independent-per-marker is the conservative default that never
+  claims cross-marker information it cannot back.
+
+### 6.5 Intended integration point
+
+`analysis.predict_response` currently loops one biomarker at a time. Un-gating
+means: group a (patient, peptide)'s requested markers into their mechanism
+cluster (`MECHANISM_CLUSTERS`), replace the per-marker `bayes.update` with a
+single multivariate update (§6.3) over the cluster, then slice `μ_post`/`Λ_post`
+back to the requested marker. That prediction-loop refactor is deliberately out
+of scope for this stub.
+
+---
+
+## 7. Dose–response (gated)
 
 **Status: design-only stub, feature-gated OFF.** Implemented in
 `engine/tracking/dose_response.py` behind the module constant
@@ -188,7 +281,7 @@ prediction — the test suite, including the calibration backtest, is unaffected
 Unit tests for the maths live in
 `tests/test_engine/test_tracking/test_dose_response.py`.
 
-### 6.1 The model
+### 7.1 The model
 
 θ (§1) is the fractional change from baseline *at plateau under a peptide's
 reference dose*. Away from that reference, we scale θ by a saturating
@@ -219,7 +312,7 @@ where the `/ s(d_ref)` term is identically 1 by construction (kept explicit in
 self-evident). Per-peptide `(EC₅₀, d_ref)` are **placeholders** in
 `PEPTIDE_PARAMS` — illustrative anchors, not calibrated values.
 
-### 6.2 Intended wiring point
+### 7.2 Intended wiring point
 
 When enabled, `θ_eff` replaces θ exactly where the latent effect enters the
 prior in `predict_response`: the prior mean `μ₀ = η · expected_pct` (§1–§2)
@@ -227,7 +320,7 @@ becomes `μ₀ = η · expected_pct · s(dose)`, applied **before** the conjugat
 update. Nothing downstream of the prior changes — the likelihood, kinetics
 `a(w)`, and posterior update are untouched.
 
-### 6.3 Why it is gated
+### 7.3 Why it is gated
 
 The current tracking cohort is effectively **single-dose per peptide**, so
 `EC₅₀` is unidentifiable: with no dose variation there is no signal to separate
