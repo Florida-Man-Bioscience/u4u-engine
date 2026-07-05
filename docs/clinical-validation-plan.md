@@ -239,14 +239,14 @@ The following classifies each major module by the strength of the clinical claim
 | `annotators/peptide_mapper.py` | "Strong Fit for peptide Z" | **Investigational** | Hand-curated gene→peptide map; invented tiers |
 | `annotators/bpc157_predictor.py` | "Likely good BPC-157 responder" | **Investigational/speculative** | Self-labeled speculative; non-FDA-approved compound |
 | `annotators/receptor_mapper.py` | "ESR1 expression HIGH" | **Investigational** | Hand-curated modifiers; no eQTL basis |
-| `tracking/bayes.py`, `genetics.py` | "Predicted response trajectory with 95% CI" | **Investigational** | Conjugate math sound; **priors admittedly synthetic** |
+| `tracking/` (HBRI — `responder_index.py`, `bayes.py`, `genetics.py`) | "Predicted response trajectory with 95% CI" | **Investigational** | Conjugate math sound; **priors admittedly synthetic** |
 | `repeat_callers/expansion_hunter.py` | "AR CAG repeat = N; testosterone sensitivity" | Analytical + clinical | Real ExpansionHunter; ancestry ranges hand-curated |
 | `dossier_generator.py` | The patient-facing rationale & "Predicted Efficacy" | **Communication of all the above** | Single-line disclaimer footer |
 | `regulatory/*` | "FDA status of peptide" | Informational | Live openFDA/ClinicalTrials/Federal Register |
 
 ### 2.4 External runtime dependencies (reproducibility surface)
 
-The pipeline's output depends on the *live state* of multiple external databases at the moment of execution. This is a fundamental reproducibility and validation challenge: **the same input file run on two different days can produce different results** if ClinVar reclassifies a variant, gnomAD releases a new version, or an API is transiently unavailable (causing silent variant drop, §2.2). The validation program must therefore **pin, snapshot, and version** all external knowledge sources (see §8.6, §9.7). Current caching (`engine/annotation_cache.py`, SQLite per-annotator caches, `data/rsid_cache.db`) improves performance and partial reproducibility but is not a versioned, validated knowledge-base snapshot.
+The pipeline's output depends on the *live state* of multiple external databases at the moment of execution. This is a fundamental reproducibility and validation challenge: **the same input file run on two different days can produce different results** if ClinVar reclassifies a variant, gnomAD releases a new version, or an API is transiently unavailable (causing silent variant drop, §2.2). The validation program must therefore **pin, snapshot, and version** all external knowledge sources (see §8.6, §9.7). Current caching (`engine/annotators/cache.py` and the rsID cache — SQLite locally and in tests, Postgres via `db/pool.py` when `DATABASE_URL` is set) improves performance and partial reproducibility but is not a versioned, validated knowledge-base snapshot.
 
 ### 2.5 Deployment topology and the API surface (`api.py`)
 
@@ -445,7 +445,7 @@ Rating key: **🔴 Absent / blocking** · **🟠 Major gap** · **🟡 Partial /
 - Peptide mapper: hand-curated gene→peptide sets, invented tier labels ("Strong Fit", etc.).
 - BPC-157 predictor: self-labeled speculative; pathway/rsID weights are mechanism-of-action guesses; the module's own disclaimer states no validated human biomarkers or genetic predictors exist.
 - Receptor mapper: hand-curated rsID "magnitude/direction" modifiers with no eQTL basis.
-- Tracking: conjugate Normal-Normal math is correct, but genetic-prior weights are, per the docstring, **"synthetic … stylised, not pulled from any GWAS."**
+- Tracking (now the Hierarchical Bayesian Responder Index / HBRI — `tracking/responder_index.py` + the feature-adapter registry `tracking/feature_adapters/`, with correlation-aware BLUE fusion in `pooling.combine_priors`; spec `docs/models/peptide-response-model.md`): the conjugate Normal-Normal math is correct, but the genetic-prior weights are, per the docstring, **"synthetic … stylised, not pulled from any GWAS."**
 - **Gaps:** these are not "under-validated" — they are **not validatable as clinical claims today** because (a) the compounds lack human efficacy evidence and (b) no genetic predictor of response exists in the literature. They can be kept only as clearly labeled, non-clinical, exploratory features, or removed.
 
 #### 5.2.7 STR calling (`repeat_callers/expansion_hunter.py`)
@@ -789,9 +789,12 @@ These predict response to compounds that are predominantly investigational/off-l
 
 Consequently, a *clinical* "Strong Fit / Likely Good Responder" claim is **not validatable today**. Acceptable dispositions: **(a) remove from clinical scope**; or **(b) reframe explicitly as a research hypothesis** inside an IRB-approved study with informed consent, where the predictor's performance is *being studied*, not asserted (§12, §18). The mechanism/pathway content can remain as transparent educational information if clearly labeled as non-predictive. The invented tier vocabulary ("Strong Fit") must not imply validated predictive performance.
 
-### 11.7 Bayesian longitudinal tracking (`tracking/bayes.py`, `genetics.py`)
+### 11.7 Bayesian longitudinal tracking — the HBRI (`tracking/responder_index.py`, `bayes.py`, `genetics.py`; spec `docs/models/peptide-response-model.md`)
 
 The Normal-Normal conjugate update is correct mathematics, but the genetic-prior weights are, per the code, **synthetic/stylised**, and the measurement-noise and approach-curve parameters are guesses (garbage-in/garbage-out). To validate: derive priors from real data; fit/justify the noise and kinetic parameters from real longitudinal measurements; validate the **predictive trajectory and its 95% intervals against held-out patient time-series** (do the intervals achieve nominal coverage?); report calibration of the predictive distribution. Until then, the trajectory/CI is illustrative, not clinical, and must be labeled as such. Separately, the synthetic **seed/demo data** (`tracking/seed.py`) used to populate the tracking UI on container start must be unmistakably segregated from, and never confused with, real patient data in any clinical deployment.
+
+<!-- NEEDS REVIEW: since this section was authored the tracking predictor was generalised to the Hierarchical Bayesian Responder Index (HBRI). The scalar genetic responder strength is now a regularised linear index over a feature vector assembled by an auto-discovering adapter registry (`engine/tracking/feature_adapters/`: genetics, PRS, BPC-157, covariates, HealthKit-behaviour), fused across genetics×cohort by correlation-aware BLUE (`pooling.combine_priors`); the prediction output carries a `responder_features` field. The Normal-Normal conjugate update itself is unchanged (with only the genetics feature present the numbers are identical to the pre-refactor model, per `tests/test_engine/test_tracking/test_responder_index.py`), so the coverage/calibration methodology above still applies — but its SCOPE now spans the added feature adapters and BLUE-fusion parameters. A biostatistician should confirm the coverage-verification study (and the calibration backtest `tests/test_engine/test_tracking/test_calibration.py`) exercises the full multi-feature index, not only the genetics prior. This is a methodology-scope question flagged for human review, not a change to the validation design. -->
+
 
 ### 11.8 Model monitoring, drift, and recalibration
 
@@ -869,7 +872,7 @@ Genomic data is uniquely sensitive: it is identifying, immutable, familial, and 
 
 ### 13.3 External data egress
 
-The pipeline transmits variant coordinates/rsIDs to external services (Ensembl, NCBI, gnomAD, MyVariant, UniProt, PharmGKB, GWAS, KEGG, openFDA). Even coordinate-level queries can be privacy-relevant. Validation/governance must: enumerate exactly **what user-derived data leaves the system and to whom** (a `docs/data-sources.md` is referenced for this — verify and keep current); assess re-identification risk; put **BAAs/agreements** in place where required; and consider hosting **internal mirrors** of these resources (which also serves reproducibility, §8.6) to eliminate per-patient egress for clinical reporting.
+The pipeline transmits variant coordinates/rsIDs to external services (Ensembl, NCBI, gnomAD, MyVariant, UniProt, PharmGKB, GWAS, KEGG, openFDA). Even coordinate-level queries can be privacy-relevant. Validation/governance must: enumerate exactly **what user-derived data leaves the system and to whom** (no such `docs/data-sources.md` exists in the repo yet — authoring this data-egress inventory is a Phase-1 deliverable, cross-referenced in Appendix K); assess re-identification risk; put **BAAs/agreements** in place where required; and consider hosting **internal mirrors** of these resources (which also serves reproducibility, §8.6) to eliminate per-patient egress for clinical reporting.
 
 ### 13.4 Validation of privacy/security controls
 
@@ -1171,7 +1174,7 @@ A snapshot of each module's clinical-readiness, to be maintained as a living reg
 | `peptide_mapper.py` | Investigational | 🔴 | Remove from clinical scope or IRB research only |
 | `bpc157_predictor.py` | Investigational/speculative | 🔴 | Remove from clinical scope or IRB research only |
 | `receptor_mapper.py` | Investigational | 🔴 | eQTL grounding + validation, or non-clinical |
-| `tracking/bayes.py`,`genetics.py` | Investigational | 🟠 | Real priors/parameters; predictive-interval coverage validation; segregate demo data |
+| `tracking/` (HBRI: `responder_index.py`,`bayes.py`,`genetics.py`) | Investigational | 🟠 | Real priors/parameters; predictive-interval coverage validation; segregate demo data |
 | `repeat_callers/expansion_hunter.py` | Analytical+clinical | 🟡 | Reference-sample validation; pinned binary/FASTA; BAM build check; interpretation evidence |
 | `dossier_generator.py` | Communication | 🟠 | Human-factors validation; provenance/uncertainty/build/KB; claim gating |
 | `api.py` (+ persistence) | Infrastructure | 🔴 | AuthN/Z; encryption; audit trail; PHI-safe storage |
@@ -1465,13 +1468,47 @@ its limits**. They are necessary but **not sufficient** for clinical use — the
 do not by themselves constitute analytical or clinical validation (Phases 2–4),
 which remain outstanding.
 
+**Broader engineering changes since authoring (beyond Phase-0 containment).**
+For reference-accuracy, three larger changes have since landed that this plan's
+baseline predates. None of them advances the validation posture — they are noted
+so the reader maps the plan onto the current tree:
+
+- **Storage → Postgres.** The annotation cache, rsID cache, tracking store, and
+  job store are backed by **Postgres via `db/pool.py` when `DATABASE_URL` is
+  set** (SQLite remains the local/test fallback). Schema is applied by
+  `db/migrate.py` from `db/migrations/00N_*.sql` (001–011), tracked in
+  `schema_migrations`. This does not change any hazard rating — an
+  access-controlled, encrypted, auditable datastore (H-08, §13.2) is still
+  required and unverified.
+- **Tracking predictor → HBRI.** The Bayesian tracking model is now the
+  Hierarchical Bayesian Responder Index (spec `docs/models/peptide-response-model.md`);
+  see §11.7 for the reference update and the validation-scope flag.
+- **New PHI-ingestion surface — HealthKit** (`engine/healthkit/`,
+  `POST`/`GET /healthkit/samples`, subject↔patient bridge, migration 010).
+  <!-- NEEDS REVIEW: this iOS-app HealthKit ingestion path is a NEW inbound PHI
+  surface that postdates the §2/§13 baseline and is not covered by any analytical
+  or privacy validation in this plan. It has device-token auth that is fail-closed
+  when DATABASE_URL is set, but it needs its own data-flow inventory (Appendix K),
+  privacy/security validation (§13), and provenance/quality handling for
+  device-sourced biomarker data feeding the HBRI. Flagged for the Security/Privacy
+  Officer and Medical Director — do not treat its presence as validated. -->
+
+<!-- NEEDS REVIEW: the H-08 row below has been corrected to current code. The
+earlier changelog claimed a blanket per-endpoint API-key gate "landed"; the code
+no longer enforces that — `/analyze`,`/jobs`,`/tracking` rely on an external
+Authentik proxy and record NULL ownership (no 401) when it is absent, so
+app-level authZ on those endpoints is softer than the changelog previously
+implied. Only HealthKit is app-fail-closed. This is a security-posture change
+that the Security/Privacy Officer should re-review against H-08 before the row is
+read as "remediated." -->
+
 | Item | Launch-blocker | What landed | Residual work |
 |---|---|---|---|
 | Genome build (H-01, B-1) | yes | `engine/genome_build.py` detects build; pipeline rejects confirmed non-GRCh38 coordinate (VCF) files; build recorded on result and surfaced via API. Optional, opt-in GRCh37→GRCh38 liftover (`engine/liftover.py`, `ENABLE_LIFTOVER`). | Validate detection accuracy on a labeled corpus; validate liftover concordance (§9.3); broaden build-detection evidence sources. |
 | Silent variant drop (H-07, B-2) | yes | Annotation failures are logged at ERROR and recorded; result carries `analysis_status` (expected/annotated/failed/complete); API surfaces it. | Report-blocking policy on incompleteness; retry/queue strategy; per-annotator status (§9.7). |
 | Synthetic conformal calibration (H-03) | yes | `conformal.py` no longer fabricates a guarantee; returns `["uncalibrated"]`/`confidence_level=None` unless a real calibration set is supplied; PGx summary states this. | Assemble a real, exchangeable calibration set and **empirically verify coverage** before enabling confidence output (§11.4). |
 | Investigational efficacy claims (H-04, B-4) | yes | Peptide mapper marks non-FDA-approved peptides investigational with a neutral `pathway_match_label` + disclaimer; dossier drops "Predicted Efficacy" for them; BPC-157 and receptor-mapper narratives neutralized to mechanistic, non-predictive, non-dosing language. | Decide final disposition (remove vs IRB-research); human-factors validation of the reframed output (§14); curated regulatory-status source. |
-| API auth + PHI at rest (H-08, B-3) | yes | All endpoints except `/health` require an API key (fail-closed; `ALLOW_INSECURE_NO_AUTH` dev override); job store encrypted with a Fernet `JOB_STORE_KEY` (else in-memory only); medications moved out of the URL query string. | Per-user identity/RBAC, audit trail (Part 11), key management, retention controls, pen-test (§13). |
+| API auth + PHI at rest (H-08, B-3) | **partial — see flag** | **Persistence:** the Fernet `JOB_STORE_KEY` on-disk snapshot is **deprecated and unused**; jobs now persist to **Postgres via `db/pool.py` when `DATABASE_URL` is set** (in-memory only otherwise), applied by `db/migrate.py` (migrations 001–011). The old unencrypted `data/jobs.json` is gone. Medications are still accepted as a multipart form field, never in the URL query string. **Auth:** the previously-claimed blanket per-endpoint API-key gate was **not retained**. In prod an Authentik reverse proxy stamps identity headers, surfaced as `current_user`; when absent (dev) the app records NULL ownership rather than returning 401. Only HealthKit ingestion (`POST`/`GET /healthkit/samples`, `engine/healthkit/`) is app-fail-closed — a device token is always required once `DATABASE_URL` is set. | Per-user identity/RBAC and enforced authZ on `/analyze`,`/jobs`,`/tracking` (not just an external proxy), audit trail (Part 11), key management, encryption-at-rest verification, retention controls, pen-test (§13). |
 | Demo-data segregation | — | Tracking seeder labels synthetic patients `DEMO-NNN`; seeding remains opt-in. | Enforce hard separation of demo vs clinical datastores in any deployment. |
 | Heuristic scoring as clinical significance (H-02, B-6) | yes | *Substantially addressed.* (a) Summaries carry `tier_basis` and reframe non-ClinVar critical/high tiers as "prioritization signal, not a clinical diagnosis". (b) An ACMG/AMP 2015 evidence-assembly engine (`engine/acmg/`) now runs per variant: faithful combining rules; conservative auto-assignment of BA1/BS1/PM2/PM4; PVS1 counted only for a curated LoF-mechanism gene set (`data/acmg/lof_mechanism_genes.txt`), else flagged for curation; PP3/BP4 from concordant SIFT+PolyPhen; ClinVar kept separate (not a code); every result flags `requires_human_review`. Surfaced in the dossier as "pending clinician sign-out". (c) PS1/PM5 codon-level codes (reference-gated) and a result-level ACMG↔ClinVar **discordance summary** for curator triage. (d) A basic attributable **sign-out workflow** (`engine/acmg/signoff.py` + `POST /jobs/{id}/variants/{vid}/acmg-signoff`) lets a reviewer approve/amend each call. | Provide a real known-pathogenic-AA reference for PS1/PM5; integrate a calibrated meta-predictor (e.g. REVEL) for PP3/BP4; expand/curate the LoF list; upgrade sign-out to a full 21 CFR Part 11 e-signature with identity binding + tamper-evident audit (§8.5); then validate against expert-panel truth (§10.2). |
 | QMS / risk file / validated configuration (B-7) | yes | *Process work, not code.* | Stand up the minimum QMS, risk file, and frozen validated configuration (§6–§8). |
