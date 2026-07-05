@@ -7,35 +7,59 @@ reasonable distribution, simulate noisy measurements, then ask how
 often the reported interval covers truth, the answer should be 95%
 (give or take Monte Carlo error).
 
-We check coverage in four regimes:
-    A. pre-baseline measurement available, low noise (5%)
-    B. no pre-baseline measurement,        low noise (5%)
-    C. pre-baseline measurement available, high noise (10%)
-    D. no pre-baseline measurement,        high noise (10%)
+The file has three sections, all built on one shared Monte-Carlo loop
+(``_run_coverage``):
 
-(B) and (D) are the regimes the joint fit was added to handle — the
-old "baseline = earliest measurement" estimator catastrophically
-under-covered there. We want to verify the new model doesn't silently
-swing the other way and over-cover (which would mean the bands are too
-wide and the model is unnecessarily uninformative).
+  1. Genetics-only (the original backtest) — four regimes crossing
+     pre-baseline availability × measurement noise (5% / 10%). The
+     no-pre-baseline regimes are the ones the joint fit was added to handle;
+     we also guard against the model over-swinging into over-coverage.
+  2. Multi-feature responder index (Phase 1) — the θ-prior is now fused from
+     genetics + a synthetic, test-only non-genetic feature (η = 1 + Δ·tanh(βᵀx),
+     Var(η) via the delta method), across weak/strong feature contribution and
+     low/high feature uncertainty. This is a propagation/integration guard; the
+     closed-form Var(η) correctness is pinned separately by
+     ``test_multifeature_feature_variance_propagates`` and the golden test in
+     ``test_responder_index.py``.
+  3. Genetics × cohort fusion (the "double-counting" scenario) — the
+     empirical-Bayes ``combine_priors`` + ``cap_combined_precision`` path.
+     Independent-source fusion (ρ=0) is calibrated; a strongly correlated
+     adversarial regime (ρ=0.9) demonstrates that fusion over-confidence
+     collapses the θ-CI and that the fused-precision cap is a structural no-op.
+     See those tests' docstrings and the PR body for the finding.
 
-Coverage on a binomial process has Monte Carlo error of
-~sqrt(0.95·0.05/N) ≈ 0.01 at N=500 trials, so we allow [0.90, 0.98] as
-the acceptable band. Coverage outside that range is a calibration bug.
+Coverage on a binomial process has Monte Carlo error ~sqrt(0.95·0.05/N) ≈
+0.005 at N=2000 trials, so we allow [0.90, 0.995] as the acceptable band
+(see _COVERAGE_LO / _COVERAGE_HI). Coverage outside that range is a
+calibration bug.
 """
 from __future__ import annotations
 
+import contextlib
 import math
 import random
 from dataclasses import dataclass
 
 import pytest
 
+import engine.tracking.responder_index as _ri
 from engine.tracking.bayes import (
     approach,
     joint_fit_likelihood,
     predictive_curve,
     update,
+)
+from engine.tracking.genetics import derive_prior, generate_synthetic_profile
+from engine.tracking.pooling import (
+    FUSED_PRECISION_CAP_MULT,
+    PopulationPrior,
+    cap_combined_precision,
+    combine_priors,
+)
+from engine.tracking.responder_index import (
+    Feature,
+    ResponderContext,
+    responder_index,
 )
 
 # ── Synthetic trajectory generator ──────────────────────────────────────────
@@ -83,6 +107,85 @@ class CoverageResult:
         )
 
 
+def _run_coverage(
+    *,
+    label: str,
+    n_trials: int,
+    weeks: list[float],
+    noise_pct: float,
+    trial_setup,               # (rng) -> (theta_true, prior_mean, prior_sd)
+    seed: int,
+    baseline: float = 180.0,   # IGF-1 scale
+    tau: float = 3.0,
+) -> CoverageResult:
+    """Monte-Carlo coverage loop shared by every calibration scenario.
+
+    ``trial_setup(rng)`` returns the trial's true θ together with the
+    ``(prior_mean, prior_sd)`` the model is handed — the ONLY thing that
+    differs between scenarios (a fixed prior, a responder-index-fused prior,
+    or a per-trial genetics×cohort fusion). Everything downstream — simulate →
+    joint fit → conjugate update → predictive band → coverage tallies — is
+    identical, so the calibration protocol lives in exactly one place and can
+    never drift out of lock-step between scenarios.
+
+    ``trial_setup`` MUST draw ``theta_true`` from ``rng`` before any other rng
+    use so the measurement-noise draws that follow stay reproducible.
+    """
+    rng = random.Random(seed)
+    hits_theta = 0
+    hits_pred = 0
+    sum_post_sd = 0.0
+
+    for _ in range(n_trials):
+        theta_true, prior_mean, prior_sd = trial_setup(rng)
+        truth = TrueState(baseline, theta_true, tau, noise_pct)
+
+        obs = _simulate(rng, truth=truth, weeks=weeks)
+        fit = joint_fit_likelihood(
+            observations=obs,
+            tau_weeks=tau,
+            baseline_prior_mean=baseline,
+            baseline_prior_sd=baseline * 0.30,
+            noise_pct=noise_pct,
+        )
+        assert fit is not None, "joint fit must succeed with ≥3 observations"
+
+        posterior = update(
+            prior_mean=prior_mean, prior_sd=prior_sd, likelihood=fit.likelihood
+        )
+        sum_post_sd += posterior.sd_pct_change
+
+        # θ-coverage: does the 95% CI on θ contain the true θ?
+        if posterior.credible_lo_95 <= theta_true <= posterior.credible_hi_95:
+            hits_theta += 1
+
+        # Predictive coverage on the noiseless true value at the longest
+        # observed week. Mirror analysis.predict_response: when a pre-treatment
+        # measurement pins b, σ_b must NOT propagate into the band (it would
+        # double-count uncertainty already absorbed by σ_θ in the delta method).
+        check_week = weeks[-1]
+        has_pre = any(w < 1.0 for w, _ in obs)
+        curve = predictive_curve(
+            baseline=fit.baseline,
+            posterior=posterior,
+            tau_weeks=tau,
+            week_grid=[check_week],
+            baseline_sd=0.0 if has_pre else fit.baseline_sd,
+        )
+        pt = curve.points[0]
+        true_val = baseline * (1 + theta_true * approach(check_week, tau))
+        if pt.lo_95 <= true_val <= pt.hi_95:
+            hits_pred += 1
+
+    return CoverageResult(
+        label=label,
+        n_trials=n_trials,
+        theta_coverage=hits_theta / n_trials,
+        predictive_coverage=hits_pred / n_trials,
+        mean_posterior_sd=sum_post_sd / n_trials,
+    )
+
+
 def _coverage_run(
     *,
     label: str,
@@ -93,76 +196,22 @@ def _coverage_run(
     prior_sd: float = 0.15,
     seed: int = 42,
 ) -> CoverageResult:
-    """Run ``n_trials`` synthetic patients and return coverage frequencies.
+    """Genetics-only calibration: the truth for each trial is drawn from the
+    same Normal we tell the model to use as its prior on θ.
 
-    The "truth" for each trial is drawn from the same Normal that we tell
-    the model to use as its prior on θ. This is the cleanest calibration
-    test: a well-calibrated Bayesian model that is given the correct
-    prior will produce 95%-covering intervals.
+    This is the cleanest calibration test — a well-calibrated Bayesian model
+    given the correct prior produces 95%-covering intervals.
     """
-    rng = random.Random(seed)
     weeks_with_pre = [0.0, 3.0, 6.0, 10.0, 16.0]
-    weeks_without_pre = weeks_with_pre[1:]
-    weeks = weeks_with_pre if has_pre_baseline else weeks_without_pre
+    weeks = weeks_with_pre if has_pre_baseline else weeks_with_pre[1:]
 
-    hits_theta = 0
-    hits_pred = 0
-    sum_post_sd = 0.0
+    def trial_setup(rng):
+        # Draw truth from the model's stated (fixed) prior.
+        return rng.gauss(prior_mean, prior_sd), prior_mean, prior_sd
 
-    for _ in range(n_trials):
-        # Draw truth from the model's stated prior.
-        theta_true = rng.gauss(prior_mean, prior_sd)
-        baseline_true = 180.0          # IGF-1 scale
-        tau = 3.0
-        truth = TrueState(baseline_true, theta_true, tau, noise_pct)
-
-        obs = _simulate(rng, truth=truth, weeks=weeks)
-        fit = joint_fit_likelihood(
-            observations=obs,
-            tau_weeks=tau,
-            baseline_prior_mean=baseline_true,
-            baseline_prior_sd=baseline_true * 0.30,
-            noise_pct=noise_pct,
-        )
-        assert fit is not None, "joint fit must succeed with ≥3 observations"
-
-        posterior = update(
-            prior_mean=prior_mean,
-            prior_sd=prior_sd,
-            likelihood=fit.likelihood,
-        )
-        sum_post_sd += posterior.sd_pct_change
-
-        # θ-coverage: does the 95% CI on θ contain the true θ?
-        if posterior.credible_lo_95 <= theta_true <= posterior.credible_hi_95:
-            hits_theta += 1
-
-        # Predictive coverage: at the longest observed week, does the 95%
-        # band on the *mean* value contain the noiseless true value?
-        # Mirror what analysis.predict_response does — when a pre-treatment
-        # measurement is present it pins b directly and σ_b should NOT
-        # propagate into the predictive band (otherwise it double-counts
-        # uncertainty already absorbed by σ_θ in the delta method).
-        check_week = weeks[-1]
-        has_pre_baseline = any(w < 1.0 for w, _ in obs)
-        curve = predictive_curve(
-            baseline=fit.baseline,
-            posterior=posterior,
-            tau_weeks=tau,
-            week_grid=[check_week],
-            baseline_sd=0.0 if has_pre_baseline else fit.baseline_sd,
-        )
-        pt = curve.points[0]
-        true_val = baseline_true * (1 + theta_true * approach(check_week, tau))
-        if pt.lo_95 <= true_val <= pt.hi_95:
-            hits_pred += 1
-
-    return CoverageResult(
-        label=label,
-        n_trials=n_trials,
-        theta_coverage=hits_theta / n_trials,
-        predictive_coverage=hits_pred / n_trials,
-        mean_posterior_sd=sum_post_sd / n_trials,
+    return _run_coverage(
+        label=label, n_trials=n_trials, weeks=weeks, noise_pct=noise_pct,
+        trial_setup=trial_setup, seed=seed,
     )
 
 
@@ -246,4 +295,427 @@ def test_predictive_band_coverage(label, has_pre_baseline, noise_pct):
     assert _COVERAGE_LO <= res.predictive_coverage <= _COVERAGE_HI, (
         f"predictive coverage {res.predictive_coverage:.3f} out of "
         f"[{_COVERAGE_LO}, {_COVERAGE_HI}] for {label}"
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Phase 1 — Multi-feature responder-index calibration
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# The genetics-only backtest above pins the scalar path. Phase 1 fans the
+# responder index out to additional, non-genetic features:
+#
+#     η      = 1 + Δ · tanh(βᵀx)          (responder_index.responder_index)
+#     Var(η) = (Δ · sech²(βᵀx))² · Σ β_j² var_j     (delta method)
+#
+# and that η/Var(η) flows into the θ-prior via ``genetics.derive_prior``
+# (μ_prior = η·expected_pct, σ_prior mixes σ_η·|expected_pct| with the panel
+# term). Two things must not silently break once real features join genetics:
+#
+#   1. Propagation — ``predictive_curve`` carrying a *feature-widened* σ_θ into
+#      the consumer-facing band, and the conjugate ``update`` staying calibrated
+#      when the prior it is handed is shifted/widened by fused features.
+#   2. Fusion with a donor cohort — the empirical-Bayes ``combine_priors`` +
+#      ``cap_combined_precision`` path (the "double-counting" scenario).
+#
+# HONESTY NOTE on what these tests do and do not prove. Sections A draws the
+# truth θ from the very prior ``derive_prior`` emits and feeds that same prior
+# back — so it is a self-consistent *integration/propagation guard*, not proof
+# that the Var(η) algebra is correct (the closed-form golden test in
+# ``test_responder_index.py`` owns that). Only the fusion tests (Section B)
+# have independent teeth on calibration, because there the fed prior (capped
+# fusion of two sources) differs from the truth-generating distribution.
+
+
+# ── Isolated, test-only feature adapters ─────────────────────────────────────
+
+class _SyntheticFeatureAdapter:
+    """A non-genetic responder feature with fixed (value, β, variance).
+
+    Registered/unregistered *within* a test via the ``_temp_adapters`` context
+    manager — never with ``@register_adapter`` at module scope — so it can never
+    leak into production adapter auto-discovery or bleed across test files.
+    """
+
+    required = False  # optional adapter: isolated from the anchored genetics one
+
+    def __init__(self, name: str, *, value: float, beta: float, variance: float):
+        self.name = name
+        self._value = value
+        self._beta = beta
+        self._variance = variance
+
+    def peptide_mask(self, peptide_name: str) -> bool:  # fires for every peptide
+        return True
+
+    def features(self, context: ResponderContext) -> dict[str, Feature]:
+        return {
+            self.name: Feature(
+                name=self.name,
+                value=self._value,
+                beta=self._beta,
+                variance=self._variance,
+                source=self.name,
+            )
+        }
+
+
+@contextlib.contextmanager
+def _temp_adapters(*adapters: _SyntheticFeatureAdapter):
+    """Register ``adapters`` alongside the real ones for the duration of the
+    block, then restore the registry exactly. Guarantees no cross-test leak."""
+    _ri.registered_adapters()  # ensure genetics (and any real adapters) discovered
+    saved = dict(_ri._REGISTRY)
+    try:
+        for a in adapters:
+            _ri._REGISTRY[a.name] = a
+        yield
+    finally:
+        _ri._REGISTRY.clear()
+        _ri._REGISTRY.update(saved)
+
+
+# ── Section A: feature-widened prior → posterior/predictive coverage ─────────
+
+def _multifeature_coverage_run(
+    *,
+    label: str,
+    adapter: _SyntheticFeatureAdapter,
+    weeks: list[float],
+    noise_pct: float,
+    n_trials: int,
+    seed: int = 42,
+    profile_seed: int = 123,
+    peptide: str = "CJC-1295",
+    biomarker: str = "Serum IGF-1",
+    expected_pct: float = 0.55,
+) -> CoverageResult:
+    """Coverage when the θ-prior is produced by the multi-feature responder
+    index (genetics + one synthetic non-genetic feature).
+
+    The prior (μ, σ) is computed once, through the *real*
+    ``responder_index`` fan-out and ``derive_prior`` propagation, then the
+    truth is drawn from it — mirroring the genetics-only harness above but with
+    the prior now feature-fused. baseline (180, IGF-1 scale) and τ match the
+    genetics-only cases so results are directly comparable.
+    """
+    profile = generate_synthetic_profile(random.Random(profile_seed))
+    with _temp_adapters(adapter):
+        prior = derive_prior(
+            profile, peptide, expected_pct=expected_pct, biomarker_name=biomarker
+        )
+        idx = responder_index(
+            ResponderContext(profile=profile, peptide_name=peptide)
+        )
+    # The synthetic non-genetic feature must actually have fired and fused.
+    # (That its variance genuinely propagates into Var(η) — which these coverage
+    # runs cannot prove, since truth is drawn from the fed prior — is guarded
+    # separately by test_multifeature_feature_variance_propagates.)
+    assert any(f.name == adapter.name for f in idx.features), (
+        f"{adapter.name} did not fire for {label}"
+    )
+    prior_mean, prior_sd = prior.mean_pct_change, prior.sd_pct_change
+
+    def trial_setup(rng):
+        return rng.gauss(prior_mean, prior_sd), prior_mean, prior_sd
+
+    return _run_coverage(
+        label=label, n_trials=n_trials, weeks=weeks, noise_pct=noise_pct,
+        trial_setup=trial_setup, seed=seed,
+    )
+
+
+# Regimes: (label, β, feature-variance, weeks, noise). The weak-data regimes
+# (few post-baseline obs, higher noise) are the ones with teeth — there the
+# feature-fused prior carries real posterior weight rather than being washed
+# out by a dominant likelihood.
+_MULTIFEATURE_REGIMES = [
+    # weak feature contribution (small β), low feature uncertainty
+    ("weak feat / low unc / rich data",  0.20, 0.05, [0.0, 3.0, 6.0, 10.0, 16.0], 0.05),
+    # strong feature contribution (large β), low feature uncertainty
+    ("strong feat / low unc / rich data", 0.90, 0.05, [0.0, 3.0, 6.0, 10.0, 16.0], 0.05),
+    # weak feature, HIGH feature uncertainty — widens σ_η, so the prior widens
+    ("weak feat / high unc / weak data",  0.30, 0.80, [3.0, 6.0, 10.0], 0.10),
+    # strong feature, HIGH feature uncertainty, weak data (prior carries weight)
+    ("strong feat / high unc / weak data", 0.70, 0.60, [3.0, 6.0, 10.0], 0.10),
+]
+
+
+@pytest.mark.parametrize(
+    "label, beta, variance, weeks, noise_pct", _MULTIFEATURE_REGIMES
+)
+def test_multifeature_theta_coverage(label, beta, variance, weeks, noise_pct):
+    """θ-CI coverage stays in-band when the prior is fused from genetics + a
+    synthetic non-genetic feature across weak/strong contribution and
+    low/high feature-uncertainty regimes."""
+    adapter = _SyntheticFeatureAdapter(
+        "synthetic_covariate", value=0.7, beta=beta, variance=variance
+    )
+    res = _multifeature_coverage_run(
+        label=label, adapter=adapter, weeks=weeks,
+        noise_pct=noise_pct, n_trials=_N_TRIALS,
+    )
+    print(f"\n  {res}")
+    assert _COVERAGE_LO <= res.theta_coverage <= _COVERAGE_HI, (
+        f"θ-coverage {res.theta_coverage:.3f} out of "
+        f"[{_COVERAGE_LO}, {_COVERAGE_HI}] for {label}"
+    )
+
+
+@pytest.mark.parametrize(
+    "label, beta, variance, weeks, noise_pct", _MULTIFEATURE_REGIMES
+)
+def test_multifeature_predictive_coverage(label, beta, variance, weeks, noise_pct):
+    """Consumer-facing predictive band coverage stays in-band with a
+    feature-widened σ_θ — i.e. ``predictive_curve`` propagates the fused
+    feature uncertainty into the ribbon correctly."""
+    adapter = _SyntheticFeatureAdapter(
+        "synthetic_covariate", value=0.7, beta=beta, variance=variance
+    )
+    res = _multifeature_coverage_run(
+        label=label, adapter=adapter, weeks=weeks,
+        noise_pct=noise_pct, n_trials=_N_TRIALS,
+    )
+    print(f"\n  {res}")
+    assert _COVERAGE_LO <= res.predictive_coverage <= _COVERAGE_HI, (
+        f"predictive coverage {res.predictive_coverage:.3f} out of "
+        f"[{_COVERAGE_LO}, {_COVERAGE_HI}] for {label}"
+    )
+
+
+def test_multifeature_feature_variance_propagates():
+    """Direct closed-form guard that a NON-genetics feature's β²·var actually
+    reaches Var(η).
+
+    The coverage tests above draw the truth from the very prior they feed back,
+    so they are self-consistent for *any* prior_sd and cannot catch a dropped
+    variance term. The genetics-only golden tests in ``test_responder_index.py``
+    only exercise the anchored operating point where ``var_g`` is constructed to
+    cancel to ``today_sd²``. Neither would notice ``FeatureVector.var_linear``
+    silently ignoring a second feature. This test closes that gap by asserting
+    the exact delta-method identity with a second feature present:
+
+        η      = 1 + Δ·tanh(βᵀx)
+        Var(η) = (Δ·sech²(βᵀx))² · Σ_j β_j² var_j
+
+    and — the teeth — that dropping the synthetic feature's β²·var term (at the
+    *same* operating point) strictly shrinks Var(η) by exactly that term.
+    """
+    from engine.tracking.genetics import R_DELTA_SCALE
+
+    profile = generate_synthetic_profile(random.Random(123))
+    peptide = "CJC-1295"
+    feat_value, feat_beta, feat_var = 0.7, 0.6, 0.5
+    adapter = _SyntheticFeatureAdapter(
+        "synthetic_covariate", value=feat_value, beta=feat_beta, variance=feat_var
+    )
+    with _temp_adapters(adapter):
+        idx = responder_index(
+            ResponderContext(profile=profile, peptide_name=peptide)
+        )
+
+    names = {f.name for f in idx.features}
+    assert {"genetics", "synthetic_covariate"} <= names
+
+    linear = sum(f.beta * f.value for f in idx.features)
+    var_linear = sum((f.beta ** 2) * f.variance for f in idx.features)
+    slope = R_DELTA_SCALE / (math.cosh(linear) ** 2)
+
+    assert math.isclose(
+        idx.eta, 1.0 + R_DELTA_SCALE * math.tanh(linear), rel_tol=0, abs_tol=1e-12
+    )
+    assert math.isclose(
+        idx.var_eta, (slope ** 2) * var_linear, rel_tol=0, abs_tol=1e-12
+    )
+
+    # Teeth: at the SAME operating point, Var(η) with the feature's variance
+    # dropped is exactly (slope²·var_genetics_only); the observed Var(η) must
+    # exceed it by precisely the propagated β²·var term. If a regression made
+    # var_linear ignore the non-genetics feature, this difference would be 0.
+    genetics_feat = next(f for f in idx.features if f.name == "genetics")
+    var_eta_without_feature = (slope ** 2) * (genetics_feat.beta ** 2) * genetics_feat.variance
+    propagated_term = (slope ** 2) * (feat_beta ** 2) * feat_var
+    assert idx.var_eta > var_eta_without_feature
+    assert math.isclose(
+        idx.var_eta - var_eta_without_feature, propagated_term,
+        rel_tol=0, abs_tol=1e-12,
+    )
+
+
+def test_multifeature_registry_restored():
+    """The isolation contract: after a temp-adapter block the registry is
+    byte-for-byte what it was, and the synthetic adapter is gone."""
+    before = dict(_ri.registered_adapters())
+    with _temp_adapters(
+        _SyntheticFeatureAdapter("leak_probe", value=0.5, beta=0.5, variance=0.1)
+    ):
+        assert "leak_probe" in _ri._REGISTRY
+    assert "leak_probe" not in _ri._REGISTRY
+    assert dict(_ri._REGISTRY) == before
+
+
+# ── Section B: genetics × cohort fusion (the "double-counting" scenario) ─────
+#
+# ``analysis.predict_response`` refines the genetic prior with an
+# empirical-Bayes population prior from a donor cohort via
+# ``pooling.combine_priors`` (precision addition τ_g + τ_p), then — when a rich
+# feature vector AND ≥ MIN_DONORS donors are present — passes it through
+# ``pooling.cap_combined_precision``. combine_priors treats the two priors as
+# *independent* sources of information about θ. They are not: a patient's cohort
+# response is itself partly a function of their genetics, so the two priors
+# share signal. When that correlation is real, the fused precision overstates
+# what we know and the posterior under-covers. The cap is documented as the
+# mitigation. These tests measure whether it actually is one.
+
+
+def _double_counting_coverage_run(
+    *,
+    rho: float,
+    weeks: list[float],
+    noise_pct: float,
+    n_trials: int,
+    seed: int = 7,
+    sd_genetic: float = 0.12,
+    sd_population: float = 0.12,
+    hyper_mean: float = 0.30,
+    hyper_sd: float = 0.60,
+) -> CoverageResult:
+    """Coverage of the posterior θ-CI when the prior is the *fused* genetic +
+    cohort prior, with genetics/cohort errors correlated by ``rho``.
+
+    Generative model (correlated-errors, near-flat hyperprior so ρ=0 is a
+    genuinely calibrated control):
+
+        θ_true      ~ N(hyper_mean, hyper_sd²)     # ~flat vs the error scale
+        e_g, e_p    ~ N(0, σ²) with corr ρ         # shared-factor construction
+        μ_g = θ+e_g, μ_p = θ+e_p                    # two noisy views of θ
+
+    Genetic prior N(μ_g, σ_g) and population prior N(μ_p, σ_p) are fused
+    exactly as production does (``combine_priors`` then
+    ``cap_combined_precision``). ``PopulationPrior`` is built directly — the
+    "≥ MIN_DONORS donors" requirement is just the production gate, encoded as
+    ``n_donors=3`` — so no DB is needed, matching the genetics-only harness.
+
+    At ρ=0 the two views are independent and precision addition is honest →
+    calibrated. At ρ>0 the views share error and fusion double-counts.
+    """
+    def trial_setup(rng):
+        theta_true = rng.gauss(hyper_mean, hyper_sd)
+        z_shared = rng.gauss(0, 1)
+        z_g = rng.gauss(0, 1)
+        z_p = rng.gauss(0, 1)
+        e_g = sd_genetic * (math.sqrt(rho) * z_shared + math.sqrt(1 - rho) * z_g)
+        e_p = sd_population * (math.sqrt(rho) * z_shared + math.sqrt(1 - rho) * z_p)
+        mu_g = theta_true + e_g
+        mu_p = theta_true + e_p
+
+        population = PopulationPrior(
+            peptide="X",
+            biomarker="Y",
+            n_donors=3,  # the production ≥ MIN_DONORS gate (informational here;
+                         # combine_priors/cap gate on σ>0, not donor count —
+                         # the MIN_DONORS gate itself lives in analysis.py)
+            mean_pct_change=mu_p,
+            sd_pct_change=sd_population,
+            raw_total_sd=sd_population,
+            mean_within_sd=0.0,
+        )
+        cm, cs = combine_priors(
+            genetic_mean=mu_g, genetic_sd=sd_genetic, population=population
+        )
+        # Production applies the cap here (rich feature vector + ≥3 donors).
+        cs = cap_combined_precision(
+            combined_sd=cs, genetic_sd=sd_genetic, population=population
+        )
+        return theta_true, cm, cs
+
+    return _run_coverage(
+        label=f"double-counting ρ={rho}", n_trials=n_trials, weeks=weeks,
+        noise_pct=noise_pct, trial_setup=trial_setup, seed=seed,
+    )
+
+
+def test_fused_precision_cap_is_a_noop_for_two_source_fusion():
+    """FINDING (reported in the PR body): ``cap_combined_precision`` can never
+    widen a two-source fusion, so it cannot protect coverage.
+
+    ``combine_priors`` sets τ_combined = τ_g + τ_p; the cap allows
+    2·max(τ_g, τ_p); and τ_g + τ_p ≤ 2·max(τ_g, τ_p) for all positive
+    precisions. Since ``combine_priors`` only ever fuses two priors (the
+    genetic prior already aggregates every feature into a single Normal), a
+    "rich feature vector" never changes this. The cap would need
+    ``FUSED_PRECISION_CAP_MULT < 2`` to ever bind. Re-tuning that constant is
+    out of scope for this backtest.
+
+    The identity is deterministic, so this is a closed set of edge cases (the
+    binding boundary τ_g==τ_p, and each source dominating) plus a guard on the
+    constant itself — not a Monte-Carlo sweep whose ability to catch a lowered
+    constant would depend on which random draws happened to land near the
+    boundary.
+    """
+    # The cap can only ever bind when FUSED_PRECISION_CAP_MULT < 2 (τ_g+τ_p >
+    # mult·max(τ) requires ratio > mult-1, impossible at mult=2). Pin the
+    # constant so a future retune that would make the cap active trips here.
+    assert FUSED_PRECISION_CAP_MULT == 2.0
+
+    # (sd_genetic, sd_population) covering: equal precisions (the τ_g==τ_p
+    # boundary where the sum is largest relative to the max), genetic-dominant,
+    # and population-dominant. None may widen the fused σ.
+    for sd_g, sd_p in [(0.10, 0.10), (0.02, 0.60), (0.60, 0.02), (0.15, 0.30)]:
+        pop = PopulationPrior(
+            peptide="X", biomarker="Y", n_donors=3,
+            mean_pct_change=0.30, sd_pct_change=sd_p,
+            raw_total_sd=sd_p, mean_within_sd=0.0,
+        )
+        _, cs = combine_priors(genetic_mean=0.30, genetic_sd=sd_g, population=pop)
+        capped = cap_combined_precision(
+            combined_sd=cs, genetic_sd=sd_g, population=pop
+        )
+        assert capped == cs, (
+            f"cap widened a two-source fusion at (σ_g={sd_g}, σ_p={sd_p}) — the "
+            f"no-op finding has changed; revisit the PR-body analysis"
+        )
+
+
+def test_double_counting_independent_sources_coverage_holds():
+    """ρ=0 control: when the genetic and cohort priors are genuinely
+    independent, precision-weighted fusion is honest and the posterior θ-CI
+    covers at the nominal rate. This is the positive half of the scenario —
+    fusing a feature-rich prior with a donor cohort does NOT break calibration
+    when the independence assumption ``combine_priors`` makes actually holds."""
+    res = _double_counting_coverage_run(
+        rho=0.0, weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
+    )
+    print(f"\n  {res}")
+    assert _COVERAGE_LO <= res.theta_coverage <= _COVERAGE_HI, (
+        f"independent-source fusion θ-coverage {res.theta_coverage:.3f} out of "
+        f"[{_COVERAGE_LO}, {_COVERAGE_HI}]"
+    )
+
+
+def test_double_counting_correlated_sources_undercover():
+    """FINDING (reported in the PR body): under strongly correlated
+    genetics×cohort errors — real double-counting — the fused prior is
+    over-confident and the posterior θ-CI *under-covers*, and the
+    fused-precision cap does NOT prevent it (it is a structural no-op; see
+    ``test_fused_precision_cap_is_a_noop_for_two_source_fusion``).
+
+    This is a positive characterization of the failure, not a masked bug: we
+    assert the coverage is measurably below the honesty floor so the finding is
+    encoded as a green, self-documenting fact. If a future fix (e.g. a real
+    redundancy-aware fusion or ``FUSED_PRECISION_CAP_MULT < 2``) restores
+    coverage, this test trips red and forces the finding to be revisited.
+
+    Only the θ-CI collapses; the predictive band still covers here because the
+    inferred-baseline σ_b dominates the ribbon in the no-pre-baseline regime —
+    so we characterize θ-coverage specifically.
+    """
+    res = _double_counting_coverage_run(
+        rho=0.9, weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
+    )
+    print(f"\n  {res}")
+    assert res.theta_coverage < _COVERAGE_LO, (
+        f"expected correlated-source double-counting to under-cover "
+        f"(< {_COVERAGE_LO}); measured {res.theta_coverage:.3f}. The cap-no-op "
+        f"finding may have been fixed — revisit the PR-body analysis."
     )
