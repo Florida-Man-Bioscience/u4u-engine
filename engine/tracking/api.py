@@ -9,6 +9,7 @@ Mount in api.py via:
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -297,6 +298,32 @@ def generate_genetics(patient_id: str, seed: int | None = None) -> dict[str, Any
     }
 
 
+def _extract_enrichment(job_results: dict[str, Any]) -> dict[str, Any]:
+    """Pull the responder-adapter feature signals out of a completed /analyze
+    job, keyed by the exact ``ResponderContext.extra`` channel each adapter reads:
+
+    - ``prs_profile`` — the polygenic-risk output (the PRS adapter reads
+      ``trait_scores.systemic_inflammation``);
+    - ``bpc157`` — the BPC-157 composite prediction, which the pipeline attaches
+      to the BPC-157 entry of ``peptide_recommendations``.
+    """
+    enrichment: dict[str, Any] = {}
+    prs = job_results.get("prs_profile")
+    if isinstance(prs, dict):
+        enrichment["prs_profile"] = prs
+    recs = (
+        (job_results.get("peptide_recommendations") or {}).get("recommendations")
+        or []
+    )
+    for rec in recs:
+        if isinstance(rec, dict) and rec.get("peptide_name") == "BPC-157":
+            pred = rec.get("bpc157_prediction")
+            if isinstance(pred, dict):
+                enrichment["bpc157"] = pred
+            break
+    return enrichment
+
+
 @router.post("/patients/from-job/{job_id}")
 def create_patient_from_job(
     job_id: str,
@@ -330,6 +357,15 @@ def create_patient_from_job(
         service.set_genetic_profile(
             conn, patient.id, profile.to_json(), source=f"job:{job_id}"
         )
+        # Persist pipeline enrichment (PRS profile + BPC-157 composite) so the
+        # corresponding responder adapters can fire at predict time. These are
+        # computed over the full annotated genome and are not in the tracking
+        # GeneticProfile, so they can only be captured here, from the job.
+        enrichment = _extract_enrichment(job_results)
+        if enrichment:
+            service.set_patient_enrichment(
+                conn, patient.id, json.dumps(enrichment)
+            )
 
     covered_with_signal = sorted(
         {

@@ -74,3 +74,12 @@ CREATE TABLE IF NOT EXISTS patient_genetics (
     source       TEXT NOT NULL DEFAULT 'synthetic',
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+
+-- Per-patient pipeline enrichment (PRS profile, BPC-157 composite) so the
+-- corresponding responder feature adapters can fire at predict time; populated
+-- at POST /tracking/patients/from-job. Mirrors db/migrations/011.
+CREATE TABLE IF NOT EXISTS patient_enrichment (
+    patient_id      TEXT PRIMARY KEY REFERENCES patients(id) ON DELETE CASCADE,
+    enrichment_json TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
