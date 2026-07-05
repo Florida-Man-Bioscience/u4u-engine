@@ -15,7 +15,6 @@ import pytest
 
 from engine.tracking import cross_biomarker as cb
 
-
 # ── Inertness gate ──────────────────────────────────────────────────────────
 
 def test_module_is_gated_off():
