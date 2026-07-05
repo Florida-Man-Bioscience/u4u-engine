@@ -120,25 +120,47 @@ must not assume their contribution is evaluated in isolation.
 
 ---
 
-## 3. Double-counting mitigation (genetics × cohort)
+## 3. Double-counting correction (genetics × cohort)
 
 `combine_priors` (`engine/tracking/pooling.py`) fuses the genetic prior with an
-empirical-Bayes **population prior** (leave-one-out donor cohort) by adding
-precisions `τ_g + τ_p`, treating them as independent. They are not: a cohort's
-observed response is itself partly driven by genetics, so the summed precision
-overstates information. The redundancy is negligible for the genetics-only
-scalar prior but grows with a rich feature vector fused against a real cohort.
+empirical-Bayes **population prior** (leave-one-out donor cohort). The two are
+**not** independent views of θ: a cohort's observed response is itself partly
+driven by genetics, so they share signal. Fusing them as independent (adding
+precisions `τ_g + τ_p`) double-counts that signal, and the posterior
+**under-covers** — the calibration backtest's correlated-source regime measured
+θ-coverage collapsing to ≈0.85 (below the 0.90 honesty floor).
 
-**Cap.** `cap_combined_precision` bounds the fused precision:
+**Correlation-aware (BLUE) fusion.** Treat the two priors' errors as jointly
+Normal with correlation `ρ`. The minimum-variance unbiased combination under
+`Σ = [[σ_g², ρσ_gσ_p],[ρσ_gσ_p, σ_p²]]` is
 
-$$\tau_{\text{combined}} \le \text{CAP\_MULT}\cdot\max(\tau_g, \tau_p),\qquad \text{CAP\_MULT}=2.0$$
+$$w_g \propto \sigma_p^2-\rho\sigma_g\sigma_p,\quad w_p \propto \sigma_g^2-\rho\sigma_g\sigma_p,\qquad
+\mu=\frac{w_g\mu_g+w_p\mu_p}{w_g+w_p},\quad
+\operatorname{Var}=\frac{\sigma_g^2\sigma_p^2(1-\rho^2)}{w_g+w_p}.$$
 
-**Gate (critical).** The cap is applied in `predict_response` **only when**
-*(≥1 non-genetic feature)* **AND** *(≥ `MIN_DONORS` donors)* are both present.
-Genetics-only — today's default, at *any* donor count — never triggers it, so
-all existing pooling behaviour is preserved exactly. (The calibration backtest
-exercises `joint_fit_likelihood`+`update` directly and does not touch this
-path; the guard is `test_pooling.py`.)
+At `ρ=0` this reduces **exactly** to `τ_g + τ_p` (so every non-fusion caller and
+the genetics-only path are byte-for-byte unchanged); at `ρ>0` the combined
+precision is lower. If a BLUE weight goes ≤0 (one source so much noisier that at
+this `ρ` it adds no independent information) the more precise source is used
+alone; `ρ` is clamped below 1 to avoid the singular fully-redundant limit.
+
+**The assumed correlation.** `ρ` is unknown at predict time, so `predict_response`
+opts into a conservative fixed `GENETIC_COHORT_CORRELATION = 0.5` ("the two
+priors share ~half their information") on **every** fused call — the redundancy is
+genetics×cohort and exists with or without non-genetic features, so it is not
+gated on feature richness. The BLUE **barely moves the point estimate** (at
+`σ_g≈σ_p` the weights stay ≈½/½); it widens the interval. This is a documented
+structural assumption, not a fitted quantity — ideally estimated once cohort
+volume allows (cf. the gated cross-biomarker `Σ`, §6).
+
+**Calibration evidence** (`test_calibration.py`, N=2000, fixed seed): a
+*matched-ρ* sweep covers at ≈0.95 for ρ∈{0, 0.5, 0.9} (the fusion math is right);
+the *fixed-ρ=0.5* default holds coverage in `[0.90, 0.995]` across true ρ∈{0,
+0.3, 0.6, 0.9} (0.985 → 0.924, mild over-coverage at low true ρ is intended
+conservatism); and an *uncorrected* (ρ-assumed=0) control still under-covers at
+0.849, proving the correction is load-bearing. This replaces the earlier
+`cap_combined_precision`, which was a structural no-op (`τ_g+τ_p ≤ 2·max(τ_g,τ_p)`
+always holds for two sources, so the cap could never bind).
 
 ---
 

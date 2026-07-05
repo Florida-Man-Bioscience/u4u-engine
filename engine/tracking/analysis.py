@@ -391,12 +391,8 @@ def predict_response(
 
     # ── Responder-index provenance ──
     # Assemble the feature context and evaluate the responder index so we can
-    # (a) surface which features fired and (b) know whether a *rich* feature
-    # vector (any non-genetic feature) is present — the gate for the
-    # fused-precision cap below. With only the genetics adapter registered
-    # (today's default) this reports a single genetics feature and the cap
-    # never binds, so behaviour is unchanged.
-    n_nongenetic_features = 0
+    # surface which features fired. With only the genetics adapter registered
+    # (today's default) this reports a single genetics feature.
     responder_features: list[dict[str, Any]] = []
     if raw is not None:
         patient = service.get_patient(conn, patient_id)
@@ -412,7 +408,6 @@ def predict_response(
         )
         idx = responder_index(ctx)
         responder_features = [f.to_dict() for f in idx.features]
-        n_nongenetic_features = sum(1 for f in idx.features if f.name != "genetics")
 
     # ── Find the active treatment for this peptide ──
     treatments = service.list_treatments_for_patient(conn, patient_id)
@@ -476,22 +471,19 @@ def predict_response(
     population_prior = pooling.estimate_population_prior(
         donors, peptide=peptide_name, biomarker=biomarker_name,
     )
-    genetic_prior_sd = prior_sd  # pre-fusion genetic σ, needed for the cap
+    # Correlation-aware fusion of the genetic prior with the cohort-pooled
+    # prior. The two are not independent (a cohort's response is itself partly
+    # genetic), so we fuse them under an assumed structural correlation rather
+    # than adding precisions — correcting the genetics×cohort double-counting
+    # that otherwise makes the posterior under-cover. With no cohort
+    # (population_prior is None) this is a no-op and the genetics-only path is
+    # unchanged.
     prior_mean, prior_sd = pooling.combine_priors(
         genetic_mean=prior_mean,
         genetic_sd=prior_sd,
         population=population_prior,
+        correlation=pooling.GENETIC_COHORT_CORRELATION,
     )
-    # Fused-precision cap: only when a rich feature vector (≥1 non-genetic
-    # feature) AND ≥ MIN_DONORS donors are both present does the genetics×cohort
-    # redundancy warrant widening. Genetics-only + any donor count leaves this a
-    # no-op, so existing behaviour is preserved exactly.
-    if n_nongenetic_features >= 1 and len(donors) >= pooling.MIN_DONORS:
-        prior_sd = pooling.cap_combined_precision(
-            combined_sd=prior_sd,
-            genetic_sd=genetic_prior_sd,
-            population=population_prior,
-        )
 
     # ── HealthKit proxy observations (conservative, isolated) ──
     # Wearable proxies (body mass, resting HR) for the *matching* biomarker are

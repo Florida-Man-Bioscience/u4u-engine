@@ -22,11 +22,12 @@ The file has three sections, all built on one shared Monte-Carlo loop
      ``test_multifeature_feature_variance_propagates`` and the golden test in
      ``test_responder_index.py``.
   3. Genetics × cohort fusion (the "double-counting" scenario) — the
-     empirical-Bayes ``combine_priors`` + ``cap_combined_precision`` path.
-     Independent-source fusion (ρ=0) is calibrated; a strongly correlated
-     adversarial regime (ρ=0.9) demonstrates that fusion over-confidence
-     collapses the θ-CI and that the fused-precision cap is a structural no-op.
-     See those tests' docstrings and the PR body for the finding.
+     empirical-Bayes ``combine_priors`` path, now correlation-aware (BLUE). A
+     matched-ρ sweep proves the fusion math is calibrated across ρ ∈ {0, .5, .9};
+     a fixed-assumption sweep proves the conservative production default
+     ``GENETIC_COHORT_CORRELATION`` keeps coverage in-band across the plausible
+     true-ρ range; and an uncorrected (ρ=0-assumed) control confirms the
+     correlation term is load-bearing (naive fusion still under-covers).
 
 Coverage on a binomial process has Monte Carlo error ~sqrt(0.95·0.05/N) ≈
 0.005 at N=2000 trials, so we allow [0.90, 0.995] as the acceptable band
@@ -51,9 +52,8 @@ from engine.tracking.bayes import (
 )
 from engine.tracking.genetics import derive_prior, generate_synthetic_profile
 from engine.tracking.pooling import (
-    FUSED_PRECISION_CAP_MULT,
+    GENETIC_COHORT_CORRELATION,
     PopulationPrior,
-    cap_combined_precision,
     combine_priors,
 )
 from engine.tracking.responder_index import (
@@ -315,15 +315,15 @@ def test_predictive_band_coverage(label, has_pre_baseline, noise_pct):
 #   1. Propagation — ``predictive_curve`` carrying a *feature-widened* σ_θ into
 #      the consumer-facing band, and the conjugate ``update`` staying calibrated
 #      when the prior it is handed is shifted/widened by fused features.
-#   2. Fusion with a donor cohort — the empirical-Bayes ``combine_priors`` +
-#      ``cap_combined_precision`` path (the "double-counting" scenario).
+#   2. Fusion with a donor cohort — the empirical-Bayes, correlation-aware
+#      ``combine_priors`` path (the "double-counting" scenario).
 #
 # HONESTY NOTE on what these tests do and do not prove. Sections A draws the
 # truth θ from the very prior ``derive_prior`` emits and feeds that same prior
 # back — so it is a self-consistent *integration/propagation guard*, not proof
 # that the Var(η) algebra is correct (the closed-form golden test in
 # ``test_responder_index.py`` owns that). Only the fusion tests (Section B)
-# have independent teeth on calibration, because there the fed prior (capped
+# have independent teeth on calibration, because there the fed prior (the BLUE
 # fusion of two sources) differs from the truth-generating distribution.
 
 
@@ -556,21 +556,23 @@ def test_multifeature_registry_restored():
 
 # ── Section B: genetics × cohort fusion (the "double-counting" scenario) ─────
 #
-# ``analysis.predict_response`` refines the genetic prior with an
-# empirical-Bayes population prior from a donor cohort via
-# ``pooling.combine_priors`` (precision addition τ_g + τ_p), then — when a rich
-# feature vector AND ≥ MIN_DONORS donors are present — passes it through
-# ``pooling.cap_combined_precision``. combine_priors treats the two priors as
-# *independent* sources of information about θ. They are not: a patient's cohort
-# response is itself partly a function of their genetics, so the two priors
-# share signal. When that correlation is real, the fused precision overstates
-# what we know and the posterior under-covers. The cap is documented as the
-# mitigation. These tests measure whether it actually is one.
+# ``analysis.predict_response`` refines the genetic prior with an empirical-Bayes
+# population prior from a donor cohort via ``pooling.combine_priors``. The two
+# priors are NOT independent views of θ: a patient's cohort response is itself
+# partly a function of their genetics, so the two share signal. Fusing them as
+# independent (τ_g + τ_p) double-counts that signal and the posterior
+# under-covers. ``combine_priors`` is therefore correlation-aware (BLUE under an
+# assumed error correlation ρ), and production opts into a conservative fixed
+# ``GENETIC_COHORT_CORRELATION``. These tests prove: (A) the fusion is calibrated
+# when ρ is known (matched sweep), (B) the fixed production default keeps coverage
+# in-band across the plausible true-ρ range, and (C) the correction is
+# load-bearing — the uncorrected (ρ-assumed=0) path still under-covers.
 
 
 def _double_counting_coverage_run(
     *,
     rho: float,
+    assumed_correlation: float,
     weeks: list[float],
     noise_pct: float,
     n_trials: int,
@@ -581,7 +583,8 @@ def _double_counting_coverage_run(
     hyper_sd: float = 0.60,
 ) -> CoverageResult:
     """Coverage of the posterior θ-CI when the prior is the *fused* genetic +
-    cohort prior, with genetics/cohort errors correlated by ``rho``.
+    cohort prior, with genetics/cohort errors truly correlated by ``rho`` and the
+    fusion told to assume ``assumed_correlation``.
 
     Generative model (correlated-errors, near-flat hyperprior so ρ=0 is a
     genuinely calibrated control):
@@ -590,14 +593,14 @@ def _double_counting_coverage_run(
         e_g, e_p    ~ N(0, σ²) with corr ρ         # shared-factor construction
         μ_g = θ+e_g, μ_p = θ+e_p                    # two noisy views of θ
 
-    Genetic prior N(μ_g, σ_g) and population prior N(μ_p, σ_p) are fused
-    exactly as production does (``combine_priors`` then
-    ``cap_combined_precision``). ``PopulationPrior`` is built directly — the
-    "≥ MIN_DONORS donors" requirement is just the production gate, encoded as
-    ``n_donors=3`` — so no DB is needed, matching the genetics-only harness.
+    Genetic prior N(μ_g, σ_g) and population prior N(μ_p, σ_p) are fused exactly
+    as production does (``combine_priors`` with the assumed correlation).
+    ``PopulationPrior`` is built directly — the "≥ MIN_DONORS donors" gate lives
+    in analysis.py — so no DB is needed, matching the genetics-only harness.
 
-    At ρ=0 the two views are independent and precision addition is honest →
-    calibrated. At ρ>0 the views share error and fusion double-counts.
+    Coverage is right when ``assumed_correlation`` matches the true ``rho``;
+    assuming *more* than the truth over-covers (conservative), assuming *less*
+    under-covers.
     """
     def trial_setup(rng):
         theta_true = rng.gauss(hyper_mean, hyper_sd)
@@ -612,110 +615,73 @@ def _double_counting_coverage_run(
         population = PopulationPrior(
             peptide="X",
             biomarker="Y",
-            n_donors=3,  # the production ≥ MIN_DONORS gate (informational here;
-                         # combine_priors/cap gate on σ>0, not donor count —
-                         # the MIN_DONORS gate itself lives in analysis.py)
+            n_donors=3,
             mean_pct_change=mu_p,
             sd_pct_change=sd_population,
             raw_total_sd=sd_population,
             mean_within_sd=0.0,
         )
         cm, cs = combine_priors(
-            genetic_mean=mu_g, genetic_sd=sd_genetic, population=population
-        )
-        # Production applies the cap here (rich feature vector + ≥3 donors).
-        cs = cap_combined_precision(
-            combined_sd=cs, genetic_sd=sd_genetic, population=population
+            genetic_mean=mu_g, genetic_sd=sd_genetic, population=population,
+            correlation=assumed_correlation,
         )
         return theta_true, cm, cs
 
     return _run_coverage(
-        label=f"double-counting ρ={rho}", n_trials=n_trials, weeks=weeks,
+        label=f"double-counting ρ={rho}/assumed={assumed_correlation}",
+        n_trials=n_trials, weeks=weeks,
         noise_pct=noise_pct, trial_setup=trial_setup, seed=seed,
     )
 
 
-def test_fused_precision_cap_is_a_noop_for_two_source_fusion():
-    """FINDING (reported in the PR body): ``cap_combined_precision`` can never
-    widen a two-source fusion, so it cannot protect coverage.
-
-    ``combine_priors`` sets τ_combined = τ_g + τ_p; the cap allows
-    2·max(τ_g, τ_p); and τ_g + τ_p ≤ 2·max(τ_g, τ_p) for all positive
-    precisions. Since ``combine_priors`` only ever fuses two priors (the
-    genetic prior already aggregates every feature into a single Normal), a
-    "rich feature vector" never changes this. The cap would need
-    ``FUSED_PRECISION_CAP_MULT < 2`` to ever bind. Re-tuning that constant is
-    out of scope for this backtest.
-
-    The identity is deterministic, so this is a closed set of edge cases (the
-    binding boundary τ_g==τ_p, and each source dominating) plus a guard on the
-    constant itself — not a Monte-Carlo sweep whose ability to catch a lowered
-    constant would depend on which random draws happened to land near the
-    boundary.
-    """
-    # The cap can only ever bind when FUSED_PRECISION_CAP_MULT < 2 (τ_g+τ_p >
-    # mult·max(τ) requires ratio > mult-1, impossible at mult=2). Pin the
-    # constant so a future retune that would make the cap active trips here.
-    assert FUSED_PRECISION_CAP_MULT == 2.0
-
-    # (sd_genetic, sd_population) covering: equal precisions (the τ_g==τ_p
-    # boundary where the sum is largest relative to the max), genetic-dominant,
-    # and population-dominant. None may widen the fused σ.
-    for sd_g, sd_p in [(0.10, 0.10), (0.02, 0.60), (0.60, 0.02), (0.15, 0.30)]:
-        pop = PopulationPrior(
-            peptide="X", biomarker="Y", n_donors=3,
-            mean_pct_change=0.30, sd_pct_change=sd_p,
-            raw_total_sd=sd_p, mean_within_sd=0.0,
-        )
-        _, cs = combine_priors(genetic_mean=0.30, genetic_sd=sd_g, population=pop)
-        capped = cap_combined_precision(
-            combined_sd=cs, genetic_sd=sd_g, population=pop
-        )
-        assert capped == cs, (
-            f"cap widened a two-source fusion at (σ_g={sd_g}, σ_p={sd_p}) — the "
-            f"no-op finding has changed; revisit the PR-body analysis"
-        )
-
-
-def test_double_counting_independent_sources_coverage_holds():
-    """ρ=0 control: when the genetic and cohort priors are genuinely
-    independent, precision-weighted fusion is honest and the posterior θ-CI
-    covers at the nominal rate. This is the positive half of the scenario —
-    fusing a feature-rich prior with a donor cohort does NOT break calibration
-    when the independence assumption ``combine_priors`` makes actually holds."""
+@pytest.mark.parametrize("rho", [0.0, 0.5, 0.9])
+def test_double_counting_matched_correlation_coverage_holds(rho):
+    """CORRECTNESS PROOF: when the fusion is told the TRUE genetics×cohort error
+    correlation, the posterior θ-CI covers at the nominal rate across the whole
+    range ρ ∈ {0, 0.5, 0.9}. This is the teeth — it shows the BLUE fusion math is
+    right independent of what production assumes. (ρ=0 is the legacy
+    independent-fusion control, still calibrated.)"""
     res = _double_counting_coverage_run(
-        rho=0.0, weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
+        rho=rho, assumed_correlation=rho,
+        weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
     )
     print(f"\n  {res}")
     assert _COVERAGE_LO <= res.theta_coverage <= _COVERAGE_HI, (
-        f"independent-source fusion θ-coverage {res.theta_coverage:.3f} out of "
-        f"[{_COVERAGE_LO}, {_COVERAGE_HI}]"
+        f"matched-ρ fusion θ-coverage {res.theta_coverage:.3f} out of "
+        f"[{_COVERAGE_LO}, {_COVERAGE_HI}] at ρ={rho}"
     )
 
 
-def test_double_counting_correlated_sources_undercover():
-    """FINDING (reported in the PR body): under strongly correlated
-    genetics×cohort errors — real double-counting — the fused prior is
-    over-confident and the posterior θ-CI *under-covers*, and the
-    fused-precision cap does NOT prevent it (it is a structural no-op; see
-    ``test_fused_precision_cap_is_a_noop_for_two_source_fusion``).
-
-    This is a positive characterization of the failure, not a masked bug: we
-    assert the coverage is measurably below the honesty floor so the finding is
-    encoded as a green, self-documenting fact. If a future fix (e.g. a real
-    redundancy-aware fusion or ``FUSED_PRECISION_CAP_MULT < 2``) restores
-    coverage, this test trips red and forces the finding to be revisited.
-
-    Only the θ-CI collapses; the predictive band still covers here because the
-    inferred-baseline σ_b dominates the ribbon in the no-pre-baseline regime —
-    so we characterize θ-coverage specifically.
-    """
+@pytest.mark.parametrize("rho", [0.0, 0.3, 0.6, 0.9])
+def test_double_counting_fixed_assumption_stays_in_band(rho):
+    """ROBUSTNESS: at predict time the true correlation is unknown, so production
+    fuses with a fixed conservative ``GENETIC_COHORT_CORRELATION``. Across the
+    plausible true-ρ range the posterior θ-CI stays in-band — it never
+    under-covers, and the mild over-coverage at low true ρ (assuming more shared
+    signal than there is) is intended conservative behaviour, not a bug."""
     res = _double_counting_coverage_run(
-        rho=0.9, weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
+        rho=rho, assumed_correlation=GENETIC_COHORT_CORRELATION,
+        weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
+    )
+    print(f"\n  {res}")
+    assert _COVERAGE_LO <= res.theta_coverage <= _COVERAGE_HI, (
+        f"fixed-assumption fusion θ-coverage {res.theta_coverage:.3f} out of "
+        f"[{_COVERAGE_LO}, {_COVERAGE_HI}] at true ρ={rho}"
+    )
+
+
+def test_double_counting_uncorrected_still_undercovers():
+    """LOAD-BEARING GUARD: fusing strongly-correlated sources as independent
+    (``assumed_correlation=0`` — the legacy behaviour) still under-covers. This
+    proves the in-band results above come from the correlation term, not from an
+    incidentally forgiving generative setup. If a future refactor makes even the
+    uncorrected path cover here, this trips and forces a re-derivation."""
+    res = _double_counting_coverage_run(
+        rho=0.9, assumed_correlation=0.0,
+        weeks=[3.0, 6.0, 10.0], noise_pct=0.10, n_trials=_N_TRIALS,
     )
     print(f"\n  {res}")
     assert res.theta_coverage < _COVERAGE_LO, (
-        f"expected correlated-source double-counting to under-cover "
-        f"(< {_COVERAGE_LO}); measured {res.theta_coverage:.3f}. The cap-no-op "
-        f"finding may have been fixed — revisit the PR-body analysis."
+        f"expected uncorrected (ρ-assumed=0) fusion of correlated sources to "
+        f"under-cover (< {_COVERAGE_LO}); measured {res.theta_coverage:.3f}"
     )
