@@ -39,24 +39,20 @@ from the tracking profile is therefore not merely lossy but *wrong*, and a
 flipped-allele PRS is precisely the confident-wrong mean shift the contract
 forbids.
 
-Two follow-ups this implies (see ``docs/models/peptide-response-model.md``):
-  1. *Persistence / threading.* Persist ``run_pipeline``'s ``prs_profile``
-     alongside the tracking genetic profile and populate
-     ``ResponderContext.extra["prs_profile"]`` in ``analysis.predict_response``
-     so this adapter actually activates. (Out of scope here — the Phase-1
-     contract forbids editing ``analysis.py``.)
-  2. *Allele-orientation.* Only if a future path ever recomputes INF-PRS from
-     the tracking profile: reconcile the tracking-catalog vs INF-PRS-panel
-     effect-allele orientation first (see the rs1800795 example above).
+Wiring (Wave 3b, done)
+----------------------
+``run_pipeline``'s ``prs_profile`` is persisted per patient at
+``POST /tracking/patients/from-job`` (``patient_enrichment`` table) and threaded
+into ``ResponderContext.extra["prs_profile"]`` by ``analysis.predict_response``,
+so this adapter activates for patients built from a job. It remains a graceful
+no-op when no ``prs_profile`` is present (patient not built from a job, or the
+job carried no informative INF-PRS).
 
-Persistence gap (follow-up)
----------------------------
-Per follow-up (1) above, nothing threads ``prs_profile`` into
-``ResponderContext.extra`` yet (``analysis.predict_response`` builds the context
-without it, and the tracking profile store does not persist the PRS). Until
-that is wired, this adapter is a graceful no-op — it fires only when a caller
-supplies a ``prs_profile`` and
-otherwise contributes nothing.
+Remaining caveat — *allele-orientation*: only if a future path ever recomputes
+INF-PRS from the tracking profile (rather than reading the persisted pipeline
+value) must it first reconcile the tracking-catalog vs INF-PRS-panel effect-allele
+orientation (see the rs1800795 example above). We read the persisted pipeline
+value precisely to avoid that.
 """
 from __future__ import annotations
 

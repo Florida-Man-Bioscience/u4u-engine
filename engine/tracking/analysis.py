@@ -405,6 +405,10 @@ def predict_response(
                 birth_year=patient.birth_year if patient else None,
             ),
             conn=conn,
+            # Pipeline enrichment (PRS profile, BPC-157 composite) persisted at
+            # from-job time; lets the PRS/BPC-157 adapters fire. Absent → {} →
+            # those adapters no-op, so patients without enrichment are unchanged.
+            extra=service.get_patient_enrichment(conn, patient_id) or {},
         )
         idx = responder_index(ctx)
         responder_features = [f.to_dict() for f in idx.features]
