@@ -33,9 +33,23 @@ Notes
 import csv
 import io
 import logging
+import os
 import time
 
 log = logging.getLogger(__name__)
+
+# Upper bound on the number of variants parsed from a single file. The input is
+# already capped at 100 MB *compressed* (engine/validators.py), but a malicious
+# low-entropy .vcf.gz can decompress to hundreds of GB ("decompression bomb"),
+# and pysam would otherwise iterate every record into an unbounded list → OOM.
+# Because pysam.fetch() is lazy, aborting the loop here also stops decompression.
+# The default comfortably exceeds a whole-genome VCF (~5M variants) while
+# refusing a bomb; override with MAX_VARIANTS for unusual legitimate inputs.
+MAX_VARIANTS = int(os.getenv("MAX_VARIANTS", "6000000"))
+
+
+class TooManyVariantsError(ValueError):
+    """Raised when a file yields more than MAX_VARIANTS records (bomb guard)."""
 
 try:
     import pysam
@@ -153,6 +167,14 @@ def _parse_vcf_bytes(file_bytes: bytes, filename: str) -> list[dict]:
                     dp=dp,
                     zygosity=zygosity,
                 ))
+            # Bomb guard: abort (stopping lazy decompression) once we cross the
+            # cap, rather than growing the list — and the temp file — unbounded.
+            if len(variants) > MAX_VARIANTS:
+                raise TooManyVariantsError(
+                    f"File yields more than {MAX_VARIANTS:,} variants; refusing "
+                    "to process (possible decompression bomb or unsupported "
+                    "whole-genome file — contact support for WGS)."
+                )
         return variants
     finally:
         os.unlink(tmp_path)

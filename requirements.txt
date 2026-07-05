@@ -28,8 +28,6 @@ aiohttp>=3.9
 # Data
 pydantic>=2.6
 
-# Auth (bcrypt password hashing for /auth/login)
-bcrypt>=4.0
 
 # Testing
 pytest>=8.0
