@@ -239,27 +239,76 @@ def estimate_population_prior(
 
 # ── Prior combination ───────────────────────────────────────────────────────
 
+# ── Genetics × cohort correlation (double-counting correction) ──────────────
+
+# The genetic prior and the cohort-pooled population prior are two views of the
+# SAME latent responder effect θ, and they are NOT independent: a donor cohort's
+# response to a peptide is itself partly a function of the donors' genetics, so
+# the two priors share signal. Fusing them as if independent (τ_g + τ_p) double-
+# counts that shared signal and makes the posterior under-cover (the calibration
+# backtest's correlated-source regime).
+#
+# ``combine_priors`` therefore takes an assumed error correlation ``ρ``. It
+# defaults to ``0.0`` — precision addition, byte-identical to the legacy fusion,
+# so every existing caller is unchanged. ``predict_response`` opts into
+# ``GENETIC_COHORT_CORRELATION`` (a conservative structural assumption: the two
+# priors share ~half their information). It is a documented assumption, not a
+# fitted quantity — ideally estimated once cohort volume allows (cf. the gated
+# cross-biomarker Σ). ``_RHO_MAX`` clamps ρ below the singular fully-redundant
+# limit (identical estimators), where the error covariance is non-invertible.
+GENETIC_COHORT_CORRELATION = 0.5
+_RHO_MAX = 0.99
+
+
 def combine_priors(
     *,
     genetic_mean: float,
     genetic_sd: float,
     population: PopulationPrior | None,
+    correlation: float = 0.0,
 ) -> tuple[float, float]:
-    """Precision-weighted combination of the genetic and population priors.
+    """Best-linear-unbiased fusion of the genetic and population priors.
 
-    If the population prior is missing, has degenerate width (σ ≤ 0), or
-    the genetic σ is non-positive, returns the genetic prior unchanged.
+    The genetic prior ``N(genetic_mean, genetic_sd²)`` and the cohort-pooled
+    population prior ``N(population.mean, population.sd²)`` are two noisy views of
+    the same latent θ. Treating their errors as jointly Normal with correlation
+    ``correlation`` (``ρ``), the minimum-variance unbiased estimate of θ is the
+    GLS combination under ``Σ = [[σ_g², ρσ_gσ_p], [ρσ_gσ_p, σ_p²]]``:
+
+        w_g ∝ σ_p² − ρσ_gσ_p,   w_p ∝ σ_g² − ρσ_gσ_p
+        μ   = (w_g·μ_g + w_p·μ_p) / (w_g + w_p)
+        Var = σ_g²σ_p²(1 − ρ²) / (w_g + w_p)
+
+    At ``ρ = 0`` (the default) this reduces **exactly** to precision-weighted
+    fusion (``τ = τ_g + τ_p``) — every existing caller is unchanged. At ``ρ > 0``
+    the combined precision is lower, correcting the genetics×cohort
+    double-counting. If one BLUE weight is ≤ 0 (a source so much noisier than the
+    other that at this ρ it carries no independent information) the more precise
+    source is used alone.
+
+    If the population prior is missing/degenerate (σ ≤ 0) or the genetic σ is
+    non-positive, returns the genetic (resp. population) prior unchanged.
     Returns ``(combined_mean, combined_sd)``.
     """
     if population is None or population.sd_pct_change <= 0:
         return genetic_mean, genetic_sd
     if genetic_sd <= 0:
         return population.mean_pct_change, population.sd_pct_change
-    tau_g = 1.0 / (genetic_sd ** 2)
-    tau_p = 1.0 / (population.sd_pct_change ** 2)
-    tau_combined = tau_g + tau_p
-    mean_combined = (
-        tau_g * genetic_mean + tau_p * population.mean_pct_change
-    ) / tau_combined
-    sd_combined = math.sqrt(1.0 / tau_combined)
+
+    sg, sp = genetic_sd, population.sd_pct_change
+    mg, mp = genetic_mean, population.mean_pct_change
+    rho = min(max(correlation, 0.0), _RHO_MAX)
+
+    cov = rho * sg * sp
+    w_g = sp * sp - cov
+    w_p = sg * sg - cov
+    # A non-positive weight means one source is fully redundant given the other
+    # at this correlation — keep only the more precise (smaller-σ) source.
+    if w_g <= 0.0 or w_p <= 0.0:
+        return (mg, sg) if sg <= sp else (mp, sp)
+
+    denom = w_g + w_p
+    det = sg * sg * sp * sp * (1.0 - rho * rho)
+    mean_combined = (w_g * mg + w_p * mp) / denom
+    sd_combined = math.sqrt(det / denom)
     return mean_combined, sd_combined

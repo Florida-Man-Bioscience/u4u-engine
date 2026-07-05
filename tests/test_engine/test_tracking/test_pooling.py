@@ -252,3 +252,73 @@ def test_pooling_shrinks_prior_toward_strong_responder_cohort(conn):
     pp = pred["population_prior"]
     assert pp is not None and pp["n_donors"] == 5
     assert 0.65 < pp["mean_pct_change"] < 0.75
+
+
+# ── Correlation-aware fusion (genetics × cohort double-counting) ─────────────
+
+def _pop(mean: float, sd: float, n: int = 5) -> pooling.PopulationPrior:
+    return pooling.PopulationPrior(
+        peptide="X", biomarker="Y", n_donors=n,
+        mean_pct_change=mean, sd_pct_change=sd,
+        raw_total_sd=sd, mean_within_sd=0.01,
+    )
+
+
+def test_combine_priors_rho0_matches_precision_addition():
+    """ρ=0 (the default) reduces exactly to τ_g + τ_p precision-weighted fusion,
+    and an explicit correlation=0.0 is byte-identical to the default."""
+    pop = _pop(0.20, 0.10)
+    m, s = pooling.combine_priors(genetic_mean=0.40, genetic_sd=0.10, population=pop)
+    tau = 1 / 0.10 ** 2 + 1 / 0.10 ** 2
+    assert math.isclose(s, math.sqrt(1 / tau), rel_tol=1e-12)
+    assert math.isclose(m, 0.30, rel_tol=1e-12)  # equal σ → simple average
+    m0, s0 = pooling.combine_priors(
+        genetic_mean=0.40, genetic_sd=0.10, population=pop, correlation=0.0
+    )
+    assert (m0, s0) == (m, s)
+
+
+def test_combine_priors_correlation_widens_equal_sigma():
+    """At σ_g=σ_p=σ and correlation ρ, Var = σ²(1+ρ)/2 (closed form); higher
+    assumed ρ ⇒ wider (less confident) fused σ, bounded by the single source."""
+    sd = 0.12
+    pop = _pop(0.30, sd)
+    for rho in (0.0, 0.3, 0.6, 0.9):
+        _, s = pooling.combine_priors(
+            genetic_mean=0.30, genetic_sd=sd, population=pop, correlation=rho
+        )
+        assert math.isclose(s, sd * math.sqrt((1 + rho) / 2), rel_tol=1e-12)
+    sds = [
+        pooling.combine_priors(
+            genetic_mean=0.30, genetic_sd=sd, population=pop, correlation=r
+        )[1]
+        for r in (0.0, 0.5, 0.9)
+    ]
+    assert sds[0] < sds[1] < sds[2]      # monotone in assumed correlation
+    assert sds[2] <= sd                  # never worse than a single source
+    assert math.isclose(sds[0], sd / math.sqrt(2), rel_tol=1e-12)  # ρ=0 anchor
+
+
+def test_combine_priors_redundant_source_falls_back_to_more_precise():
+    """When one source is far noisier than the other at high ρ, a BLUE weight
+    goes ≤0 and we keep only the more precise source — no negative-weight
+    extrapolation outside [μ_g, μ_p]."""
+    pop = _pop(0.30, 0.60)   # σ_p=0.60 ≫ σ_g=0.05; ρ high ⇒ w_p = σ_g²−ρσ_gσ_p ≤ 0
+    m, s = pooling.combine_priors(
+        genetic_mean=0.10, genetic_sd=0.05, population=pop, correlation=0.9
+    )
+    assert (m, s) == (0.10, 0.05)        # genetics kept alone
+    pop2 = _pop(0.25, 0.05)              # symmetric: genetics much noisier
+    m2, s2 = pooling.combine_priors(
+        genetic_mean=0.10, genetic_sd=0.60, population=pop2, correlation=0.9
+    )
+    assert (m2, s2) == (0.25, 0.05)      # population kept alone
+
+
+def test_combine_priors_rho_clamped_below_one():
+    """ρ is clamped below 1 so the fusion never hits the singular limit."""
+    pop = _pop(0.30, 0.12)
+    _, s = pooling.combine_priors(
+        genetic_mean=0.30, genetic_sd=0.12, population=pop, correlation=1.5
+    )
+    assert 0 < s <= 0.12                 # finite, positive, ≤ single source

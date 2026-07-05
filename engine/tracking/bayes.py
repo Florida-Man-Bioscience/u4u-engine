@@ -301,12 +301,13 @@ def joint_fit_likelihood(
     baseline_prior_sd: float,
     noise_pct: float = 0.10,
     min_weeks: float = 0.0,
+    noise_scales: Sequence[float] | None = None,
 ) -> JointFit | None:
     """Jointly estimate baseline ``b`` and θ from raw measurements.
 
     Model
     -----
-        y_i = b · (1 + θ · a(w_i)) + ε_i,    ε_i ~ N(0, σ²)
+        y_i = b · (1 + θ · a(w_i)) + ε_i,    ε_i ~ N(0, (σ·s_i)²)
 
     Reparameterised as a linear regression in (b, φ) with φ ≡ b·θ::
 
@@ -321,6 +322,18 @@ def joint_fit_likelihood(
         θ̂ = φ̂ / b̂
         Var(θ̂) ≈ Var(φ̂)/b̂² + Var(b̂)·φ̂²/b̂⁴ − 2·Cov(b̂,φ̂)·φ̂/b̂³
 
+    Per-observation noise scales
+    ----------------------------
+    ``noise_scales`` optionally supplies a per-observation multiplier ``s_i``
+    on the measurement standard deviation, turning the fit into a *weighted*
+    least-squares regression with weights ``w_i = 1/s_iⁿ²``. This lets a
+    noisier data source (e.g. wearable-derived HealthKit proxies) inform the
+    posterior without swamping tighter clinical labs — a scale of 2.0 makes
+    an observation count for a quarter of the information of a lab value.
+    ``None`` (the default) means every observation has scale 1.0, which
+    reduces exactly to the ordinary-least-squares fit — existing
+    clinical-only behaviour is byte-for-byte unchanged.
+
     Why this matters
     ----------------
     The previous approach used the earliest measurement as baseline. If
@@ -333,15 +346,28 @@ def joint_fit_likelihood(
     Returns ``(Likelihood, refined_baseline)`` or ``None`` if the system
     is underdetermined (e.g. zero usable observations).
     """
-    pts = [(w, y) for w, y in observations if w >= min_weeks]
-    if not pts:
+    if noise_scales is None:
+        paired = [(w, y, 1.0) for w, y in observations if w >= min_weeks]
+    else:
+        if len(noise_scales) != len(observations):
+            raise ValueError("noise_scales must align 1:1 with observations")
+        if any(s <= 0 for s in noise_scales):
+            raise ValueError("noise_scales must be strictly positive")
+        paired = [
+            (w, y, s)
+            for (w, y), s in zip(observations, noise_scales, strict=True)
+            if w >= min_weeks
+        ]
+    if not paired:
         return None
     if baseline_prior_mean <= 0 or baseline_prior_sd <= 0:
         return None
 
-    a_vec = [approach(w, tau_weeks) for w, _ in pts]
-    y_vec = [y for _, y in pts]
-    n = len(pts)
+    a_vec = [approach(w, tau_weeks) for w, _, _ in paired]
+    y_vec = [y for _, y, _ in paired]
+    # Precision weight per observation: 1/s_iⁿ². s_i = 1 → weight 1 → OLS.
+    wt_vec = [1.0 / (s * s) for _, _, s in paired]
+    n = len(paired)
 
     # Initial σ² from the panel's noise estimate; refined from residuals.
     sigma2 = max((noise_pct * baseline_prior_mean) ** 2, 1e-9)
@@ -350,10 +376,11 @@ def joint_fit_likelihood(
     # measurement is at the same a(w) (rare but possible).
     sigma_phi2 = max((10.0 * baseline_prior_sd) ** 2, 1.0)
 
-    sx = sum(a_vec)
-    sxx = sum(a * a for a in a_vec)
-    sy = sum(y_vec)
-    sxy = sum(a * y for a, y in zip(a_vec, y_vec, strict=False))
+    sw = sum(wt_vec)
+    sx = sum(wt * a for wt, a in zip(wt_vec, a_vec, strict=False))
+    sxx = sum(wt * a * a for wt, a in zip(wt_vec, a_vec, strict=False))
+    sy = sum(wt * y for wt, y in zip(wt_vec, y_vec, strict=False))
+    sxy = sum(wt * a * y for wt, a, y in zip(wt_vec, a_vec, y_vec, strict=False))
 
     b_hat = baseline_prior_mean
     phi_hat = 0.0
@@ -362,8 +389,8 @@ def joint_fit_likelihood(
     cov_bp = 0.0
 
     for _ in range(4):
-        # Posterior precision Λ = X'X/σ² + diag(1/σ_b², 1/σ_φ²)
-        A = n / sigma2 + 1.0 / sigma_b2
+        # Posterior precision Λ = Xᵀ W X/σ² + diag(1/σ_b², 1/σ_φ²)
+        A = sw / sigma2 + 1.0 / sigma_b2
         B = sx / sigma2
         D = sxx / sigma2 + 1.0 / sigma_phi2
 
@@ -382,9 +409,9 @@ def joint_fit_likelihood(
         cov_bp = -B / det
 
         if n >= 3:
-            # Refine σ² from residuals (degrees of freedom = n − 2).
+            # Refine σ² from weighted residuals (degrees of freedom = n − 2).
             resid = [y - (b_hat + phi_hat * a) for y, a in zip(y_vec, a_vec, strict=False)]
-            ss = sum(r * r for r in resid)
+            ss = sum(wt * r * r for wt, r in zip(wt_vec, resid, strict=False))
             df = max(n - 2, 1)
             sigma2_new = ss / df
             # Floor σ² at ~25% of the panel-noise estimate to avoid
@@ -405,19 +432,31 @@ def joint_fit_likelihood(
         + var_b * (phi_hat ** 2) / (b_hat ** 4)
         - 2.0 * cov_bp * phi_hat / (b_hat ** 3)
     )
+    # Effective sample size (Kish): n_eff = (Σw)² / Σw². With uniform weights
+    # (the clinical-only / noise_scales=None path) n_eff == n exactly, so the
+    # floor and t-inflation below are byte-for-byte unchanged. When noisier,
+    # down-weighted observations are mixed in (e.g. wearable HealthKit
+    # proxies), they contribute *fractional* effective observations — so
+    # appending them cannot shrink the noise floor or buy Student-t degrees of
+    # freedom as if they were full-precision clinical draws. This is what
+    # keeps noisy proxies from swamping a small set of clinical labs.
+    sw2 = sum(wt * wt for wt in wt_vec)
+    n_eff = (sw * sw / sw2) if sw2 > 0 else float(n)
     # Floor at the per-observation pooled-noise scale so we never claim
     # zero uncertainty even with a perfect fit.
-    floor = (noise_pct / max(math.sqrt(n), 1.0)) ** 2
+    floor = (noise_pct / max(math.sqrt(n_eff), 1.0)) ** 2
     sd_theta = math.sqrt(max(var_theta, floor, 1e-9))
     # Bayesian-linear-regression with unknown σ has Student-t marginals,
     # not Normal — with small n the χ² tails on σ² translate into fatter
     # θ tails. The conjugate update downstream treats σ_θ as a Normal
     # standard deviation; scaling by t_0.975(df) / z_0.975 makes the
     # 95% interval that *would* be drawn at ±1.96·σ_θ instead match the
-    # honest t-interval. df = n − 2 because we fit two parameters
-    # (baseline and slope). Without this correction the calibration
-    # backtest under-covers θ at ~88% when n=5 and noise is low.
-    df = max(n - 2, 1)
+    # honest t-interval. df = n_eff − 2 because we fit two parameters
+    # (baseline and slope); n_eff (not raw n) so a burst of down-weighted
+    # proxies doesn't collapse the small-sample correction. Without this
+    # correction the calibration backtest under-covers θ at ~88% when n=5
+    # and noise is low.
+    df = max(n_eff - 2.0, 1.0)
     sd_theta *= _t_inflation_factor(df)
 
     likelihood = Likelihood(
@@ -458,8 +497,12 @@ _T_INFLATION_TABLE: dict[int, float] = {
 }
 
 
-def _t_inflation_factor(df: int) -> float:
-    """Return t_0.975(df) / Z_0.975, capped to ≥1.0 for very large df."""
+def _t_inflation_factor(df: float) -> float:
+    """Return t_0.975(df) / Z_0.975, capped to ≥1.0 for very large df.
+
+    ``df`` may be fractional (effective degrees of freedom from a weighted
+    fit); an integer-valued float hits the table exactly (``3.0 in table`` is
+    True), a fractional one interpolates between the neighbouring rows."""
     if df >= 30:
         return 1.0
     if df in _T_INFLATION_TABLE:

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import secrets
 from collections.abc import Iterable
 from datetime import datetime
@@ -284,6 +285,46 @@ def get_genetic_profile_json(
         return None
     d = _row(row)
     return d["profile_json"], d["source"], d["created_at"]
+
+
+def set_patient_enrichment(conn, patient_id: str, enrichment_json: str) -> None:
+    """Upsert per-patient pipeline enrichment (PRS profile, BPC-157 composite).
+
+    ``enrichment_json`` is a JSON object string keyed by the channel the responder
+    feature adapters read (``prs_profile``, ``bpc157``). Written at
+    ``POST /tracking/patients/from-job``.
+    """
+    ph = _ph(conn)
+    now_fn = "NOW()" if ph == "%s" else "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+    conn.execute(
+        f"""INSERT INTO patient_enrichment (patient_id, enrichment_json)
+           VALUES ({ph}, {ph})
+           ON CONFLICT(patient_id) DO UPDATE SET
+               enrichment_json = EXCLUDED.enrichment_json,
+               created_at = {now_fn}""",
+        (patient_id, enrichment_json),
+    )
+    conn.commit()
+
+
+def get_patient_enrichment(conn, patient_id: str) -> dict | None:
+    """Return the patient's stored pipeline-enrichment dict, or None.
+
+    Malformed/non-object JSON returns None so a corrupt row degrades to the
+    graceful adapter no-op rather than raising into predict_response.
+    """
+    ph = _ph(conn)
+    row = conn.execute(
+        f"SELECT enrichment_json FROM patient_enrichment WHERE patient_id = {ph}",
+        (patient_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    try:
+        parsed = json.loads(_row(row)["enrichment_json"])
+    except (ValueError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def parse_measurement_csv(text: str) -> tuple[list[dict], list[str]]:

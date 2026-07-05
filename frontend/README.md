@@ -1,64 +1,48 @@
-# Frontend
+# PeptOdyssey Frontend
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+The web UI for the u4u-engine peptide-genomics platform. A [Next.js](https://nextjs.org)
+16 app (App Router, React 19, Tailwind CSS v4, Recharts), deployed in production at
+`https://flmanbiosci.net`.
 
-## Getting Started
+A fuller walkthrough of the routes, data flow, and components lives in
+[`../docs/frontend.md`](../docs/frontend.md).
 
-Let me know if the resolution isn't high enough or if you have any questions. You pretty much have free reign. This repo was largely generated in AntiGravity with no human touch or intervention.
+## Backend connection
 
-Please create a feature branch for your work and create tags for working versions. Merge back into master, but we just want to ensure that there are tags for ``artesinal'' code made with human TLC because the high-quality human-written code might be accidentally overwritten by vibe coding.
-
-### Development Mode
-
-First, run the development server:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
-
-### Docker
-
-This project is fully dockerized for deployment to Kubernetes.
-
-#### Build the Docker image:
+Browser API calls go through `src/app/lib/api.ts` / `authFetch.ts`. The base URL is
+`process.env.NEXT_PUBLIC_API_BASE`, defaulting to **`/api/v1`** (the gateway rewrites
+`/api/v1/*` to the backend). For local dev against a backend on another host, set it
+explicitly:
 
 ```bash
-# Build the Docker image
-docker build -t frontend:latest .
-
-# Run the container locally for testing
-docker run -p 3000:3000 frontend:latest
+NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
 ```
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
+## Routes
 
-#### Kubernetes Deployment
+| Route | Purpose |
+|-------|---------|
+| `/` | Genome upload / new analysis |
+| `/jobs` | Analysis history |
+| `/jobs/[id]` | Job status / progress polling |
+| `/jobs/[id]/results` | Results — tabs `peptides \| pgx \| variants` (`pgx` default) |
+| `/tracking`, `/tracking/cohort`, `/tracking/model` | Longitudinal biomarker tracking + model explainer |
+| `/tracking/patients/[id]`, `.../onboard` | Patient detail + onboarding wizard |
+| `/regulatory` | FDA peptide regulatory dashboard (SSR) |
+| `/study`, `/study/dev` | Observational validation study pages |
 
-This project is designed to be deployed to Kubernetes with Flux for GitOps-based continuous delivery. The Dockerfile uses multi-stage builds and Next.js standalone output for optimal image size and performance.
+## Development
 
-## Learn More
+```bash
+npm install
+npm run dev      # dev server on http://localhost:3000
+npm run build    # production build (Next standalone output)
+npm run start    # serve the production build
+npm run lint     # eslint
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-## Tasklist
- - [ ] Master back-end integrations by defining a standard JSON structure for data received from backend variant callers and annotation software
- - [ ] Represent data graphically on the frontend
- - [ ] Implement login and authentification
- - [ ] Local VCF processing
- - [ ] Ensure that no identifying information regarding the genotype of the user is being sent to the backend
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
+Dockerized (multi-stage build, Next standalone output) and deployed to the RKE2
+Kubernetes cluster via Flux GitOps. Pushing to `main` triggers CI to build/push a new
+image; Flux rolls it out. See the repo root `CLAUDE.md` and `docs/server-management.md`.
