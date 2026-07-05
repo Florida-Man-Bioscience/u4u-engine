@@ -40,8 +40,9 @@ export default function ModelPage() {
           <em>measurements</em> show (the likelihood). This page formalizes that
           model — the generative story, the conjugate update, and how
           uncertainty becomes the band you see. It mirrors the implementation in{" "}
-          <code style={mono}>engine/tracking/bayes.py</code> and{" "}
-          <code style={mono}>engine/tracking/genetics.py</code>.
+          <code style={mono}>engine/tracking/bayes.py</code>,{" "}
+          <code style={mono}>engine/tracking/genetics.py</code>, and{" "}
+          <code style={mono}>engine/tracking/responder_index.py</code>.
         </p>
         <p className="max-w-3xl rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
           Research / decision-support model — not a validated clinical
@@ -59,9 +60,11 @@ export default function ModelPage() {
           <FlowDiagram />
         </div>
         <p className="text-xs leading-relaxed text-slate-500">
-          The genetic prior is centred on the panel&apos;s documented effect and
-          scaled by the patient&apos;s responder strength <em>r</em>; its width
-          is sharpened or widened by the{" "}
+          The prior is centred on the panel&apos;s documented effect and scaled
+          by the patient&apos;s <em>responder index</em> <Sym>η</Sym> — a
+          regularised linear index over a feature vector that generalises the old
+          scalar responder strength <em>r</em> (today the genetics feature is the
+          only one wired). Its width is sharpened or widened by the{" "}
           <Link href="/tracking/model#evidence" className="text-[#1a6b4a] underline">
             evidence grade
           </Link>{" "}
@@ -94,22 +97,73 @@ export default function ModelPage() {
       </Section>
 
       {/* ── Prior ─────────────────────────────────────────────────────── */}
-      <Section title="2 · Prior — from genetics + research">
+      <Section title="2 · Prior — the responder index η">
         <p>
-          Before any measurement, the prior on <Sym>θ</Sym> is Normal. Its mean
-          is the patient&apos;s latent responder strength <Sym>r</Sym> (centred
-          at 1 = &ldquo;average responder&rdquo;, shifted by their aggregate
-          variant weight <Sym>g</Sym>) times the panel&apos;s documented effect{" "}
-          <Sym>θ̄</Sym> for that biomarker:
+          Before any measurement, the prior on <Sym>θ</Sym> is Normal, centred on
+          the panel&apos;s documented effect <Sym>θ̄</Sym> for that biomarker
+          scaled by the patient&apos;s <strong>responder index</strong>{" "}
+          <Sym>η</Sym> (centred at 1 = &ldquo;average responder&rdquo;):
         </p>
-        <Eq>{`r ~ Normal(1 + 0.72 · tanh(g),  σ_r²)`}</Eq>
-        <Eq>{`θ ~ Normal(μ₀, σ₀²)    with   μ₀ = r · θ̄`}</Eq>
+        <Eq>{`θ ~ Normal(μ₀, σ₀²)    with   μ₀ = η · θ̄`}</Eq>
         <p>
-          The prior width combines two independent uncertainties — in the
-          responder strength and in the panel effect itself — added in
-          quadrature:
+          <Sym>η</Sym> is the <strong>Hierarchical Bayesian Responder Index
+          (HBRI)</strong>. It generalises the old scalar responder strength{" "}
+          <Sym>r = 1 + 0.72 · tanh(w)</Sym> into a ridge-regularised linear index
+          over a <em>feature vector</em> <Sym>x</Sym>, squashed by{" "}
+          <Sym>tanh</Sym> to stay bounded in <Sym>[1 − Δ, 1 + Δ]</Sym> with{" "}
+          <Sym>Δ = 0.72</Sym>:
         </p>
-        <Eq>{`σ₀ = √( (σ_r · |θ̄|)²  +  (ρ · |θ̄|)² )`}</Eq>
+        <Eq>{`η = 1 + Δ · tanh(βᵀx)          Δ = 0.72`}</Eq>
+        <p>
+          The features come from auto-discovered <em>feature adapters</em>{" "}
+          (<code style={mono}>engine/tracking/feature_adapters/</code>). The{" "}
+          <strong>genetics feature is the anchored reference</strong>: it passes
+          the patient&apos;s summed variant weight <Sym>w</Sym> through
+          unstandardised with coefficient <Sym>β_g = 1</Sym>. So with genetics
+          alone <Sym>βᵀx = w</Sym> and <Sym>η = 1 + Δ · tanh(w)</Sym> — the
+          responder index <strong>reduces exactly to the prior scalar model</strong>,
+          every number preserved.
+        </p>
+        <p>
+          Other signals — a <Sym>PRS</Sym> inflammatory baseline, the{" "}
+          <Sym>BPC-157</Sym> composite, coarse demographics, and HealthKit{" "}
+          <em>behavioural</em> covariates (§6) — are additional features that
+          enter the same linear index and thus shift the prior <em>mean</em>.
+          Their coefficients carry a <strong>ridge prior</strong>{" "}
+          <Sym>β_j ~ Normal(0, σ_β²)</Sym> that shrinks weakly-evidenced signals
+          toward zero. Today the genetics adapter is the only one wired; the rest
+          are framework slots with <Sym>β_j = 0</Sym>, so current predictions are
+          genetics-only.
+        </p>
+        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <strong>Display-only signals.</strong> The receptor-isoform prediction
+          and KEGG pathway overlays shown elsewhere in the app are{" "}
+          <strong>not</strong> fused into this predictor — they inform{" "}
+          <em>interpretation</em>, not <Sym>η</Sym>. Only registered feature
+          adapters move the prior.
+        </p>
+        <p>
+          Each feature carries a variance <Sym>var_j</Sym> on its value.
+          Treating features as independent, that uncertainty propagates into a
+          variance on the index itself by the <strong>delta method</strong>:
+        </p>
+        <Eq>{`Var(βᵀx) = Σⱼ βⱼ² · var_j`}</Eq>
+        <Eq>{`dη/d(βᵀx) = Δ · sech²(βᵀx)`}</Eq>
+        <Eq>{`Var(η) = ( Δ · sech²(βᵀx) )² · Var(βᵀx)`}</Eq>
+        <p className="text-sm text-slate-600">
+          The <Sym>sech²</Sym> factor is the slope of the <Sym>tanh</Sym> squash,
+          so a confident feature far out on the flat tails barely moves{" "}
+          <Sym>η</Sym> — a feature shifts the responder only as much as its
+          certainty warrants. The genetics adapter engineers its <Sym>var_g</Sym>{" "}
+          so that at the genetics-only operating point <Sym>βᵀx = w</Sym> this{" "}
+          <Sym>Var(η)</Sym> reproduces the legacy responder SD exactly.
+        </p>
+        <p>
+          The prior width then combines the index uncertainty{" "}
+          <Sym>σ_η = √Var(η)</Sym> with the uncertainty in the panel effect
+          itself, added in quadrature:
+        </p>
+        <Eq>{`σ₀ = √( (σ_η · |θ̄|)²  +  (ρ · |θ̄|)² )`}</Eq>
         <p className="text-sm text-slate-600">
           <Sym>ρ</Sym> is the <em>relative</em> uncertainty in the panel effect.
           For an uncited biomarker it is the flat default{" "}
@@ -186,8 +240,62 @@ export default function ModelPage() {
         </p>
       </Section>
 
+      {/* ── HealthKit split by role ───────────────────────────────────── */}
+      <Section title="6 · HealthKit — two roles, two sides of Bayes' rule">
+        <p>
+          HealthKit signals reach the model through a de-identified identity
+          bridge (<code style={mono}>engine/tracking/healthkit_identity.py</code>).
+          When wired, they split into <strong>two distinct roles</strong> that
+          land on opposite sides of Bayes&apos; rule — conflating them would let a
+          signal count twice:
+        </p>
+        <p>
+          <strong>1 · Proxy observations.</strong> HealthKit quantities that{" "}
+          <em>are</em> a tracked biomarker — resting heart rate, body mass,
+          VO₂max — enter as additional <strong>likelihood</strong> observations{" "}
+          <Sym>yᵢ</Sym> on <Sym>θ</Sym> (§3), under their own measurement-noise
+          model. They update the posterior; they do <strong>not</strong> touch
+          the prior.
+        </p>
+        <p>
+          <strong>2 · Behavioural covariates.</strong> Signals that modulate{" "}
+          <em>responsiveness</em> but are not the outcome — sleep, activity
+          minutes, adherence proxies — enter as <strong>feature adapters</strong>{" "}
+          contributing to <Sym>η</Sym> (the prior, §2), with ridge-shrunk{" "}
+          <Sym>β_j</Sym> and honest <Sym>var_j</Sym>.
+        </p>
+        <p className="text-sm text-slate-600">
+          Keeping a covariate on the prior side and a proxy measurement on the
+          likelihood side prevents a covariate from being double-counted as
+          evidence of the very effect it predicts.
+        </p>
+      </Section>
+
+      {/* ── Gated-later extensions ────────────────────────────────────── */}
+      <Section title="7 · Gated-later extensions">
+        <p>
+          Two generalisations are specified but deliberately <strong>gated</strong>{" "}
+          — not wired into the predictor until the modelling and data support
+          them:
+        </p>
+        <p>
+          <strong>Cross-biomarker covariance over a shared <Sym>η</Sym>.</strong>{" "}
+          Multiple biomarkers for one <Tuple>patient, peptide</Tuple> share the
+          same responder index. Modelling them jointly with a covariance over the
+          shared <Sym>η</Sym> would let a strong signal in one marker inform
+          another — but it needs a multivariate prior and careful
+          identifiability work.
+        </p>
+        <p>
+          <strong>Dose-response.</strong> Replacing <Sym>θ</Sym> with an
+          effective <Sym>θ_eff = θ · s(dose)</Sym> for a saturating dose function{" "}
+          <Sym>s</Sym> — gated behind dose-stratified data the cohort does not
+          yet have.
+        </p>
+      </Section>
+
       {/* ── Calibration ───────────────────────────────────────────────── */}
-      <Section title="6 · Is the band honest?">
+      <Section title="8 · Is the band honest?">
         <p>
           A 95% band should contain the truth 95% of the time. That is a
           testable claim, and it is tested: a Monte-Carlo backtest
@@ -203,7 +311,7 @@ export default function ModelPage() {
       {/* ── Evidence grades ───────────────────────────────────────────── */}
       <section id="evidence" className="space-y-3 scroll-mt-20">
         <h2 className="text-2xl" style={serif}>
-          7 · Evidence grades feed the prior width
+          9 · Evidence grades feed the prior width
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
           The panel-effect uncertainty <Sym>ρ</Sym> in step 2 is research-driven.
@@ -340,7 +448,7 @@ function FlowDiagram() {
       viewBox="0 0 760 260"
       className="mx-auto block h-auto w-full max-w-3xl"
       role="img"
-      aria-label="Data-flow: genetics and evidence form a prior; measurements form a likelihood; together they yield a posterior and a predictive band."
+      aria-label="Data-flow: a feature-vector responder index and evidence form a prior; measurements form a likelihood; together they yield a posterior and a predictive band."
     >
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -349,7 +457,7 @@ function FlowDiagram() {
       </defs>
 
       {/* Inputs */}
-      <Node x={10} y={20} w={170} h={46} title="Genetic profile" sub="responder strength r" />
+      <Node x={10} y={20} w={170} h={46} title="Feature vector x" sub="responder index η" />
       <Node x={10} y={78} w={170} h={46} title="Evidence registry" sub="grade → ρ (prior width)" accent />
       <Node x={10} y={170} w={170} h={46} title="Measurements" sub="y(w) over time" />
 
