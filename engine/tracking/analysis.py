@@ -13,6 +13,7 @@ the deploy footprint small and the queries readable.
 """
 from __future__ import annotations
 
+import logging
 import math
 import statistics
 from dataclasses import dataclass, field
@@ -22,10 +23,12 @@ from typing import Any
 from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
-from . import bayes, pooling, service
+from . import bayes, healthkit_bridge, pooling, service
 from .biomarker_params import expected_pct_change, params_for
 from .genetics import GeneticProfile, derive_prior
 from .responder_index import PatientHandle, ResponderContext, responder_index
+
+logger = logging.getLogger(__name__)
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -490,15 +493,51 @@ def predict_response(
             population=population_prior,
         )
 
+    # ── HealthKit proxy observations (conservative, isolated) ──
+    # Wearable proxies (body mass, resting HR) for the *matching* biomarker are
+    # appended as extra likelihood observations, tagged with a higher noise
+    # scale so the joint fit down-weights them relative to clinical labs (see
+    # engine/tracking/healthkit_bridge). Gated so that with no subject mapping
+    # or no proxy samples the fit inputs are identical to the clinical-only
+    # path — behaviour (and the calibration backtest) is byte-for-byte
+    # unchanged. Any failure degrades to the clinical-only fit.
+    fit_observations = observations
+    fit_noise_scales: list[float] | None = None
+    if treatment is not None:
+        try:
+            hk_obs = healthkit_bridge.healthkit_observations(
+                conn, patient_id, peptide_name, biomarker_name, treatment.start_date,
+            )
+        except Exception:
+            # Never let a HealthKit-side failure break the clinical prediction.
+            # All *expected* empty cases (no proxy, no subject, no samples)
+            # already return [] without raising, so reaching here means an
+            # unexpected fault (schema drift, bad connection) worth surfacing.
+            logger.warning(
+                "HealthKit proxy lookup failed for patient=%s peptide=%s "
+                "biomarker=%s; falling back to clinical-only fit",
+                patient_id, peptide_name, biomarker_name, exc_info=True,
+            )
+            hk_obs = []
+        if hk_obs:
+            binding = healthkit_bridge.resolve_proxy(peptide_name, biomarker_name)
+            scale = (
+                binding.noise_scale if binding
+                else healthkit_bridge.WEARABLE_NOISE_SCALE
+            )
+            fit_observations = observations + hk_obs
+            fit_noise_scales = [1.0] * len(observations) + [scale] * len(hk_obs)
+
     fit = (
         bayes.joint_fit_likelihood(
-            observations=observations,
+            observations=fit_observations,
             tau_weeks=tau,
             baseline_prior_mean=baseline_prior_mean,
             baseline_prior_sd=baseline_prior_sd,
             noise_pct=panel_params.noise_pct,
+            noise_scales=fit_noise_scales,
         )
-        if observations else None
+        if fit_observations else None
     )
     if fit is not None:
         likelihood = fit.likelihood
