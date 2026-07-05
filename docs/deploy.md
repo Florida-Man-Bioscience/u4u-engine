@@ -8,9 +8,17 @@
 > troubleshooting.
 
 This guide covers deploying the Florida Man Bioscience tracking stack
-(tracking app + API) as two Docker[^docker] containers. A TLS-terminating[^tls]
+(tracking app + API) as three Docker[^docker] containers: `api`, `frontend`,
+and a bundled `postgres`[^postgres] service. A TLS-terminating[^tls]
 reverse proxy[^revproxy] in front of them is **out of scope for this repo** — it's
 managed separately on the VPS[^vps] (Caddy, nginx, Cloudflare Tunnel, etc.).[^proxies]
+
+The compose file brings up a `postgres:16-alpine` service and wires
+`DATABASE_URL` into the api container automatically, so the engine uses
+Postgres for the annotation cache, rsID cache, biomarker tracking, jobs,
+and HealthKit ingestion. It auto-migrates on startup (`db/migrate.py`).
+Postgres is an **internal** service — only `api` and `frontend` are
+public-facing, so the external proxy contract is unchanged.
 
 The deploy contract the external proxy must satisfy:
 
@@ -21,8 +29,8 @@ The deploy contract the external proxy must satisfy:
 
 That is: route `/api/v1/*` to the api container with the `/api/v1`
 prefix stripped (because the backend routes live at `/tracking/*`,
-`/jobs/*`, `/regulatory/*` — not under `/api/v1`). Everything else
-goes to the frontend.
+`/jobs/*`, `/healthkit/*`, `/regulatory/*` — not under `/api/v1`).
+Everything else goes to the frontend.
 
 ---
 
@@ -57,20 +65,53 @@ cp .env.example .env
 $EDITOR .env
 ```
 
-Minimum production settings (`JOB_STORE_KEY` is a Fernet[^fernet] key for encrypting persisted job results):
+Minimum production settings:
 
 ```
 NCBI_API_KEY=<your NCBI key>
-JOB_STORE_KEY=<output of python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'>
 
 # Same-origin path: the external proxy at flmanbiosci.net forwards
 # /api/v1/* to the api container.
 NEXT_PUBLIC_API_BASE=/api/v1
 ```
 
-The API has no authentication — every endpoint is open. Treat the
-deploy as public; anything sensitive must be gated by the external
-proxy (network ACL[^acl], basic auth[^basicauth], etc.).
+You usually do **not** set `DATABASE_URL` here: the compose file ships a
+`postgres` service and wires `DATABASE_URL` to it automatically. Set it
+only to point the api at a *different* database (an external/managed
+Postgres). When `DATABASE_URL` is unset entirely, the engine falls back
+to local SQLite files under `data/` and jobs live in memory only.
+
+> **`JOB_STORE_KEY` is deprecated and ignored.** Jobs now persist to
+> Postgres when `DATABASE_URL` is set (in-memory otherwise); the old
+> Fernet-encrypted on-disk job snapshot has been removed. Setting the
+> variable does nothing but log a deprecation warning.
+
+**Harden the bundled Postgres for a real deployment.** The compose
+`postgres` service ships with a **dev-only** password
+(`POSTGRES_PASSWORD: u4u_dev_password`) and publishes `5432` on the host —
+fine for local development, not for a public VPS. Before going live:
+
+- Override the password to a strong secret and update the matching
+  `DATABASE_URL` credentials (both must agree — the api authenticates to
+  Postgres with them).
+- Do **not** expose port `5432` publicly; remove the `postgres` host
+  port mapping or firewall the port so only the `api` container reaches it.
+
+### Authentication
+
+The API is **mostly** unauthenticated: the analysis (`/analyze`,
+`/jobs/*`), tracking (`/tracking/*`), and regulatory (`/regulatory/*`)
+endpoints have no auth. The exception is **HealthKit ingestion**
+(`POST`/`GET /healthkit/samples`), which requires a per-device bearer
+token (`engine/healthkit/auth.py`). This check is **fail-closed whenever
+`DATABASE_URL` is set** — which is the case for this compose deploy — so
+in production a valid device token is *always* required to write or read
+HealthKit samples and no env var can turn it off. Mint tokens with
+`scripts/create_healthkit_token.py`.
+
+Everything else stays open, so treat the deploy as public: anything
+sensitive on the open endpoints must be gated by the external proxy
+(network ACL[^acl], basic auth[^basicauth], etc.).
 
 ## 5. Bring it up
 
@@ -80,11 +121,14 @@ docker compose up -d --build
 ```
 
 The api binds host port `8000` and the frontend binds `3000` — that's
-what the external proxy talks to.
+what the external proxy talks to. The `postgres` service starts first;
+the api waits for it to pass its health check (`pg_isready`) before
+booting and running migrations.
 
 Verify the containers are healthy:
 
 ```sh
+docker compose ps                         # all three services Up (postgres healthy)
 curl -I http://localhost:8000/health      # api on the box
 curl -I http://localhost:3000/            # frontend on the box
 ```
@@ -136,7 +180,7 @@ a lightweight endpoint a proxy or orchestrator polls to confirm the service is u
 [^lts]: **LTS (Long-Term Support)** — an OS release (here Ubuntu 24.04) that receives security/maintenance updates for an extended period, preferred for servers.
 [^ports]: **Ports 22 / 80 / 443** — standard TCP ports: 22 (SSH, remote shell), 80 (HTTP), 443 (HTTPS).
 [^systemctl]: **systemctl** — the command-line interface to `systemd`, Linux's service/init manager; `enable --now` both starts a service and sets it to launch on boot.
-[^fernet]: **Fernet** — a symmetric (shared-key) authenticated-encryption scheme from Python's `cryptography` library; the `JOB_STORE_KEY` is a Fernet key used to encrypt job results at rest.
+[^postgres]: **Postgres** — PostgreSQL, the relational database the engine uses for its caches, biomarker tracking, jobs, and HealthKit data. The compose file bundles the official `postgres:16-alpine` image; production on the k8s cluster runs an in-cluster StatefulSet with a Bitwarden-sourced password.
 [^acl]: **Network ACL (Access Control List)** — firewall-style rules that allow or deny traffic by source IP/port, restricting who can reach the service.
 [^basicauth]: **Basic auth** — HTTP Basic Authentication, a simple username/password challenge sent with each request; here applied at the proxy to gate the otherwise-open API.
 [^liveness]: **Liveness check** — a minimal endpoint (`/health`) that a proxy, load balancer, or orchestrator polls to verify the process is alive and able to serve requests.
