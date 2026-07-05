@@ -254,7 +254,7 @@ def test_pooling_shrinks_prior_toward_strong_responder_cohort(conn):
     assert 0.65 < pp["mean_pct_change"] < 0.75
 
 
-# ── Fused-precision cap (genetics × cohort double-counting mitigation) ───────
+# ── Correlation-aware fusion (genetics × cohort double-counting) ─────────────
 
 def _pop(mean: float, sd: float, n: int = 5) -> pooling.PopulationPrior:
     return pooling.PopulationPrior(
@@ -264,38 +264,61 @@ def _pop(mean: float, sd: float, n: int = 5) -> pooling.PopulationPrior:
     )
 
 
-def test_cap_is_noop_when_precision_below_ceiling():
-    # Wide combined_sd → low precision → cap does not bind.
-    pop = _pop(0.30, 0.10)
-    out = pooling.cap_combined_precision(
-        combined_sd=0.09, genetic_sd=0.10, population=pop,
+def test_combine_priors_rho0_matches_precision_addition():
+    """ρ=0 (the default) reduces exactly to τ_g + τ_p precision-weighted fusion,
+    and an explicit correlation=0.0 is byte-identical to the default."""
+    pop = _pop(0.20, 0.10)
+    m, s = pooling.combine_priors(genetic_mean=0.40, genetic_sd=0.10, population=pop)
+    tau = 1 / 0.10 ** 2 + 1 / 0.10 ** 2
+    assert math.isclose(s, math.sqrt(1 / tau), rel_tol=1e-12)
+    assert math.isclose(m, 0.30, rel_tol=1e-12)  # equal σ → simple average
+    m0, s0 = pooling.combine_priors(
+        genetic_mean=0.40, genetic_sd=0.10, population=pop, correlation=0.0
     )
-    assert out == 0.09
+    assert (m0, s0) == (m, s)
 
 
-def test_cap_widens_when_precision_exceeds_ceiling():
-    # τ_g = τ_p = 100 → cap = 2·100 = 200 → σ_cap = 1/√200 ≈ 0.0707.
-    pop = _pop(0.30, 0.10)
-    # A too-tight fused σ (precision 400 > cap 200) must be widened to the cap.
-    out = pooling.cap_combined_precision(
-        combined_sd=0.05, genetic_sd=0.10, population=pop,
+def test_combine_priors_correlation_widens_equal_sigma():
+    """At σ_g=σ_p=σ and correlation ρ, Var = σ²(1+ρ)/2 (closed form); higher
+    assumed ρ ⇒ wider (less confident) fused σ, bounded by the single source."""
+    sd = 0.12
+    pop = _pop(0.30, sd)
+    for rho in (0.0, 0.3, 0.6, 0.9):
+        _, s = pooling.combine_priors(
+            genetic_mean=0.30, genetic_sd=sd, population=pop, correlation=rho
+        )
+        assert math.isclose(s, sd * math.sqrt((1 + rho) / 2), rel_tol=1e-12)
+    sds = [
+        pooling.combine_priors(
+            genetic_mean=0.30, genetic_sd=sd, population=pop, correlation=r
+        )[1]
+        for r in (0.0, 0.5, 0.9)
+    ]
+    assert sds[0] < sds[1] < sds[2]      # monotone in assumed correlation
+    assert sds[2] <= sd                  # never worse than a single source
+    assert math.isclose(sds[0], sd / math.sqrt(2), rel_tol=1e-12)  # ρ=0 anchor
+
+
+def test_combine_priors_redundant_source_falls_back_to_more_precise():
+    """When one source is far noisier than the other at high ρ, a BLUE weight
+    goes ≤0 and we keep only the more precise source — no negative-weight
+    extrapolation outside [μ_g, μ_p]."""
+    pop = _pop(0.30, 0.60)   # σ_p=0.60 ≫ σ_g=0.05; ρ high ⇒ w_p = σ_g²−ρσ_gσ_p ≤ 0
+    m, s = pooling.combine_priors(
+        genetic_mean=0.10, genetic_sd=0.05, population=pop, correlation=0.9
     )
-    assert math.isclose(out, math.sqrt(1.0 / 200.0), rel_tol=1e-9)
-    # Widened, never tightened.
-    assert out > 0.05
-
-
-def test_cap_noop_without_population():
-    assert pooling.cap_combined_precision(
-        combined_sd=0.02, genetic_sd=0.10, population=None,
-    ) == 0.02
-
-
-def test_cap_ceiling_uses_larger_single_source_precision():
-    # Genetics much tighter than population: cap keyed on max(τ_g, τ_p) = τ_g.
-    pop = _pop(0.30, 0.20)          # τ_p = 25
-    gsd = 0.05                       # τ_g = 400 → cap = 800 → σ = 1/√800
-    out = pooling.cap_combined_precision(
-        combined_sd=0.01, genetic_sd=gsd, population=pop,
+    assert (m, s) == (0.10, 0.05)        # genetics kept alone
+    pop2 = _pop(0.25, 0.05)              # symmetric: genetics much noisier
+    m2, s2 = pooling.combine_priors(
+        genetic_mean=0.10, genetic_sd=0.60, population=pop2, correlation=0.9
     )
-    assert math.isclose(out, math.sqrt(1.0 / 800.0), rel_tol=1e-9)
+    assert (m2, s2) == (0.25, 0.05)      # population kept alone
+
+
+def test_combine_priors_rho_clamped_below_one():
+    """ρ is clamped below 1 so the fusion never hits the singular limit."""
+    pop = _pop(0.30, 0.12)
+    _, s = pooling.combine_priors(
+        genetic_mean=0.30, genetic_sd=0.12, population=pop, correlation=1.5
+    )
+    assert 0 < s <= 0.12                 # finite, positive, ≤ single source
