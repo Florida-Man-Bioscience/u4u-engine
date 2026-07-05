@@ -46,10 +46,13 @@ unfaithful (wrong variant footprint) *and* would break the frozen genetics-only
 golden numbers for BPC-157 (the synthetic ``VARIANT_CATALOG`` carries BPC-157
 pathway genes). So this adapter deliberately sources only from an explicit
 ``context.extra["bpc157"]`` channel and is a **graceful no-op** whenever that
-channel is absent — which, until the pipeline wires the composite (or raw
-variants) through ``ResponderContext.extra``, is every production prediction.
-It is optional (``required = False``) and, being peptide-masked, contributes
-nothing to any non-BPC-157 prediction by design.
+channel is absent. As of Wave 3b the pipeline's BPC-157 composite prediction is
+persisted per patient at ``POST /tracking/patients/from-job`` and threaded
+through ``ResponderContext.extra["bpc157"]`` by ``analysis.predict_response``, so
+the adapter fires for BPC-157 predictions on patients built from a job that
+carried a BPC-157 composite; it stays a no-op otherwise. It is optional
+(``required = False``) and, being peptide-masked, contributes nothing to any
+non-BPC-157 prediction by design.
 
 ``context.extra["bpc157"]`` may be either:
   - a ``list`` of annotated variant dicts (``genes`` / ``rsid`` fields) — the
