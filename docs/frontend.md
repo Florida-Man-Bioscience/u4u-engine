@@ -1,340 +1,107 @@
-# Frontend Spec
+# Frontend
 
-**Read also:** `docs/project-status.md`, `docs/architecture.md` (API contract)
+**Read also:** `frontend/README.md` (dev/build commands), `docs/api.md` (API contract), `docs/architecture.md`
 
----
+The frontend is a shipped, deployed [Next.js](https://nextjs.org) 16 app (App Router,
+React 19, Tailwind CSS v4, Recharts). It is served in production at
+`https://flmanbiosci.net` alongside the FastAPI backend. Source lives under
+`frontend/src/app/`.
 
-## What you're building
-
-Three screens. Upload → Processing → Results.
-
-The results screen is the whole product. A person uploads their genome file, waits ~2 minutes, and gets a plain-English report of what matters and what to do about it. The engine already produces everything — your job is to show it in a way a non-scientist trusts and understands.
-
----
-
-## The UI direction — not a card grid
-
-23andMe uses card grids. Every health app uses card grids. Don't do that.
-
-This is a **prioritized findings report**, not a social feed. Think about what a genetic counselor[^counselor] would hand someone after an appointment — one clean page, organized by what needs attention first, where the most critical finding is impossible to miss and every result ends with one concrete action. That's the feeling to design toward.
-
-**Layout:** single column, full-width, sectioned by urgency. Not a grid, not tiles. Scannable top-to-bottom like a document.
-
-**Each finding is a row** with a color-coded left border (tier color), gene name, one-line summary, and an action button. Click the row to expand inline detail. Nothing opens a new page, nothing uses a modal[^modal].
-
-**Section order:**
-1. Summary header — total findings, tier breakdown, filename
-2. **Needs Attention** — critical + high findings (shown by default)
-3. **For Your Records** — carrier status + medium + low findings (collapsed by default, expandable)
-4. Email capture — "get notified when new research publishes on your variants"
-5. Download report button
-
-This keeps the most important things at the top and doesn't overwhelm people with everything at once.
+Product name in the UI: **PeptOdyssey — Precision Peptide Genomics**.
 
 ---
 
-## Backend — what you're building against
+## How it talks to the backend
 
-API base URL: TBD (update when deployed)
+All browser API calls go through `frontend/src/app/lib/api.ts` and `authFetch.ts`.
+The base URL is `process.env.NEXT_PUBLIC_API_BASE`, defaulting to **`/api/v1`**
+(the gateway rewrites `/api/v1/*` → backend `/`). Server-rendered routes (e.g.
+`/regulatory`) resolve their own base in `regulatory/lib/serverApi.ts`.
+
+Set `NEXT_PUBLIC_API_BASE` for local dev when the backend is elsewhere, e.g.
+`NEXT_PUBLIC_API_BASE=http://localhost:8000`.
+
+The core analysis flow is the async job-queue pattern (see `docs/api.md`):
 
 ```
-POST /analyze
-  Body: multipart/form-data { file: <genome file> }
-  Returns 202: { "job_id": "uuid", "poll_url": "/jobs/<id>" }
-
-GET /jobs/<job_id>
-  Returns:
-  {
-    "status":   "pending" | "running" | "done" | "failed",
-    "progress": { "step": "Annotating rs80357906 (4/81)", "pct": 47 },
-    "count":    12,
-    "results":  [...],    // null until done
-    "error":    null
-  }
+POST /analyze              multipart { file } → 202 { job_id }
+GET  /jobs/{job_id}        poll → { status, progress, ... , result }
+GET  /jobs                 recent job history
+GET  /jobs/{id}/pgx        PGx profile for a completed job
 ```
 
-Poll[^polling] every 3 seconds. Stop when `status` is `"done"` or `"failed"`.
-
-### Result object — one per variant
-
-Every result in the `results` array has exactly these fields. All JSON-safe[^jsonsafe], pre-sorted by score descending. Don't re-sort client-side. (Field meanings — `zygosity`, `consequence`, `clinvar`, `gnomad_af`, `condition_key`, `tier`, `carrier_note` — are documented in `docs/pipeline.md` and `docs/architecture.md`.)
-
-```json
-{
-  "variant_id":              "rs80357906",
-  "rsid":                    "rs80357906",
-  "location":                "17:43094692",
-  "genes":                   ["BRCA1"],
-  "zygosity":                "heterozygous",
-
-  "consequence":             "missense_variant",
-  "clinvar":                 "pathogenic",
-  "clinvar_raw":             "Pathogenic",
-  "disease_name":            "Hereditary breast ovarian cancer syndrome",
-  "condition_key":           "OMIM:604370",
-
-  "gnomad_af":               0.000023,
-
-  "score":                   1000,
-  "tier":                    "critical",
-  "carrier_note":            null,
-  "frequency_derived_label": null,
-
-  "emoji":                   "🔴",
-  "headline":                "Pathogenic variant in BRCA1 — known cancer risk",
-  "consequence_plain":       "This change disrupts how the BRCA1 protein is made.",
-  "rarity_plain":            "Extremely rare — seen in 0.002% of people.",
-  "clinvar_plain":           "ClinVar classifies this as Pathogenic, meaning clinical experts have confirmed it causes disease.",
-  "action_hint":             "Discuss this finding with a genetic counselor or oncologist.",
-  "zygosity_plain":          "You carry one copy of this variant."
-}
-```
-
-**Tier → visual treatment:**
-
-| `tier` | Left border color | Emoji | Label |
-|--------|------------------|-------|-------|
-| critical | red | 🔴 | Needs attention |
-| high | orange | 🟠 | High priority |
-| medium | yellow | 🟡 | Worth knowing |
-| low | green | 🟢 | Low priority |
-| carrier (any tier where `carrier_note` is set) | blue | 🔵 | Carrier status |
+`run_pipeline()` returns a **dict** (keys: `variants`, `pathway_summary`,
+`receptor_genetics`, `prs_profile`, `ar_cag_repeat`, `peptide_recommendations`,
+`pgx_profile`, `dossiers`, `acmg_summary`, `analysis_status`). The results page reads
+`variants`, `peptide_recommendations`, and `pgx_profile` off that dict.
 
 ---
 
-## Screen 1 — Upload
+## Routes (the shipped surface)
 
-Single centered form. Clean, minimal, not medical-looking.
+Every route below has a `page.tsx` under `frontend/src/app/`. The top `Nav`
+(`components/Nav.tsx`) links History, Tracking, Regulatory, Study, and New Analysis.
 
-**Elements:**
-- File drop zone — `.vcf`, `.vcf.gz`, `.txt` (23andMe), `.csv`. Max 100 MB. Show filename + size on select.
-- Privacy statement (display text, not a checkbox): "Your file is processed in memory and immediately discarded. It is never stored. Only variant coordinates leave this system to look up what each variant means."
-- Consent checkbox (required before submit): "I understand this is general genomic information, not medical advice."
-- Analyze button — disabled until file + checkbox. On click: `POST /analyze`, navigate to processing screen with `job_id`.
-
-**Inline errors (before submit):**
-- File > 100 MB
-- Wrong file extension
-- Empty file
-
----
-
-## Screen 2 — Processing
-
-Progress page. Don't let people navigate away.
-
-**Elements:**
-- Progress bar — `progress.pct` (0 → 100)
-- Step label — `progress.step` (e.g. "Annotating rs80357906 (4/81)")
-- Static copy: "Genome analysis usually takes 1–3 minutes."
-- Browser `beforeunload`[^beforeunload] warning: "Analysis in progress. Leaving this page will cancel your results."
-
-If `status == "failed"`: show the `error` message and a retry button that returns to upload.
+| Route | Purpose |
+|-------|---------|
+| `/` | **New analysis / upload.** Hero + genome file upload form (`.vcf`, `.txt`, `.csv`, ≤100 MB). `POST /analyze`, then routes to the job page. |
+| `/jobs` | **Analysis history.** List of recent jobs with status. |
+| `/jobs/[id]` | **Job status / processing.** Polls `GET /jobs/{id}`, shows progress until the job completes, then links to results. |
+| `/jobs/[id]/results` | **Results.** Three tabs — `peptides \| pgx \| variants` — with **`pgx` as the default tab**. Tier filter, CSV export, and a "create tracking profile from this job" action (`createPatientFromJob`). |
+| `/tracking` | **Biomarker tracking home.** Entry point to the longitudinal tracking UI. |
+| `/tracking/cohort` | **Cohort analysis** — pooled cohort view, including dose-response. |
+| `/tracking/model` | **Model documentation** — in-app explainer for the peptide-response model (HBRI), inline-SVG data flow mirroring `engine/tracking/bayes.py`. See `docs/models/peptide-response-model.md`. |
+| `/tracking/patients/[id]` | **Patient detail** — per-patient measurements with Bayesian predictions per (peptide, biomarker). |
+| `/tracking/patients/[id]/onboard` | **Patient onboarding** — multi-stage wizard: engine recommendations → peptide selection → baseline entry. |
+| `/regulatory` | **FDA peptide regulatory dashboard** (server-rendered). Curated peptide FDA status merged with live sources; served from `/regulatory/peptides` + `/regulatory/events`. |
+| `/study` | **Study landing** — public-facing description of the observational validation study (what it is / is not, participation, privacy). |
+| `/study/dev` | **Study detail** — expanded study/methodology page. |
 
 ---
 
-## Screen 3 — Results
+## Results page — the three tabs
 
-This is the product.
+`/jobs/[id]/results` (`ViewMode = "peptides" | "pgx" | "variants"`, default `pgx`):
 
-### Summary header
+- **PGx** (`pgx` — default): the PGx profile (`pgx_profile`) — star-allele calls, CPIC
+  phenotypes, and drug recommendations. Rendered by `components/PGxReport.tsx`; drug
+  detail via `getDrugDetail`.
+- **Peptides** (`peptides`): peptide-therapy recommendations
+  (`peptide_recommendations`) — the therapy candidates whose biology aligns with the
+  uploaded genome.
+- **Variants** (`variants`): the prioritized per-variant findings (`variants`),
+  filterable by tier, exportable to CSV. Each variant renders through
+  `components/VariantCard.tsx` + `components/TierBadge.tsx`.
 
-```
-12 findings in 81 clinically actionable genes
-genome.vcf
-
-🔴 2 Critical    🟠 3 High    🟡 4 VUS    🔵 2 Carrier    🟢 1 Low
-
-[Download Report]
-```
-
-Persistent disclaimer, small text: "This is not medical advice. Discuss significant findings with a healthcare provider."
-
----
-
-### Needs Attention section (critical + high)
-
-Shown by default. These are the findings that matter.
-
-**Row — collapsed:**
-```
-[🔴 CRITICAL]  BRCA1    Pathogenic variant in BRCA1 — known cancer risk    [Talk to a specialist →]
-```
-Left-border color matches tier. Gene name bold. Headline fills center. Action button right-aligned. Clicking anywhere on the row expands inline.
-
-**Row — expanded (inline below):**
-- `consequence_plain`
-- `zygosity_plain`
-- `rarity_plain`
-- `clinvar_plain`
-- `action_hint` — most prominent element in the expanded state, styled as a CTA[^cta]
-- Source links (small, below): ClinVar, gnomAD, gene card
-
-**Carrier[^carrier] row variant:**
-- Blue left border, 🔵 badge
-- Collapsed: "CFTR — You appear to be a carrier for cystic fibrosis"
-- Expanded: `carrier_note` text + `action_hint`
-
-**VUS[^vus] row variant:**
-- Yellow left border, 🟡 badge
-- Collapsed: "GENE — Variant of uncertain significance"
-- Expanded: `consequence_plain`, `rarity_plain`, `frequency_derived_label` if set, plus: "Not enough evidence to classify this variant as harmful or harmless."
+Design principle carried over from the original spec: variants are shown as a
+**prioritized findings list** (color-coded by tier, plain-English headline + action),
+not a card grid. Tiers: `critical` / `high` / `medium` / `low`, plus a carrier
+treatment when `carrier_note` is set. Tier and language semantics are documented in
+`docs/pipeline.md` and `docs/interpretation.md`.
 
 ---
 
-### For Your Records section (medium + low + carrier)
+## Key files
 
-Collapsed by default. Same row format, lower visual weight. Toggle to reveal.
-
----
-
-### Zero findings state
-
-```
-No findings in the 81 ACMG[^acmg] actionable genes.
-This is common — most people don't have known pathogenic variants in these genes.
-It does not mean your genome has no variants worth knowing about.
-```
-
-Don't leave a blank page.
-
----
-
-### Email capture
-
-At the bottom of results:
-
-> "Get notified when new research publishes on your variants."
-> [email input] [Subscribe]
-> "We don't store your genome. We only keep your email."
-
-For MVP: just capture it. No complex backend needed.
-
----
-
-### Download report
-
-`window.print()`[^windowprint] with a print stylesheet[^printstyle]. MVP only. Contents: header, tier breakdown, findings table (gene | tier | headline | action), disclaimer.
-
----
-
-## Insight categories (V2, not MVP)
-
-When the condition library includes `category` fields, findings can be grouped into Disease predisposition, Carrier status, Drug response, Traits. Don't build category tabs for MVP. Show everything in one prioritized list. Add tabs in V2.
-
----
-
-## Component build order
-
-```
-1. /upload
-   <UploadZone />         file select + validation + privacy statement
-   <ConsentGate />        checkbox
-   <AnalyzeButton />      POST /analyze → navigate to /processing/:jobId
-
-2. /processing/:jobId
-   <PollingLoop />        GET /jobs/:id every 3s — critical path, build this first
-   <ProgressBar />        progress.pct + step text
-   <NavigationGuard />    beforeunload warning
-
-3. /results/:jobId
-   <SummaryHeader />      count + tier badges + filename + disclaimer
-   <FindingsSection />    "Needs Attention" — critical + high rows
-   <FindingRow />         collapsed + expanded states
-     <TierBadge />        color + emoji + label
-     <ActionButton />     action_hint as CTA
-     <SourceLinks />      ClinVar / gnomAD / gene card
-     <CarrierRow />       blue variant
-     <VUSRow />           yellow + uncertainty language
-   <RecordsSection />     medium + low + carrier, collapsed default
-   <ZeroFindings />       empty state
-   <EmailCapture />       subscribe form
-   <DownloadReport />     window.print()
-
-4. /shared
-   <Disclaimer />         persistent footer
-   <ErrorScreen />        failed jobs + network errors
-```
-
-Build `<PollingLoop />` and `<FindingRow />` data layer first against the JSON schema above. Designs slot in on top.
-
----
-
-## Design order
-
-1. **Single finding row — collapsed + expanded** — core component
-2. **Needs Attention section** with 2–3 real findings
-3. **Upload screen** — drop zone + consent + privacy statement
-4. **Summary header + tier badges**
-5. **Carrier row + VUS row** — variants of the main row
-6. **Processing screen**
-7. **Print stylesheet** for report — last
-
-**Design against real content — not Lorem Ipsum[^lorem]:**
-
-Finding 1:
-```
-tier:        critical
-gene:        BRCA1
-headline:    Pathogenic variant in BRCA1 — known cancer risk
-action:      Discuss this finding with a genetic counselor or oncologist.
-consequence: This change disrupts how the BRCA1 protein is made.
-rarity:      Extremely rare — seen in 0.002% of people.
-clinvar:     ClinVar classifies this as Pathogenic — clinical experts have confirmed it causes disease.
-zygosity:    You carry one copy of this variant.
-```
-
-Finding 2:
-```
-tier:        carrier (blue)
-gene:        CFTR
-headline:    You appear to be a carrier for cystic fibrosis
-carrier:     Carrying one copy of this variant typically does not cause the condition,
-             but may be relevant for family planning.
-action:      Mention this to your doctor if you're planning a family.
-```
-
-The design goal: a non-scientist reads one row and understands what it means and what to do. That's the bar.
-
----
-
-## Tech decisions already made — don't revisit
-
-- No user accounts in V1. Results live at `/results/:jobId` — URL is the session.
-- No genome storage. File processed in memory, discarded immediately. Say this on the upload screen.
-- VCF is the primary format. 23andMe `.txt` also supported.
-- Results pre-sorted by score. Don't sort client-side.
-- Category tabs (disease/carrier/drug/traits) are V2.
-- Condition library text not in API yet. Use `action_hint` as placeholder in expanded rows. No frontend change needed when it's added — comes through the API.
-
----
-
-## Where to find things
-
-| What | Location |
+| Area | Location |
 |------|----------|
-| This spec | `docs/frontend.md` — GitHub |
-| API endpoints + full result schema | `docs/architecture.md` — GitHub |
-| All result fields documented | `engine/__init__.py` lines 28–68 — GitHub |
-| Scoring + tier logic | `docs/pipeline.md` — GitHub |
-| Clinical language guide | `docs/interpretation.md` — GitHub |
-| Roadmap + phase owners | `docs/roadmap.md` — GitHub |
-| Notion website page | U4U Notion → Website subpage |
-| GitHub repo | https://github.com/Florida-Man-Bioscience/u4u-engine |
+| Root layout + Nav | `src/app/layout.tsx`, `src/app/components/Nav.tsx` |
+| API client (browser) | `src/app/lib/api.ts`, `src/app/lib/authFetch.ts` (`API_BASE`), `src/app/lib/types.ts` |
+| Regulatory SSR client | `src/app/regulatory/lib/serverApi.ts` |
+| Shared components | `src/app/components/` — `PGxReport`, `SummaryMetrics`, `TierBadge`, `VariantCard`, `Nav` |
+| Build version stamp | `frontend/version.json` (auto-bumped per commit) |
 
 ---
 
-## Footnotes
+## Dev / build
 
-[^counselor]: **Genetic counselor** — a healthcare professional trained to interpret genetic test results and help patients understand risk, inheritance, and next steps. The doc uses their hand-off report as the design metaphor.
-[^modal]: **Modal** — a pop-up dialog that overlays the page and blocks interaction with everything behind it until dismissed. The spec deliberately avoids these in favor of inline expansion.
-[^jsonsafe]: **JSON-safe** — every field value is a plain JSON type (string, number, boolean, null, array, object) with no special encoding needed, so the frontend can consume it directly.
-[^polling]: **Polling** — repeatedly requesting an endpoint on a timer (here every 3s) to check for a status change, rather than receiving a push notification.
-[^beforeunload]: **`beforeunload`** — a browser event that fires when the user tries to leave/close the page; the app hooks it to warn that navigating away cancels the in-progress analysis.
-[^cta]: **CTA (Call To Action)** — a visually prominent prompt (button/link) directing the user to the single recommended next step.
-[^vus]: **VUS (Variant of Uncertain Significance)** — a variant whose evidence is insufficient to classify as pathogenic or benign; shown with explicit "not enough evidence" language.
-[^carrier]: **Carrier** — someone with one copy of a recessive variant who is typically unaffected themselves but can pass it on; relevant for family planning.
-[^acmg]: **ACMG genes** — the 81-gene American College of Medical Genetics "Secondary Findings" list of clinically actionable genes the report screens.
-[^windowprint]: **`window.print()`** — the browser API that opens the native print dialog; used as the MVP "download report" mechanism (print-to-PDF).
-[^printstyle]: **Print stylesheet** — CSS rules scoped to printing (`@media print`) that reformat the page for paper/PDF output (hide nav, adjust layout).
-[^lorem]: **Lorem Ipsum** — conventional placeholder filler text. The spec insists on designing with real clinical content instead, since wording is part of the product.
+```bash
+cd frontend
+npm install
+npm run dev      # dev server on :3000
+npm run build    # production build (Next standalone output)
+npm run start    # serve the production build
+```
+
+The app is dockerized (multi-stage build, Next standalone output) and deployed to the
+RKE2 cluster via Flux GitOps — see `CLAUDE.md` and `docs/server-management.md`.
