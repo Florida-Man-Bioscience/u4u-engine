@@ -46,6 +46,10 @@ app's (currently open) behaviour:
   than honour the unsafe combo (A8).
 - **Stop logging PHI filenames** — `/analyze` logs the extension only (A8).
 - **CI dependency scanning** — `pip-audit` + `npm audit` workflow + Dependabot (A8).
+  The new scan immediately caught **9 frontend advisories** (4 high); patched via
+  a semver-safe lockfile update plus a Next.js minor bump (16.1.4 → 16.2.10,
+  frontend build verified), leaving only 2 moderate (below the high gate).
+  Python deps audit clean.
 - **Hygiene** — `chmod 700` on the data dir, removed unused `bcrypt`, least-privilege
   `permissions:` on the test workflow (A8).
 
