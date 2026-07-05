@@ -1,6 +1,8 @@
 # Contributing
 
-The engine is a pure Python function — bytes in, list of dicts out. No servers, no databases, no web frameworks inside `engine/`. PRs that add them will be closed.
+The annotation pipeline (`engine/pipeline.py` and the annotators it drives) is a pure Python function — bytes in, a result `dict` out. Keep that core path free of servers, databases, and web frameworks; PRs that add I/O, network servers, or a web framework to the annotation pipeline will be closed.
+
+This rule scopes the *pipeline*, not all of `engine/`. Service modules under `engine/` — `engine/tracking/`, `engine/healthkit/`, `engine/users/` — deliberately own their FastAPI routers (`api.py`) and their Postgres/SQLite storage (`db.py`). That boundary is intentional: the pure pipeline stays pure, while the service layers around it may hold state and expose endpoints.
 
 ## Setup
 

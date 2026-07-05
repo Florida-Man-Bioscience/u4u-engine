@@ -141,12 +141,28 @@ enrichment subsystems run (see [`docs/architecture.md`](docs/architecture.md)):
   live sources (ClinicalTrials.gov, openFDA, Federal Register); live-source failures
   degrade gracefully.
 - **Biomarker tracking** (`engine/tracking/`) — SQLite/Postgres-backed longitudinal
-  tracking with a Normal–Normal Bayesian posterior fusing a genetics-derived prior,
-  leave-one-out cohort pooling, and the measurement likelihood. Effect sizes are
-  citation-anchored and grade-tagged in a research-backed evidence registry.
+  tracking built on the **Hierarchical Bayesian Responder Index (HBRI)**: a responder
+  index `η = 1 + Δ·tanh(βᵀx)` shapes the prior from an auto-discovering
+  feature-adapter registry (`engine/tracking/feature_adapters/`: genetics, PRS,
+  BPC-157, covariates, HealthKit behavior). Priors, leave-one-out cohort pooling, and
+  the measurement likelihood are combined with a correlation-aware **BLUE fusion**
+  (`pooling.combine_priors`); the prediction output carries a `responder_features`
+  breakdown. Effect sizes are citation-anchored and grade-tagged in a research-backed
+  evidence registry. Authoritative spec:
+  [`docs/models/peptide-response-model.md`](docs/models/peptide-response-model.md).
+- **HealthKit ingestion** (`engine/healthkit/`) — de-identified Apple HealthKit sync
+  from the iOS app via `POST`/`GET /healthkit/samples`, guarded by device-token auth
+  (fail-closed when `DATABASE_URL` is set). Samples bridge to tracking patients through
+  an opaque subject map. See [`docs/healthkit-storage.md`](docs/healthkit-storage.md).
 
-**Storage.** All caches and stores use **Postgres** when `DATABASE_URL` is set, and fall
-back to local **SQLite** otherwise (so local dev and the test suite work unchanged).
+**Storage.** All caches and stores — annotation cache, rsID cache, tracking, jobs, and
+HealthKit — use **Postgres** when `DATABASE_URL` is set, and fall back to local
+**SQLite** otherwise (so local dev and the test suite work unchanged). Schema is applied
+by `db/migrate.py`.
+
+**Auth.** A `/users` surface (`engine/users/api.py`) resolves the Authentik-forwarded
+subject (`GET /users/me` lazily upserts the caller; `GET /users` lists known users for
+operator views).
 
 **Deployment.** Production runs on the hwcopeland RKE2/Kubernetes cluster with Flux
 GitOps, served at `https://flmanbiosci.net`. See
@@ -434,8 +450,8 @@ Open **http://localhost:3000** in your browser to access the genome analysis UI.
 | `FILTERS` | `acmg81_rsids.txt` | Comma-separated filter filenames (empty = all variants) |
 | `WORKERS` | `4` | Thread pool size for concurrent pipeline runs |
 | `MAX_UPLOAD_MB` | `100` | Maximum upload file size in megabytes |
-| `JOB_TTL_HOURS` | `24` | Hours to keep completed jobs in memory |
-| `JOB_STORE_KEY` | _(none)_ | Fernet key to encrypt the on-disk job store. Without it, results are kept in memory only (never written as plaintext). |
+| `JOB_TTL_HOURS` | `24` | Hours to keep completed jobs (in Postgres, or in memory when `DATABASE_URL` is unset) |
+| `JOB_STORE_KEY` | _(none)_ | **Deprecated / unused.** The old Fernet-encrypted on-disk job store is gone — jobs now persist to Postgres when `DATABASE_URL` is set, and are in-memory only otherwise. Setting it logs a deprecation warning and has no effect. |
 | `PGX_CONFORMAL_CALIBRATION` | `data/pgx/conformal_calibration.json` | Path to a validated PGx conformal calibration set. Without it, drug-response predictions are returned as `uncalibrated`. |
 | `ENABLE_LIFTOVER` | `0` | When `1`, lift GRCh37 coordinate files to GRCh38 instead of rejecting them (requires the optional `pyliftover` package). |
 | `LIFTOVER_CHAIN_37_TO_38` | _(none)_ | Optional local hg19→hg38 chain file for liftover (else fetched from UCSC). |
