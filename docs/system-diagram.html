@@ -15,12 +15,6 @@
   .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
   .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
-  .diagram { display: grid; grid-template-columns: 180px 1fr 200px; gap: 0; position: relative; }
-
-  /* Column headers */
-  .col-header { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #475569; padding: 0 0 12px 0; }
-
-  /* Boxes */
   .box {
     border-radius: 8px;
     padding: 10px 14px;
@@ -30,305 +24,162 @@
     position: relative;
   }
   .box-title { font-weight: 700; font-size: 12px; margin-bottom: 2px; }
-  .box-sub { font-size: 11px; opacity: 0.75; }
+  .box-sub { font-size: 11px; opacity: 0.85; }
+  .box-path { font-size: 10px; opacity: 0.6; margin-top: 4px; }
 
-  .exists    { background: #052e16; border-color: #16a34a; color: #bbf7d0; }
-  .exists .box-title { color: #4ade80; }
-  .missing   { background: #431407; border-color: #c2410c; color: #fed7aa; }
-  .missing .box-title { color: #fb923c; }
+  .shipped   { background: #052e16; border-color: #16a34a; color: #bbf7d0; }
+  .shipped .box-title { color: #4ade80; }
   .external  { background: #0c1a3a; border-color: #1d4ed8; color: #bfdbfe; }
   .external .box-title { color: #60a5fa; }
-  .v2        { background: #2e1065; border-color: #6d28d9; color: #ddd6fe; }
-  .v2 .box-title { color: #a78bfa; }
+  .store     { background: #2e1065; border-color: #6d28d9; color: #ddd6fe; }
+  .store .box-title { color: #a78bfa; }
   .output    { background: #0d2a2a; border-color: #0f766e; color: #99f6e4; }
   .output .box-title { color: #2dd4bf; }
+  .frontend  { background: #422006; border-color: #d97706; color: #fde68a; }
+  .frontend .box-title { color: #fbbf24; }
 
-  .badge {
-    display: inline-block;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-  }
-  .badge-exists   { background: #16a34a; color: #f0fdf4; }
-  .badge-missing  { background: #c2410c; color: #fff7ed; }
-  .badge-external { background: #1d4ed8; color: #eff6ff; }
-  .badge-v2       { background: #6d28d9; color: #faf5ff; }
-  .badge-output   { background: #0f766e; color: #f0fdfa; }
+  .col-header { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #475569; padding-bottom: 12px; }
 
-  /* Left column - inputs */
-  .inputs { display: flex; flex-direction: column; gap: 8px; padding-right: 16px; }
+  .section-divider { border: none; border-top: 1px dashed #1e3a5f; margin: 28px 0; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #334155; margin-bottom: 12px; }
 
-  /* Center column - pipeline */
-  .pipeline { display: flex; flex-direction: column; gap: 0; padding: 0 16px; border-left: 1px solid #1e293b; border-right: 1px solid #1e293b; }
-  .step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 4px; }
-  .step-num { font-size: 10px; font-weight: 700; color: #334155; min-width: 18px; padding-top: 11px; }
-  .step-box { flex: 1; }
-
-  .arrow-down { text-align: center; color: #334155; font-size: 16px; line-height: 1; padding: 2px 0; margin-left: 28px; }
-
-  /* Right column - APIs */
-  .apis { display: flex; flex-direction: column; gap: 8px; padding-left: 16px; }
-
-  /* Output row */
-  .output-row { margin-top: 24px; }
-  .output-row .col-header { grid-column: 1 / -1; }
-
-  /* Missing section */
-  .missing-section { margin-top: 32px; }
-  .missing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
-
-  /* V2 section */
-  .v2-section { margin-top: 32px; }
-  .v2-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
-
-  /* Data flow label */
-  .flow-label {
-    font-size: 10px;
-    color: #334155;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-align: center;
-    padding: 4px;
-  }
-
-  /* Connector row between sections */
-  .connector { text-align: center; color: #334155; font-size: 20px; margin: 12px 0; letter-spacing: 4px; }
-
-  .section-divider {
-    border: none;
-    border-top: 1px dashed #1e3a5f;
-    margin: 28px 0;
-  }
-
-  .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #334155;
-    text-align: center;
-    margin-bottom: 12px;
-  }
-
-  .gap-note {
-    font-size: 11px;
-    color: #64748b;
-    font-style: italic;
-    text-align: center;
-    margin-top: 8px;
-  }
-
-  .owner-tag {
-    font-size: 10px;
-    color: #475569;
-    margin-top: 4px;
-  }
-
-  .top-grid { display: grid; grid-template-columns: 180px 1fr 200px; gap: 0; }
-  .top-grid .col-header { padding-bottom: 12px; }
+  .top-grid { display: grid; grid-template-columns: 200px 1fr 220px; gap: 0; }
   .inputs-wrap { padding-right: 16px; display: flex; flex-direction: column; gap: 8px; }
   .pipeline-wrap { padding: 0 16px; border-left: 1px solid #1e293b; border-right: 1px solid #1e293b; display: flex; flex-direction: column; gap: 0; }
   .apis-wrap { padding-left: 16px; display: flex; flex-direction: column; gap: 8px; }
 
-  .api-callout {
-    font-size: 10px;
-    color: #475569;
-    text-align: center;
-    padding: 4px 8px;
-    border-top: 1px dashed #1e293b;
-    margin-top: 8px;
-  }
+  .step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 4px; }
+  .step-num { font-size: 10px; font-weight: 700; color: #334155; min-width: 18px; padding-top: 11px; }
+  .step-box { flex: 1; }
+  .arrow-down { text-align: center; color: #334155; font-size: 16px; line-height: 1; padding: 2px 0; margin-left: 28px; }
+
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+
+  code { font-size: 10px; background: rgba(148,163,184,0.15); padding: 1px 4px; border-radius: 3px; }
 </style>
 </head>
 <body>
 
 <h1>U4U SYSTEM MAP</h1>
-<p class="subtitle">Last updated: March 2026 &nbsp;&bull;&nbsp; Green = exists &nbsp;&bull;&nbsp; Orange = not built &nbsp;&bull;&nbsp; Blue = external &nbsp;&bull;&nbsp; Purple = V2</p>
+<p class="subtitle">Last updated: July 2026 &nbsp;&bull;&nbsp; Deployed at flmanbiosci.net &nbsp;&bull;&nbsp; Green = shipped &nbsp;&bull;&nbsp; Amber = frontend &nbsp;&bull;&nbsp; Blue = external &nbsp;&bull;&nbsp; Purple = data store &nbsp;&bull;&nbsp; Teal = output</p>
 
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Exists and works</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> Not built yet</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Shipped (backend / engine)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Frontend (Next.js, deployed)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div> External service</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div> Data store (Postgres / SQLite)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#0f766e"></div> Output</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div> V2 (subscription)</div>
+</div>
+
+<!-- FRONTEND -->
+<div class="section-label" style="color:#d97706">FRONTEND &mdash; Next.js 15, deployed at flmanbiosci.net</div>
+<div class="grid-4">
+  <div class="box frontend"><div class="box-title">Upload</div><div class="box-sub">VCF / 23andMe / CSV</div><div class="box-path">/</div></div>
+  <div class="box frontend"><div class="box-title">Jobs + Results</div><div class="box-sub">progress polling; tabs: peptides | pgx | variants (pgx default)</div><div class="box-path">/jobs · /jobs/[id]/results</div></div>
+  <div class="box frontend"><div class="box-title">Tracking</div><div class="box-sub">HBRI biomarker tracking + cohort</div><div class="box-path">/tracking · /tracking/cohort</div></div>
+  <div class="box frontend"><div class="box-title">Regulatory + Study</div><div class="box-sub">FDA peptide dashboard; study surface</div><div class="box-path">/regulatory · /study</div></div>
+</div>
+
+<!-- API SUBSYSTEMS -->
+<hr class="section-divider">
+<div class="section-label">API &mdash; <code>api.py</code> (FastAPI) + mounted routers</div>
+<div class="grid-3">
+  <div class="box shipped"><div class="box-title">Job queue</div><div class="box-sub">POST /analyze &rarr; 202; GET /jobs/{id}; GET /health; ThreadPoolExecutor</div><div class="box-path">api.py</div></div>
+  <div class="box shipped"><div class="box-title">Tracking / HBRI</div><div class="box-sub">longitudinal biomarker posterior updates</div><div class="box-path">/tracking/* · engine/tracking/api.py</div></div>
+  <div class="box shipped"><div class="box-title">HealthKit</div><div class="box-sub">POST/GET /samples; device-token auth (fail-closed w/ DATABASE_URL)</div><div class="box-path">/healthkit/* · engine/healthkit/api.py</div></div>
+  <div class="box shipped"><div class="box-title">Users</div><div class="box-sub">identity from Authentik forward-auth headers</div><div class="box-path">/users · engine/users/api.py</div></div>
+  <div class="box shipped"><div class="box-title">Regulatory</div><div class="box-sub">curated + live FDA peptide status</div><div class="box-path">/regulatory/* · engine/regulatory/</div></div>
+  <div class="box shipped"><div class="box-title">ACMG sign-off</div><div class="box-sub">qualified human ACMG/AMP sign-out</div><div class="box-path">POST /jobs/.../acmg-signoff · engine/acmg/</div></div>
 </div>
 
 <!-- TOP SECTION: Input + Pipeline + APIs -->
+<hr class="section-divider">
 <div class="top-grid">
   <div class="col-header">INPUT FILES</div>
-  <div class="col-header" style="padding-left:16px">ANNOTATION PIPELINE &nbsp;&mdash;&nbsp; <code style="font-size:10px">engine/run_pipeline()</code></div>
+  <div class="col-header" style="padding-left:16px">ANNOTATION PIPELINE &nbsp;&mdash;&nbsp; <code>engine/run_pipeline()</code></div>
   <div class="col-header" style="padding-left:16px">EXTERNAL APIs</div>
 
   <!-- Inputs -->
   <div class="inputs-wrap">
-    <div class="box exists">
-      <div class="box-title">23andMe .txt</div>
-      <div class="box-sub">rsid + genotype</div>
-    </div>
-    <div class="box exists">
-      <div class="box-title">VCF / .vcf.gz</div>
-      <div class="box-sub">clinical sequencing</div>
-    </div>
-    <div class="box exists">
-      <div class="box-title">CSV</div>
-      <div class="box-sub">chrom, pos, ref, alt</div>
-    </div>
-    <div class="box exists">
-      <div class="box-title">rsID list .txt</div>
-      <div class="box-sub">plain list</div>
-    </div>
-    <div style="margin-top:8px; text-align:right; padding-right:4px;">
-      <span style="font-size:20px; color:#334155">&rarr;</span>
-    </div>
+    <div class="box shipped"><div class="box-title">23andMe .txt</div><div class="box-sub">rsid + genotype</div></div>
+    <div class="box shipped"><div class="box-title">VCF / .vcf.gz</div><div class="box-sub">clinical sequencing</div></div>
+    <div class="box shipped"><div class="box-title">CSV</div><div class="box-sub">chrom, pos, ref, alt</div></div>
+    <div class="box shipped"><div class="box-title">rsID list .txt</div><div class="box-sub">plain list</div></div>
+    <div class="box shipped" style="border-style:dashed; opacity:0.85;"><div class="box-title">BAM (optional)</div><div class="box-sub">enables AR CAG repeat + long-read PGx</div></div>
   </div>
 
   <!-- Pipeline -->
   <div class="pipeline-wrap">
-    <div class="step"><div class="step-num">1</div><div class="step-box"><div class="box exists"><div class="box-title">Validate</div><div class="box-sub">format, size, encoding</div></div></div></div>
+    <div class="step"><div class="step-num">1</div><div class="step-box"><div class="box shipped"><div class="box-title">Validate</div><div class="box-sub">format, size, encoding</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">2</div><div class="step-box"><div class="box exists"><div class="box-title">Parse</div><div class="box-sub">normalize to chrom/pos/ref/alt/rsid, infer zygosity</div></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-box"><div class="box shipped"><div class="box-title">Parse</div><div class="box-sub">normalize to chrom/pos/ref/alt/rsid, infer zygosity</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">3</div><div class="step-box"><div class="box exists"><div class="box-title">Quality filter</div><div class="box-sub">drop hom-ref, low GQ/DP, indels, failed calls</div></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-box"><div class="box shipped"><div class="box-title">Quality filter</div><div class="box-sub">drop hom-ref, low GQ/DP, failed calls</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">4</div><div class="step-box"><div class="box exists"><div class="box-title">Whitelist filter</div><div class="box-sub">keep only rsIDs in selected panel &mdash; default: ACMG SF v3.2 (81 genes)</div></div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-box"><div class="box shipped"><div class="box-title">Whitelist filter</div><div class="box-sub">keep rsIDs in selected panel &mdash; default: ACMG SF v3.2 (81 genes)</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">5</div><div class="step-box"><div class="box exists"><div class="box-title">rsID resolution</div><div class="box-sub">23andMe rsIDs &rarr; genomic coordinates via Ensembl Variation API</div></div></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-box"><div class="box shipped"><div class="box-title">rsID resolution</div><div class="box-sub">rsIDs &rarr; coordinates via Ensembl (rsid_cache)</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">6</div><div class="step-box"><div class="box exists"><div class="box-title">Deduplicate</div><div class="box-sub">key: (chrom, pos, ref, alt)</div></div></div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-box"><div class="box shipped"><div class="box-title">Deduplicate</div><div class="box-sub">key: (chrom, pos, ref, alt)</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">7</div><div class="step-box"><div class="box exists" style="border-color:#22d3ee; background:#082f49; color:#cffafe;"><div class="box-title" style="color:#22d3ee">Annotate &nbsp;<span style="font-size:10px; color:#164e63">&larr; calls all 4 external APIs &rarr;</span></div><div class="box-sub">consequence, clinical significance, population frequency</div></div></div></div>
+    <div class="step"><div class="step-num">7</div><div class="step-box"><div class="box shipped" style="border-color:#22d3ee; background:#082f49; color:#cffafe;"><div class="box-title" style="color:#22d3ee">Annotate (8 threads) &nbsp;<span style="font-size:10px; color:#164e63">&larr; external APIs &rarr;</span></div><div class="box-sub">consequence, clinical significance, population frequency, protein/pharma context</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">8</div><div class="step-box"><div class="box exists"><div class="box-title">Score + tier</div><div class="box-sub">&#128308; Critical &ge;500 &nbsp; &#128992; High &ge;100 &nbsp; &#128993; Medium &ge;30 &nbsp; &#128994; Low &lt;30 &nbsp; &#128309; Carrier</div></div></div></div>
+    <div class="step"><div class="step-num">8</div><div class="step-box"><div class="box shipped"><div class="box-title">Score + tier + ACMG</div><div class="box-sub">&#128308; Critical &#128992; High &#128993; Medium &#128994; Low &#128309; Carrier; per-variant ACMG evidence</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">9</div><div class="step-box"><div class="box exists"><div class="box-title">Summarize</div><div class="box-sub">headline, consequence_plain, rarity_plain, action_hint</div></div></div></div>
+    <div class="step"><div class="step-num">9</div><div class="step-box"><div class="box shipped"><div class="box-title">Summarize</div><div class="box-sub">headline, consequence_plain, rarity_plain, action_hint, tier_basis</div></div></div></div>
     <div class="arrow-down">&#8595;</div>
-    <div class="step"><div class="step-num">10</div><div class="step-box"><div class="box exists"><div class="box-title">Sort</div><div class="box-sub">by score descending</div></div></div></div>
+    <div class="step"><div class="step-num">10</div><div class="step-box"><div class="box shipped" style="border-color:#22d3ee; background:#082f49; color:#cffafe;"><div class="box-title" style="color:#22d3ee">V3/V4 enrichment</div><div class="box-sub">KEGG pathways &bull; receptor genetics &bull; PRS &bull; BPC-157 &bull; peptide coverage &bull; PGx (star alleles &rarr; CPIC &rarr; conformal)</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">11</div><div class="step-box"><div class="box shipped"><div class="box-title">Sort + assemble dict</div><div class="box-sub">variants sorted by score; dossiers generated</div></div></div></div>
   </div>
 
   <!-- External APIs -->
   <div class="apis-wrap">
-    <div style="font-size:10px; color:#475569; padding: 8px 0 8px 0; font-style:italic">called per variant during step 7</div>
-    <div class="box external">
-      <div class="box-title">Ensembl VEP</div>
-      <div class="box-sub">functional consequence<br>MANE Select transcript<br>15 req/sec</div>
-    </div>
-    <div class="box external">
-      <div class="box-title">NCBI ClinVar</div>
-      <div class="box-sub">clinical classification<br>disease name + condition_key<br>3&ndash;10 req/sec</div>
-    </div>
-    <div class="box external">
-      <div class="box-title">gnomAD</div>
-      <div class="box-sub">population frequency<br>~800k genomes<br>GraphQL, r4 &rarr; r2.1</div>
-    </div>
-    <div class="box external" style="border-style: dashed; opacity:0.7;">
-      <div class="box-title">MyVariant.info</div>
-      <div class="box-sub">fallback aggregator<br>only when ClinVar + gnomAD both null</div>
-    </div>
-    <div style="font-size:10px; color:#475569; margin-top:8px; font-style:italic">also used in step 5:</div>
-    <div class="box external" style="opacity:0.7;">
-      <div class="box-title">Ensembl Variation</div>
-      <div class="box-sub">rsID &rarr; coordinates<br>15 req/sec</div>
-    </div>
+    <div style="font-size:10px; color:#475569; padding:8px 0; font-style:italic">called per variant during annotation</div>
+    <div class="box external"><div class="box-title">Ensembl VEP</div><div class="box-sub">functional consequence; MANE Select</div></div>
+    <div class="box external"><div class="box-title">NCBI ClinVar</div><div class="box-sub">clinical classification; condition_key</div></div>
+    <div class="box external"><div class="box-title">gnomAD</div><div class="box-sub">population frequency (GraphQL)</div></div>
+    <div class="box external" style="border-style:dashed; opacity:0.75;"><div class="box-title">MyVariant.info</div><div class="box-sub">fallback aggregator</div></div>
+    <div class="box external"><div class="box-title">UniProt · PharmGKB · GWAS Catalog</div><div class="box-sub">protein + pharma + trait enrichment</div></div>
+    <div style="font-size:10px; color:#475569; margin-top:8px; font-style:italic">regulatory subsystem (live merge):</div>
+    <div class="box external"><div class="box-title">ClinicalTrials.gov · openFDA · Federal Register</div><div class="box-sub">live FDA peptide status; degrades gracefully</div></div>
   </div>
 </div>
 
 <!-- Output -->
 <hr class="section-divider">
-<div class="section-label">ENGINE OUTPUT</div>
-<div style="max-width:500px; margin:0 auto;">
+<div class="section-label">ENGINE OUTPUT &mdash; <code>run_pipeline()</code> returns a dict</div>
+<div style="max-width:640px; margin:0 auto;">
   <div class="box output" style="text-align:center; padding:16px 20px;">
-    <div class="box-title" style="font-size:14px; margin-bottom:6px;">list[dict] &mdash; scored, ranked variants</div>
+    <div class="box-title" style="font-size:14px; margin-bottom:6px;">dict &mdash; scored variants + enrichment profiles</div>
     <div class="box-sub" style="font-size:11px; line-height:1.8">
-      variant_id &bull; genes &bull; clinvar &bull; condition_key &bull; gnomad_af<br>
-      score &bull; tier &bull; emoji &bull; headline &bull; consequence_plain<br>
-      rarity_plain &bull; action_hint &bull; carrier_note &bull; frequency_derived_label
+      variants (variant_id &bull; genes &bull; clinvar &bull; score &bull; tier &bull; tier_basis &bull; acmg &bull; headline &hellip;)<br>
+      pathway_summary &bull; receptor_genetics &bull; prs_profile &bull; ar_cag_repeat<br>
+      peptide_recommendations &bull; pgx_profile &bull; dossiers &bull; acmg_summary &bull; analysis_status
     </div>
   </div>
 </div>
 
-<!-- Missing web layer -->
+<!-- Data + storage layer -->
 <hr class="section-divider">
-<div class="section-label" style="color:#c2410c">&#9650; NOT BUILT YET &mdash; WEB LAYER</div>
-
-<div class="missing-grid">
-  <div class="box missing">
-    <div class="badge badge-missing">missing</div>
-    <div class="box-title">FastAPI</div>
-    <div class="box-sub">POST /analyze<br>accepts file upload<br>calls run_pipeline()<br>returns merged JSON</div>
-    <div class="owner-tag">owner: Hampton</div>
-  </div>
-  <div class="box missing">
-    <div class="badge badge-missing">missing</div>
-    <div class="box-title">Annotation cache</div>
-    <div class="box-sub">Postgres<br>keyed by (chrom,pos,ref,alt)<br>TTL 30 days<br>skips external API calls on repeat</div>
-    <div class="owner-tag">owner: Hampton</div>
-  </div>
-  <div class="box missing">
-    <div class="badge badge-missing">content missing</div>
-    <div class="box-title">Condition library</div>
-    <div class="box-sub">Postgres table<br>keyed by condition_key<br>schema exists<br>81 ACMG rows needed</div>
-    <div class="owner-tag">owner: Sasank</div>
-  </div>
-  <div class="box missing">
-    <div class="badge badge-missing">missing</div>
-    <div class="box-title">Frontend</div>
-    <div class="box-sub">React<br>upload screen<br>processing screen<br>results cards</div>
-    <div class="owner-tag">Tom (code) Rocky (design)</div>
-  </div>
+<div class="section-label" style="color:#a78bfa">DATA LAYER &mdash; Postgres when <code>DATABASE_URL</code> set, SQLite fallback (<code>db/pool.py</code>)</div>
+<div class="grid-4">
+  <div class="box store"><div class="box-title">jobs</div><div class="box-sub">status / progress / results; in-memory fallback without DATABASE_URL</div></div>
+  <div class="box store"><div class="box-title">annotation_cache + rsid_cache</div><div class="box-sub">skip repeat external API calls; TTL</div></div>
+  <div class="box store"><div class="box-title">condition + peptide libraries</div><div class="box-sub">plain-English condition text; peptide/regulatory data</div></div>
+  <div class="box store"><div class="box-title">tracking · healthkit_* · users</div><div class="box-sub">HBRI series, device tokens, subject map, user rows</div></div>
 </div>
-<p class="gap-note">Annotation cache lookup happens before the engine runs. Condition library merge happens after the engine returns, before the API responds to the frontend.</p>
+<p style="font-size:11px; color:#64748b; font-style:italic; margin-top:10px;">Schema managed by <code>db/migrate.py</code> applying <code>db/migrations/00N_*.sql</code> (001&ndash;011), tracked in <code>schema_migrations</code>. Migrations run at API startup when <code>DATABASE_URL</code> is set.</p>
 
-<!-- V2 -->
+<!-- HealthKit ingestion -->
 <hr class="section-divider">
-<div class="section-label" style="color:#7c3aed">&#9650; V2 &mdash; SUBSCRIPTION / RESEARCH TRACKING</div>
-
-<div class="v2-grid">
-  <div class="box v2">
-    <div class="badge badge-v2">V2</div>
-    <div class="box-title">User accounts</div>
-    <div class="box-sub">Authelia auth<br>registration + login<br>required before any V2 feature works</div>
-    <div class="owner-tag">owner: Hampton</div>
-  </div>
-  <div class="box v2">
-    <div class="badge badge-v2">V2</div>
-    <div class="box-title">Stored profiles</div>
-    <div class="box-sub">Postgres user_variants<br>variant list per user<br>persists between sessions</div>
-    <div class="owner-tag">owner: Hampton</div>
-  </div>
-  <div class="box v2">
-    <div class="badge badge-v2">V2</div>
-    <div class="box-title">PubMed nightly job</div>
-    <div class="box-sub">NCBI Entrez query<br>gene symbols from stored profile<br>new papers since last run<br>LLM summarizes each paper</div>
-    <div class="owner-tag">owner: Curtis</div>
-  </div>
-  <div class="box v2">
-    <div class="badge badge-v2">V2</div>
-    <div class="box-title">Research feed</div>
-    <div class="box-sub">results tab in UI<br>one entry per relevant paper<br>free: 1 preview<br>paid: full feed</div>
-    <div class="owner-tag">Tom (UI) Curtis (logic)</div>
-  </div>
-</div>
-
-<!-- Immediate blockers -->
-<hr class="section-divider">
-<div class="section-label">IMMEDIATE BLOCKERS</div>
-<div style="display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-top:12px;">
-  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
-    <div class="box-title" style="color:#f87171;">&#9888; No URL</div>
-    <div class="box-sub">Hampton: FastAPI + Docker + K8s<br>Curtis: register domain<br><strong>blocks everything</strong></div>
-  </div>
-  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
-    <div class="box-title" style="color:#f87171;">&#9888; No condition library content</div>
-    <div class="box-sub">Sasank: write 4 rows<br>(BRCA1, TP53, LDLR, RYR1)<br><strong>blocks Rocky + Tom</strong></div>
-  </div>
-  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
-    <div class="box-title" style="color:#f87171;">&#9888; No branded email</div>
-    <div class="box-sub">Jeran: Google Workspace<br><strong>blocks outreach</strong></div>
-  </div>
+<div class="section-label">HEALTHKIT INGESTION PATH</div>
+<div class="grid-3">
+  <div class="box shipped"><div class="box-title">iOS app (peptodyssey)</div><div class="box-sub">syncs HealthKit samples with a device token</div></div>
+  <div class="box shipped"><div class="box-title">POST /healthkit/samples</div><div class="box-sub">device-token auth (fail-closed w/ DATABASE_URL) &rarr; de-identified healthkit_* tables</div></div>
+  <div class="box shipped"><div class="box-title">Subject &harr; patient bridge</div><div class="box-sub">healthkit_subject_map (migration 010) &rarr; healthkit_behavior HBRI adapter</div></div>
 </div>
 
 </body>
