@@ -84,7 +84,7 @@ These are the items an IRB will specifically scrutinize for *this* pipeline. Mos
 - [ ] **BAA and/or DUA with each partner clinic** (executed before any PHI transfer)
 - [ ] **Recruitment materials** (recruit at partner clinics from patients already on peptide therapy; no coercion; exclude investigators' own students/employees/subordinates)
 - [ ] **AE observation / reporting plan** (observe and record adverse events; do not manage therapy or issue clinical directives)
-- [ ] **Data management & security plan** (storage, encryption at rest/in transit, access control, retention; addresses the current `api.py`/`jobs.json` gaps — `clinical-validation-plan.md` §13)
+- [ ] **Data management & security plan** (storage, encryption at rest/in transit, access control, retention). Note current code state: jobs persist to Postgres via `db/pool.py` when `DATABASE_URL` is set (in-memory fallback otherwise); the deprecated `JOB_STORE_KEY`/Fernet `jobs.json` snapshot in `api.py` has been removed. Reconcile the residual gaps against `clinical-validation-plan.md` §13. <!-- NEEDS REVIEW: confirm the security posture (encryption at rest, access control) is sufficient for identifiable data against master-plan §13 B-3 status -->
 - [ ] **ROR / incidental-findings plan** (ACMG SF; default no clinical return)
 - [ ] **Financial COI management plan** ← required regardless of lane
 - [ ] DUA / dbGaP DAC approval (if controlled-access secondary data is also used)
