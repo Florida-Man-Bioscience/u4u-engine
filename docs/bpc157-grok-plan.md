@@ -2,7 +2,12 @@
 
 > Moved out of the top-level `README.md` (2026-07-01) to keep the README focused on
 > the engine. These are the original brainstorm notes that seeded the BPC-157 predictor
-> (`engine/annotators/bpc157_predictor.py`). Retained verbatim for provenance; **not**
+> (`engine/annotators/bpc157_predictor.py`), whose composite response score now also
+> feeds the HBRI responder-index feature adapter
+> (`engine/tracking/feature_adapters/bpc157_adapter.py`). Note the adapter's own
+> honesty contract: BPC-157 has **no validated human genetic predictor**, so the
+> feature enters the responder index with a wide, shrunk coefficient and widens
+> (does not sharpen) response uncertainty. Retained verbatim for provenance; **not**
 > clinical guidance — see the disclaimer below.
 
 ## Grok Plan for Predicting BPC-157 Response

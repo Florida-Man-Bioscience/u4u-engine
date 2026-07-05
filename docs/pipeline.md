@@ -3,9 +3,14 @@
 ```python
 from engine import run_pipeline
 
-results = run_pipeline(file_bytes, filename, filters, data_dir, progress_callback)
-# returns list[dict], score descending
+result = run_pipeline(file_bytes, filename, filters, data_dir, progress_callback)
+# returns a dict; result["variants"] is the scored variant list (score descending)
 ```
+
+The return value is a `dict` with keys: `variants`, `pathway_summary`,
+`receptor_genetics`, `prs_profile`, `ar_cag_repeat`, `peptide_recommendations`,
+`pgx_profile`, `dossiers`, `acmg_summary`, `genome_build`, `analysis_status`.
+The **Output fields** below describe each per-variant entry in `result["variants"]`.
 
 ---
 
@@ -102,14 +107,6 @@ Tier thresholds: CRITICAL ≥ 500, HIGH ≥ 100, MEDIUM ≥ 30, LOW < 30.
 - Heterozygous + recessive disease → `carrier_note` set, score halved
 - Empty file → raises `ValueError`
 - Pathogenic variant → first in sorted output
-
----
-
-## Next steps
-
-1. **Curtis** — write `scripts/generate_filters.py`: download ClinVar bulk XML from `https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarFullRelease_00-latest.xml.gz`, filter to ACMG SF v3.2 gene list, write rsIDs to `data/acmg81_rsids.txt`
-2. **Curtis** — add integration test with a real (anonymized) 23andMe sample file: call `run_pipeline(sample_bytes, "sample.txt", ["acmg81_rsids.txt"])`, assert at least one result has `tier="critical"` or `tier="high"`
-3. **Hampton** — wire `progress_callback` in the FastAPI layer: pass a callback that writes `{"step": step, "pct": pct}` to a channel keyed by upload ID; frontend polls this channel for the live progress bar
 
 ---
 
