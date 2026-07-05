@@ -192,7 +192,9 @@ Longitudinal biomarker tracking with Bayesian response prediction (`engine/track
 |--------|------|---------|
 | `GET` | `/tracking/patients/{id}/predictions?peptide={p}&biomarker={b}` | Bayesian posterior + 95% credible-interval predictive curve for one (patient, peptide, biomarker) |
 
-The prediction response fuses a genetics-derived prior, leave-one-out cohort pooling, and the measurement likelihood into a Normal–Normal posterior. Key fields: `posterior` (`mean_pct_change`, `credible_lo_95`, `credible_hi_95`), `posterior_predictive` / `prior_predictive` (per-week `mean`, `lo_95`, `hi_95` curves), `prior` (carries `evidence_grade` when the biomarker has a research-backed registry entry — see `docs/architecture.md`), and `expected_window`.
+The prediction response fuses a genetics-derived prior, leave-one-out cohort pooling, and the measurement likelihood into a Normal–Normal posterior. Key fields: `posterior` (`mean_pct_change`, `credible_lo_95`, `credible_hi_95`), `posterior_predictive` / `prior_predictive` (per-week `mean`, `lo_95`, `hi_95` curves), `prior` (carries `evidence_grade` when the biomarker has a research-backed registry entry — see `docs/architecture.md`), `expected_window`, and `responder_features`.
+
+`responder_features` is the per-feature provenance of the HBRI[^hbri] responder index — an array (one entry per feature-adapter that fired) of `{ "name", "value", "beta", "variance", "source" }`, where `source` is the emitting adapter (e.g. `genetics`, and, when patient enrichment is present, `prs_inflammatory_baseline` / `bpc157_composite` / `covariates` / `healthkit_behavior`). The full generative model is in `docs/models/peptide-response-model.md`.
 
 **Catalog & demo**
 
@@ -204,6 +206,106 @@ The prediction response fuses a genetics-derived prior, leave-one-out cohort poo
 | `POST` | `/tracking/seed` | Populate synthetic demo data |
 
 > The generative model is documented in-app at `/tracking/model`.
+
+---
+
+## HealthKit ingestion API (`/healthkit`)
+
+De-identified ingestion of Apple HealthKit samples from the peptodyssey iOS app (`engine/healthkit/`, mounted under `/healthkit`). Subjects are the app-assigned opaque `subject_id` — never a user identity. A migration-010 subject↔patient bridge (`healthkit_subject_map`) links a subject to a tracking patient; see `docs/healthkit-storage.md`.
+
+**Authentication** — interim per-device bearer token (`Authorization: Bearer pep_hk_…`). Enforcement is **fail-closed in prod**: when a real database is configured (`DATABASE_URL` set) a valid token is **always** required and no env var can open it. The local SQLite dev/test fallback (no `DATABASE_URL`) is open unless `HEALTHKIT_REQUIRE_TOKEN=1`. A token may be bound to a single `subject_id` (a bound token may only touch that subject); read requests additionally require a *bound* token so a shared token cannot read every subject's data. Tokens are stored only as SHA-256 hashes (mint via `scripts/create_healthkit_token.py`). The longer-term auth target is Authentik device-code flow.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/healthkit/samples` | Idempotent batch upload of HealthKit samples (insert-only by sample `uuid`) |
+| `GET` | `/healthkit/samples` | Read back a subject's stored samples |
+
+### POST /healthkit/samples
+
+**Request body** (JSON; keys accept iOS-natural camelCase)
+```json
+{
+  "subjectId": "opaque-subject-id",
+  "samples": [
+    {
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "class": "HKQuantitySample",
+      "type": "HKQuantityTypeIdentifierBodyMass",
+      "value": 81.2,
+      "unit": "kg",
+      "start": "2026-07-01T08:00:00Z",
+      "end": "2026-07-01T08:00:00Z",
+      "source": { "name": "iPhone", "bundleId": "com.apple.Health" },
+      "device": {},
+      "metadata": {},
+      "workout": {
+        "activityType": "running",
+        "durationSeconds": 1800,
+        "totalEnergyKcal": 240,
+        "totalDistanceMeters": 4200
+      }
+    }
+  ],
+  "anchors": { "HKQuantityTypeIdentifierBodyMass": "base64-HKQueryAnchor" }
+}
+```
+- `subjectId` (aliased `subject_id`) — required, 1–128 chars
+- `samples[].class` — HealthKit sample class (aliased from the reserved word `class`)
+- `value`, `unit`, `source`, `device`, `metadata`, `workout` are optional per sample
+- `anchors` — optional per-type `HKQueryAnchor` mirror (base64), `type_identifier → anchor`
+
+**Response 200**
+```json
+{ "received": 1, "inserted": 1 }
+```
+`received` counts samples in the request; `inserted` counts newly stored rows (duplicates by `uuid` are skipped — the write is idempotent).
+
+### GET /healthkit/samples
+
+**Query parameters**
+- `subject_id` (string, required)
+- `type` (string, optional) — filter by HealthKit type identifier
+- `since` (ISO-8601, optional) — only samples with `start_time >= since`
+- `limit` (integer, default `1000`, range 1–10000)
+
+**Response 200** — a JSON array of stored sample rows.
+
+**Error responses**
+| Code | Reason |
+|------|--------|
+| 401 | Token required (prod / `HEALTHKIT_REQUIRE_TOKEN=1`) but missing, invalid, or revoked |
+| 403 | Token bound to a different `subject_id`, or (read) an unbound token used |
+
+---
+
+## User accounts API (`/users`)
+
+Local app-user rows behind an Authentik forward-auth proxy (`engine/users/`, mounted under `/users`). The proxy is expected to forward trusted `X-Authentik-*` headers identifying the caller; the router materialises a local users row on first sight.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/users/me` | Return (and lazily create) the user row for the Authentik subject on this request |
+| `GET` | `/users` | List all known users (admin/operator view; the proxy gates access) |
+
+**User object**
+```json
+{
+  "id": "string",
+  "authentik_uid": "string",
+  "username": "string",
+  "email": "string|null",
+  "full_name": "string|null",
+  "groups": ["group-a"],
+  "created_at": "2026-07-01T00:00:00Z",
+  "last_seen_at": "2026-07-01T00:00:00Z",
+  "disabled_at": "string|null"
+}
+```
+
+**Error responses**
+| Code | Reason |
+|------|--------|
+| 401 | `GET /users/me` when no Authentik subject was forwarded (request bypassed the proxy or open-demo mode) — treat as unauthenticated |
 
 ---
 
@@ -222,7 +324,7 @@ POST /analyze  →  pending  →  running (progress 0→100%)  →  done
                                                            →  failed
 ```
 
-Jobs are held in memory for `JOB_TTL_HOURS` hours after completion, then purged.
+Jobs persist to Postgres when `DATABASE_URL` is set; without it they live only in an in-memory store and are lost on restart. Either way, completed jobs are retained for `JOB_TTL_HOURS` hours, then purged. (The former `JOB_STORE_KEY`/Fernet on-disk snapshot is deprecated and no longer used.)
 
 ---
 
@@ -230,6 +332,8 @@ Jobs are held in memory for `JOB_TTL_HOURS` hours after completion, then purged.
 
 | Env var | Default | Description |
 |---------|---------|-------------|
+| `DATABASE_URL` | _(none)_ | Postgres connection string. When set, all caches/stores — annotation cache, rsID cache, tracking, jobs, HealthKit — use Postgres (via `db/pool.py`, migrations applied by `db/migrate.py`); without it, SQLite/in-memory fallback for local dev/tests |
+| `HEALTHKIT_REQUIRE_TOKEN` | _(unset)_ | Set to `1` to require a device token even in the open SQLite dev/test fallback (always required when `DATABASE_URL` is set) |
 | `WORKERS` | `4` | Thread pool size |
 | `MAX_UPLOAD_MB` | `100` | Upload size limit (MB) |
 | `JOB_TTL_HOURS` | `24` | Job retention window (hours) |
@@ -256,3 +360,4 @@ Jobs are held in memory for `JOB_TTL_HOURS` hours after completion, then purged.
 [^conditionkey]: **condition_key** — a stable identifier for the associated condition, formatted `OMIM:<id>`, `MedGen:<id>`, or `ClinVar:<id>`; used to join curated plain-English condition text.
 [^gnomad]: **gnomAD AF / popmax** — population allele frequency from the Genome Aggregation Database; `gnomad_af` is the overall frequency, `gnomad_popmax` the highest across individual ancestry groups.
 [^tier]: **Tier** — the engine's clinical-priority bucket (critical / high / medium / low) derived from the numeric `score`.
+[^hbri]: **HBRI** — the tracking module's unified peptide-response model: a responder index `η = 1 + Δ·tanh(βᵀx)` assembled from an auto-discovering feature-adapter registry (`engine/tracking/feature_adapters/`). Authoritative spec: `docs/models/peptide-response-model.md`.
