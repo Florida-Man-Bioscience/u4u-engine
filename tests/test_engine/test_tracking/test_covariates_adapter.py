@@ -16,6 +16,11 @@ from datetime import datetime, timedelta
 import pytest
 
 from engine.tracking import analysis, pooling, service
+from engine.tracking.feature_adapters.covariates_adapter import (
+    _AGE_BETA,
+    _AGE_SIGMA_BETA,
+    CovariatesAdapter,
+)
 from engine.tracking.genetics import R_DELTA_SCALE, generate_synthetic_profile
 from engine.tracking.responder_index import (
     PatientHandle,
@@ -23,11 +28,6 @@ from engine.tracking.responder_index import (
     build_feature_vector,
     registered_adapters,
     responder_index,
-)
-from engine.tracking.feature_adapters.covariates_adapter import (
-    _AGE_BETA,
-    _AGE_SIGMA_BETA,
-    CovariatesAdapter,
 )
 
 _YEAR = 2026  # deterministic reference year (passed via context.extra)
