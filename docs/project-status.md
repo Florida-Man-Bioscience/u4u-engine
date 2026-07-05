@@ -1,21 +1,30 @@
 # Project Status
 
+> **Note (2026-07):** this file has been reconciled with shipped reality. The
+> MVP has been superseded — the frontend is built and deployed, Postgres is
+> wired, and pharmacogenomics / research tracking / PRS have all shipped. See
+> **[Now shipped — previously listed as missing](#now-shipped--previously-listed-as-missing)**.
+
 ---
 
-## MVP scope
+## MVP scope (historical)
 
-VCF upload → annotation engine → interactive dashboard. No genome storage. Email capture for future research updates. Target: 4 weeks.
+The original 4-week MVP was: VCF upload → annotation engine → interactive
+dashboard, no genome storage, email capture for future research updates. That
+scope shipped and the product has since grown well past it (PGx, tracking, PRS,
+HealthKit, a deployed Next.js frontend).
 
 ---
 
 ## What works
 
-- Parses VCF / `.vcf.gz` (MVP primary), 23andMe `.txt`, CSV, rsID lists
-- 10-step pipeline: validate → parse → quality filter → whitelist → rsID resolution → deduplicate → annotate → score → summarize → sort
-- Annotates against ClinVar, gnomAD, Ensembl VEP[^vep] (retry + fallback)
+- Parses VCF / `.vcf.gz` (primary), 23andMe `.txt`, CSV, rsID lists
+- 10-step pipeline (`engine/pipeline.py`): validate → parse → quality filter → whitelist → rsID resolution → deduplicate → annotate → score → summarize → sort. `run_pipeline()` returns a rich **`dict`** (keys: `variants`, `pathway_summary`, `receptor_genetics`, `prs_profile`, `ar_cag_repeat`, `peptide_recommendations`, `pgx_profile`, `dossiers`, `acmg_summary`, `analysis_status`)
+- Annotates against ClinVar, gnomAD, Ensembl VEP[^vep], MyVariant.info (fallback), UniProt, PharmGKB, GWAS Catalog (retry + fallback)
 - Returns plain-English headline, consequence, rarity, action hint per variant
-- FastAPI job queue (`api.py`) — `POST /analyze` → 202 + `job_id`, `GET /jobs/:id` for polling
-- Postgres schema (`db/schema.sql`) — jobs, results, condition_library, annotation_cache
+- FastAPI job queue (`api.py`) — `POST /analyze` → 202 + `job_id`, `GET /jobs/:id` for polling. Jobs persist to **Postgres when `DATABASE_URL` is set**; in-memory fallback otherwise. (The old `JOB_STORE_KEY`/Fernet on-disk job store is **deprecated and unused** — `api.py` emits a deprecation warning if the var is set.)
+- **Postgres backing** for annotation cache, rsID cache, tracking, jobs, and HealthKit — via `db/pool.py` when `DATABASE_URL` is set, with SQLite fallback for local dev/tests. Schema is applied by `db/migrate.py` (`run_migrations`, called at startup), which runs `db/migrations/00N_*.sql` files `001`–`011` and tracks them in a `schema_migrations` table.
+- Deployed to a self-hosted RKE2 Kubernetes cluster, public at **`flmanbiosci.net`** (GitOps via Flux)
 - CI on push via GitHub Actions (Python 3.11 and 3.12)
 
 ### PeptidIQ V3[^peptidiq] — Peptide Response Interpretation Engine ✅
@@ -44,10 +53,39 @@ Added April 2026. Extends the genomics pipeline into a clinically actionable pep
 
 **Predictive Logic Architecture** — spec documented in Notion[^notion] (Predictive Logic Architecture page); 4-layer scoring engine (Input → Evidence [35/25/20/20 weights] → Outcome → Logic Flow).
 
-**Bayesian Biomarker Tracking & Evidence Registry** (`engine/tracking/`) ✅
-- Longitudinal biomarker tracking with a Normal–Normal conjugate model (`bayes.py`): `analysis.predict_response` fuses a genetics-derived prior (`genetics.derive_prior`), leave-one-out cohort pooling (`pooling.py`), and the measurement likelihood into a posterior with 95% credible intervals and a forward predictive curve. REST API at `/tracking/...`; the generative model is documented in-app at `/tracking/model`.
+**Biomarker Tracking — HBRI unified peptide-effect model** (`engine/tracking/`) ✅
+
+The tracking subsystem has been upgraded from the original scalar Normal–Normal
+model to the **Hierarchical Bayesian Responder Index (HBRI)**. The authoritative
+spec is [`docs/models/peptide-response-model.md`](models/peptide-response-model.md).
+
+- **Responder index** (`responder_index.py`): `η = 1 + Δ·tanh(βᵀx)` with `Δ = R_DELTA_SCALE = 0.72`, a bounded per-patient/per-biomarker multiplier over the linear feature score `βᵀx`.
+- **Auto-discovering feature-adapter registry** (`engine/tracking/feature_adapters/`): each `*_adapter.py` self-registers via `@register_adapter` on package load — genetics, PRS, BPC-157, demographic covariates, and HealthKit behaviour adapters ship. Dropping a new adapter file requires no edit to any shared file.
+- **Correlation-aware BLUE fusion** (`pooling.combine_priors`): a best-linear-unbiased-estimator fusion of the genetics-derived prior and leave-one-out cohort pooling under an assumed error correlation `ρ`, replacing the previous fused-precision cap and fixing double-counting.
+- **Pipeline enrichment wiring** (`patient_enrichment`, migration `011`): pipeline-derived enrichment feeds the responder context.
+- **Prediction output** now includes a `responder_features` field (per-feature contributions) alongside the posterior with 95% credible intervals and forward predictive curve. Bayesian conjugate math still lives in `bayes.py`.
+- **Gated design stubs**: `dose_response.py` (saturating dose→multiplier) and `cross_biomarker.py` (cross-biomarker covariance) ship gated/off by default.
+- REST API mounted at `/tracking/*`; the generative model is documented in-app at `/tracking/model`.
+
 - **Research-backed evidence registry** (`engine/tracking/evidence.py` + `data/biomarker_evidence.json`): citation-anchored, grade-tagged (A–D) per-biomarker effect entries. The evidence grade sets the prior's `relative_sd` — tighter for well-evidenced markers, flat `PANEL_REL_SD` fallback for the (still majority) uncited markers. Honesty contract: an entry requires ≥1 real, retrieved citation (DOI); curate via `python -m engine.tracking.evidence_update`.
 - **GLP-1 / incretin class** (Semaglutide, Tirzepatide, Liraglutide) integrated as first-class, grade-A evidence-backed peptides, with class-qualified marker names (e.g. `Body weight (GLP-1 RA)`) so their large, well-evidenced effects do not bleed onto the smaller generic markers shared by weaker peptides (AOD-9604, MOTS-c).
+
+**HealthKit ingestion** (`engine/healthkit/`) ✅
+- iOS app (`peptodyssey`) syncs de-identified HealthKit samples to `POST`/`GET /healthkit/samples` (router mounted in `api.py`).
+- **Device-token auth** (`engine/healthkit/auth.py`), **fail-closed when `DATABASE_URL` is set** (migration `009` device tokens).
+- **Subject ↔ patient bridge** (`healthkit_subject_map`, migration `010`; `engine/tracking/healthkit_identity.py` + `healthkit_bridge.py`) links opaque HealthKit subjects to tracking patients, feeding the HealthKit behaviour feature adapter.
+
+**Pharmacogenomics (PGx)** (`engine/pgx/`) ✅
+- Orchestrated by `pgx/orchestrator.py`: star-allele calls → HLA tag-SNP calls → CPIC phenoconversion → drug recommendations + PRS + HGNN conformal prediction sets. Served at `GET /jobs/{id}/pgx` and `GET /jobs/{id}/drug/{drug}`; the frontend results view defaults to the **`pgx`** tab.
+
+**Polygenic Risk Scores (PRS)** (`engine/annotators/prs_calculator.py`) ✅
+- PRS profiles are computed in-pipeline (`prs_profile` output key) and also surface as a tracking responder feature (`engine/tracking/feature_adapters/prs_adapter.py`).
+
+**ACMG/AMP classification** (`engine/acmg/`) — evidence-assembly aid requiring qualified human sign-out via `POST /jobs/{id}/variants/{variant_id}/acmg-signoff`.
+
+**Regulatory module** (`engine/regulatory/`) — curated peptide FDA status merged with live sources; served at `/regulatory/peptides` and `/regulatory/events` (migration `006` cache).
+
+**Users / auth** (`engine/users/`) — `/users` router (`/users/me`, `/users`) mounted in `api.py` (migration `004` users, `005` ownership FKs).
 
 ---
 
@@ -55,52 +93,86 @@ Added April 2026. Extends the genomics pipeline into a clinically actionable pep
 
 ```
 engine/
-  annotators/       ClinVar, gnomAD, VEP, MyVariant, kegg_mapper modules
+  annotators/       ClinVar, gnomAD, VEP, MyVariant, UniProt, PharmGKB,
+                    GWAS Catalog, kegg_mapper, receptor_mapper,
+                    prs_calculator, bpc157_predictor, peptide_mapper
   repeat_callers/   ExpansionHunter STR caller (AR CAG repeat)
-  tracking/         Bayesian biomarker tracking + research-backed evidence registry
-  pipeline.py       run_pipeline() entry point
+  peptides/         peptide biomarker + measurement catalogs
+  tracking/         HBRI tracking: responder_index.py, bayes.py, pooling.py
+                    (BLUE fusion), analysis.py, evidence registry,
+                    healthkit_identity.py / healthkit_bridge.py,
+                    dose_response.py + cross_biomarker.py (gated stubs),
+                    feature_adapters/ (auto-discovering adapter registry)
+  healthkit/        HealthKit ingestion: api.py, auth.py (device token),
+                    service.py, db.py, schemas.py
+  pgx/              pharmacogenomics: orchestrator.py, star_alleles/, cpic/,
+                    hgnn/, prs_pgx/
+  acmg/             ACMG/AMP classifier + human sign-off
+  regulatory/       curated + live FDA peptide status (aggregator, sources/)
+  users/            users/auth router + service
+  pipeline.py       run_pipeline() entry point (returns a dict)
   scoring.py        scoring + tier logic
   summary.py        plain-English text generation
-api.py              FastAPI job queue
+api.py              FastAPI app: analyze/jobs + /tracking, /healthkit, /users,
+                    /regulatory routers + ACMG sign-off; startup runs migrations
 db/
-  schema.sql        base Postgres schema (jobs, results, condition_library)
-  migrations/       incremental migration files (003 = Peptide Condition Library)
+  pool.py           shared psycopg2 pool + sqlite3-compatible conn wrapper
+  migrate.py        run_migrations() — applies 00N_*.sql, tracks schema_migrations
+  schema.sql        base Postgres schema
+  migrations/       001 initial · 002 caches+tracking · 003 peptide condition
+                    library · 004 users · 005 ownership FKs · 006 regulatory
+                    cache · 007 cache TTL · 008 healthkit · 009 healthkit device
+                    tokens · 010 healthkit subject map · 011 patient enrichment
   models/           SQLAlchemy ORM models (peptide_models.py)
   seeds/            seed data SQL (peptide_seed_data.sql)
 data/
   acmg81_rsids.txt
-  condition_library_for_sasank.xlsx
-  peptidiq_engine_schema.json     ← JSON Schema 2020-12 for scoring engine I/O
-tests/test_engine/  all unit + integration tests
+  biomarker_evidence.json          ← citation-anchored evidence registry
+  peptidiq_engine_schema.json      ← JSON Schema 2020-12 for scoring engine I/O
+frontend/           Next.js 15 app (built + deployed): /, /jobs/[id],
+                    /jobs/[id]/results (peptides|pgx|variants tabs, pgx default),
+                    /tracking, /tracking/cohort, /regulatory, /study
+tests/              all unit + integration tests
 docs/               documentation (this file, architecture, roadmap, etc.)
 .github/            CI, issue templates, PR template
 ```
 
 ---
 
-## What doesn't exist
+## Now shipped — previously listed as missing
+
+The earlier "What doesn't exist" table is obsolete. The items below have all shipped:
+
+| Area | Then | Now |
+|------|------|-----|
+| Docker build + K8s deployment | Not deployed | **Deployed** to self-hosted RKE2, public at `flmanbiosci.net` (Docker + Flux GitOps) |
+| Postgres instance running | Schema exists — not wired | **Wired** via `db/pool.py`; `db/migrate.py` applies migrations `001`–`011` at startup |
+| Frontend | Not built | **Built + deployed** — Next.js 15 app (`frontend/`); routes `/`, `/jobs/[id]`, `/jobs/[id]/results`, `/tracking`, `/tracking/cohort`, `/regulatory`, `/study` |
+| Domain + DNS | Not registered | **Live** at `flmanbiosci.net` |
+| FastAPI endpoints for peptide response | Not yet wired | **Live** — `/tracking/*` router mounted in `api.py`; also `/healthkit/*`, `/users`, `/regulatory/*` |
+
+### Genuinely open / environment-dependent
 
 | Area | Status |
 |------|--------|
-| Docker build + K8s deployment | Not deployed |
-| Postgres instance running | Schema exists — not wired |
-| Condition library content | 81 ACMG SF rows needed |
-| Frontend | Not built — spec in `docs/frontend.md` |
-| Domain + DNS | Not registered |
-| Security audit | Not started — plan in `U4U_Cybersecurity_Execution_Plan.docx` |
-| PeptidIQ scoring engine (Layer 3 Outcome) | Architecture spec done, implementation pending |
-| FastAPI endpoints for peptide response | Not yet wired to new ORM models |
-| ExpansionHunter binary + reference FASTA[^fasta] | Must be installed in deployment environment |
+| Condition library content | <!-- NEEDS REVIEW: confirm current ACMG SF row coverage against seeded data --> ACMG SF coverage still being expanded |
+| Security audit | <!-- NEEDS REVIEW: confirm current status --> Plan in `U4U_Cybersecurity_Execution_Plan.docx`; HealthKit uses device-token auth (fail-closed with `DATABASE_URL`) |
+| ExpansionHunter binary + reference FASTA[^fasta] | Optional runtime dep — must be installed in the deployment environment; pipeline degrades to VCF-only without it |
 
 ---
 
-## UI spec
+## UI
 
-Full spec in `docs/frontend.md`.
+The Next.js 15 frontend is built and deployed (see [`docs/frontend.md`](frontend.md)).
+It has grown past the original three-screen MVP (Upload → Processing → Results)
+into a multi-surface app: genome upload (`/`), job progress (`/jobs/[id]`),
+results with `peptides | pgx | variants` tabs (`pgx` default), longitudinal
+tracking (`/tracking`, `/tracking/cohort`), the FDA regulatory dashboard
+(`/regulatory`), and the study surface (`/study`).
 
-Three screens: Upload → Processing → Results.
-
-Results screen is a **prioritized findings report** — single column, expandable rows with a colored left border (tier color). Two sections: "Needs Attention" (critical + high) and "For Your Records" (medium + low + carrier, collapsed by default).
+The variant results view still renders a **prioritized findings report** —
+expandable rows with a colored left border (tier color), grouped into "Needs
+Attention" (critical + high) and "For Your Records" (medium + low + carrier).
 
 **Tier visual treatment:**
 
@@ -125,9 +197,21 @@ Results screen is a **prioritized findings report** — single column, expandabl
 
 ---
 
-## Not in V1
+## Beyond the original V1 — now shipped
 
-User accounts, saved results, email delivery, pharmacogenomics, research tracking, PRS[^prs], mobile, API access for external developers.
+Most items once deferred past V1 have shipped:
+
+- **Pharmacogenomics** — `engine/pgx/` (star alleles, CPIC phenoconversion, drug recs, HGNN conformal sets); results `pgx` tab.
+- **Research / biomarker tracking** — `engine/tracking/` (HBRI model, `/tracking/*` API, `/tracking` + `/tracking/cohort` UI).
+- **PRS[^prs]** — `engine/annotators/prs_calculator.py` (`prs_profile` output) + tracking `prs_adapter`.
+- **User accounts / auth** — `engine/users/` (`/users` router; migrations `004`/`005`).
+- **Saved results** — jobs persist to Postgres when `DATABASE_URL` is set.
+- **Mobile** — the `peptodyssey` iOS app syncs HealthKit into `engine/healthkit/`.
+
+Still genuinely future: email delivery and a public API for external developers.
+<!-- NEEDS REVIEW: confirm email-delivery and external-developer-API status. -->
+
+---
 
 ---
 

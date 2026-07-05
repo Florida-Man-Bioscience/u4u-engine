@@ -1,50 +1,62 @@
 # Roadmap
 
+> **Status reconciled 2026-07-04.** This was the original phased MVP[^mvp] plan. Phases 1–3
+> are shipped: the engine API and Next.js frontend are deployed at
+> [`flmanbiosci.net`](https://flmanbiosci.net), Postgres is wired via `db/pool.py`, and
+> results screens are live. Status tags below reflect current reality:
+> **[SHIPPED]** verified in the codebase / deployment · **[FUTURE]** genuinely not built ·
+> **[UNVERIFIED]** business/marketing milestone that can't be confirmed from code. Several
+> capabilities were delivered beyond this original plan — see
+> [Delivered beyond the original plan](#delivered-beyond-the-original-plan).
+
 ---
 
-## MVP[^mvp] target: 4 weeks from go
+## MVP[^mvp] target: 4 weeks from go — **[SHIPPED]**
 
 MVP is done when a user can upload a VCF[^vcf] file at a public URL and see an interactive results view of interpreted variants. No genome stored. Email capture for research updates.
 
----
-
-## Phase 1 — Get a URL
-
-**Done when:** `POST /analyze` at a public URL accepts a VCF file and returns annotated JSON.
-
-- Deploy `api.py` to K8s[^k8s]: `docker compose up --build`
-- Register domain, point DNS[^dns] at cluster
-- Google Workspace[^workspace] email setup
+This bar is met: uploads at `flmanbiosci.net` run `run_pipeline()` and render an interactive results view (`/jobs/[id]/results`, tabs `peptides | pgx | variants`).
 
 ---
 
-## Phase 2 — Build the product
+## Phase 1 — Get a URL — **[SHIPPED]**
 
-**Done when:** upload produces a styled results page with real condition content for 4 genes.
+**Done when:** `POST /analyze` at a public URL accepts a VCF file and returns annotated JSON. ✅ met.
 
-- Wire Postgres: `psql $DATABASE_URL -f db/schema.sql`
-- Condition library: BRCA1, TP53, LDLR, RYR1[^genes] rows
-- Results screen design (1 Critical row + 1 Carrier row using real text)
-- Upload + processing screens
-- Results screen build
+- **[SHIPPED]** Deploy `api.py` — now on the RKE2 Kubernetes[^k8s] cluster (`theswamp` namespace), released automatically on push to `main` via Flux image automation. `docker compose up --build` remains the local-prod-parity path.
+- **[SHIPPED]** Register domain, point DNS[^dns] at cluster — live at `flmanbiosci.net`.
+- **[UNVERIFIED]** Google Workspace[^workspace] email setup. <!-- NEEDS REVIEW: not verifiable from the codebase -->
 
 ---
 
-## Phase 3 — Ship
+## Phase 2 — Build the product — **[SHIPPED]**
+
+**Done when:** upload produces a styled results page with real condition content for 4 genes. ✅ met.
+
+- **[SHIPPED]** Wire Postgres — done via `db/pool.py` (shared psycopg2 pool, SQLite fallback when `DATABASE_URL` is unset). Schema is applied by `db/migrate.py` running `db/migrations/00N_*.sql` (001–011), tracked in `schema_migrations` — *not* the old `psql $DATABASE_URL -f db/schema.sql` one-shot.
+- **[SHIPPED]** Condition library: BRCA1, TP53, LDLR, RYR1[^genes] rows — seeded via migration `003_peptide_condition_library.sql`.
+- **[SHIPPED]** Results screen design + build — live Next.js results view with per-gene tables.
+- **[SHIPPED]** Upload + processing screens — `/` upload form and `/jobs/[id]` polling page.
+
+---
+
+## Phase 3 — Ship — **[SHIPPED]** (technical) / **[UNVERIFIED]** (beta cohort)
 
 **Done when:** 10 beta users have uploaded real files and seen real results.
 
-- All 81 ACMG SF[^acmgsf] condition library rows
-- Full results screen (all row states)
-- Security audit + pre-deploy checklist
-- CI/CD[^cicd]: main push triggers auto-deploy
-- 10 named beta users committed
+- **[SHIPPED]** All 81 ACMG SF[^acmgsf] condition library rows — filter list at `data/acmg81_rsids.txt` (default `FILTERS`).
+- **[SHIPPED]** Full results screen (all row states).
+- **[UNVERIFIED]** Security audit + pre-deploy checklist. <!-- NEEDS REVIEW: not verifiable from the codebase -->
+- **[SHIPPED]** CI/CD[^cicd]: push to `main` triggers auto-deploy — GitHub Actions build-and-push (`build-and-push.yml`, `build-and-push-frontend.yml`) → Zot registry → Flux rolls out.
+- **[UNVERIFIED]** 10 named beta users committed. <!-- NEEDS REVIEW: business milestone, not verifiable from the codebase -->
 
 ---
 
-## Phase 4 — Acquire users
+## Phase 4 — Acquire users — **[UNVERIFIED]** (business/marketing)
 
 **Done when:** 100+ uploads, 10 user interviews, subscription CTA[^cta] at 20%+ click-through[^clickthrough].
+
+<!-- NEEDS REVIEW: every item below is a growth/marketing milestone that cannot be confirmed from the codebase. Left as originally written. -->
 
 - Landing page: hero, value props[^valueprop], waitlist
 - Community outreach (r/23andme, r/genetics, r/Biohackers)
@@ -55,19 +67,38 @@ MVP is done when a user can upload a VCF[^vcf] file at a public URL and see an i
 
 ---
 
-## V2 — Research tracking (subscription)
+## V2 — Research tracking (subscription) — **[FUTURE]** (partially shipped)
 
-Not started. Requires Phases 1–3 complete.
+The original V2 was a **literature research feed**: a nightly PubMed job that surfaces new
+papers relevant to a user's stored variants, behind a subscription paywall. That specific
+product is **not built**. Note this is distinct from the longitudinal **biomarker** tracking
+(HBRI) that *did* ship — see [Delivered beyond the original plan](#delivered-beyond-the-original-plan).
 
-- User accounts
-- `user_variants` table (stored profiles)
-- Nightly PubMed[^pubmed] job + LLM[^llm] summarization
-- Research feed UI
-- Subscription paywall[^paywall]
+- **[SHIPPED]** User accounts — `engine/users/` (auth + `/users` API, migration `004_users.sql`).
+- **[FUTURE]** `user_variants` table (stored profiles) — no such table in `db/migrations/`.
+- **[FUTURE]** Nightly PubMed[^pubmed] job + LLM[^llm] summarization.
+- **[FUTURE]** Research feed UI.
+- **[FUTURE]** Subscription paywall[^paywall].
+
+---
+
+## Delivered beyond the original plan
+
+Capabilities shipped this cycle that the original roadmap did not scope. Verified in the codebase.
+
+- **Postgres data layer** — annotation cache, rsID cache, tracking, jobs, and HealthKit all use Postgres via `db/pool.py` when `DATABASE_URL` is set (SQLite fallback otherwise); migrations 001–011 via `db/migrate.py`. Jobs persist to Postgres; the older `JOB_STORE_KEY`/Fernet on-disk job store is deprecated and unused.
+- **HBRI biomarker tracking** (`engine/tracking/`) — longitudinal Bayesian biomarker tracking with the responder index η = 1 + Δ·tanh(βᵀx) (Δ = 0.72), a feature-adapter registry (`engine/tracking/feature_adapters/`: genetics, prs, bpc157, covariates, healthkit_behavior), correlation-aware BLUE fusion (`pooling.combine_priors`), and `patient_enrichment` (migration 011). Prediction output includes `responder_features`. Authoritative spec: [`docs/models/peptide-response-model.md`](models/peptide-response-model.md). UI at `/tracking`, `/tracking/cohort`.
+- **HealthKit ingestion** (`engine/healthkit/`) — `POST`/`GET /healthkit/samples` from the iOS app, device-token auth (fail-closed when `DATABASE_URL` is set), subject↔patient bridge (`healthkit_subject_map`, migration 010).
+- **PGx pipeline** (`engine/pgx/`) — star-allele calls, CPIC phenoconversion, drug recommendations; the `pgx` tab is the default on the results screen.
+- **Polygenic risk scores** (`engine/annotators/prs_calculator.py`) — surfaced as `prs_profile` in the pipeline output.
+- **Regulatory dashboard** (`engine/regulatory/`) — `/regulatory/*` API + `/regulatory` UI.
+- **Frontend surfaces** beyond upload/results: `/tracking`, `/tracking/cohort`, `/regulatory`, `/study`.
 
 ---
 
 ## Experiments
+
+<!-- NEEDS REVIEW: experiment outcomes are business/marketing measurements, not verifiable from the codebase. Left as originally written. -->
 
 | ID | Hypothesis | Method | Success threshold |
 |----|-----------|--------|-------------------|
@@ -80,7 +111,7 @@ Not started. Requires Phases 1–3 complete.
 
 ## Open decisions
 
-- Domain / URL
+- ~~Domain / URL~~ — **resolved:** `flmanbiosci.net`.
 - Subscription price
 - Consumer brand name
 - VUS[^vus] display language
@@ -109,3 +140,5 @@ Not started. Requires Phases 1–3 complete.
 [^vus]: **VUS (Variant of Uncertain Significance)** — a variant whose evidence is insufficient to classify as pathogenic or benign; how to display these to consumers is an open decision.
 [^llc]: **LLC (Limited Liability Company)** — a U.S. business entity that limits the owners' personal liability; "incorporation" is the act of legally forming it.
 [^meddevice]: **Medical device** — a regulatory classification (FDA-governed) for products intended to diagnose or treat. Being a "medical device" triggers far heavier oversight than an informational platform; which side of that line the product sits on is an open decision.
+</content>
+</invoke>
