@@ -62,16 +62,25 @@ All external APIs: 3 attempts, exponential backoff[^backoff] (2s, 4s, 8s). Netwo
 
 ---
 
-## Internal data stores (Postgres — not yet built)
+## Internal data stores (Postgres — shipped)
+
+When `DATABASE_URL` is set the engine uses Postgres via `db/pool.py`; without it,
+the caches fall back to local SQLite (`data/annotation_cache.db`, `data/rsid_cache.db`).
+Schema is applied by `db/migrate.py`, which runs the `db/migrations/00N_*.sql` files in
+order and records applied files in `schema_migrations`.
 
 | Table | Contents | Status |
 |-------|----------|--------|
-| `annotation_cache` | Results keyed by `(chrom, pos, ref, alt)`. TTL: 30 days.[^ttl] | Not built |
-| `condition_library` | Sasank's condition rows, loaded from CSV at deploy. | Not built |
-| `user_variants` | Stored profiles per user. | V2 |
-| `research_updates` | LLM paper summaries linked to user_variant records. | V2 |
+| `annotation_cache` | Annotator results keyed `(source, lookup_key)` → `result_json`. Rows older than 90 days are evicted on the next write.[^ttl] | Shipped (migration `002`) |
+| `rsid_cache` | rsID → coordinate resolution keyed `(rsid, genotype)`; same 90-day eviction. | Shipped (migration `002`) |
+| `peptide_condition_library` | One row per gene × variant × peptide response (direction, mechanism, dosing, safety flags). Seeded from `db/seeds/peptide_seed_data.sql`. | Shipped (migration `003`) |
+| `peptide_trade_offs` | Compound-level trade-off / regulatory / anecdote data (one row per peptide). | Shipped (migration `003`) |
+| `user_variants` | Stored profiles per user. | Future |
+| `research_updates` | LLM paper summaries linked to user_variant records. | Future |
 
-Hampton owns schema and migrations.
+The Postgres-only `peptide_condition_library` / `peptide_trade_offs` tables are defined
+by migration `003` with SQLAlchemy models in `db/models/peptide_models.py`. The two caches
+(`annotation_cache`, `rsid_cache`) are the only stores with a SQLite fallback.
 
 ---
 
@@ -84,7 +93,7 @@ Hampton owns schema and migrations.
 | `carrier_rsids.txt` | Carrier screening rsIDs |
 | `all_clinvar_rsids.txt.gz` | All ClinVar rsIDs (large) |
 
-Regeneration: `scripts/generate_filters.py` — not yet written.
+Regeneration: `scripts/generate_filters.py`.
 
 ---
 
@@ -97,14 +106,6 @@ Regeneration: `scripts/generate_filters.py` — not yet written.
 | Raw genome file | Nobody | Never |
 | User identity | Nobody | V1 has no accounts |
 | Gene symbols | NCBI Entrez[^entrez] | V2 only, after user opts in |
-
----
-
-## Next steps
-
-1. **Curtis** — register free NCBI API key at https://www.ncbi.nlm.nih.gov/account/ and add `NCBI_API_KEY` to `.env.example`; without it ClinVar annotates at 3 req/sec and will be the bottleneck under any real load
-2. **Curtis** — write `scripts/generate_filters.py`: fetch `https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarFullRelease_00-latest.xml.gz`, filter to ACMG SF v3.2 gene list, write rsIDs to `data/acmg81_rsids.txt`; this file is required before the whitelist filter step works
-3. **Hampton** — design Postgres `annotation_cache` schema: `(chrom TEXT, pos INT, ref TEXT, alt TEXT, vep_json JSONB[^jsonb], clinvar_json JSONB, gnomad_json JSONB, cached_at TIMESTAMP)`, unique index on `(chrom, pos, ref, alt)`, cron[^cron] job or trigger for 30-day TTL cleanup
 
 ---
 
@@ -122,7 +123,5 @@ Regeneration: `scripts/generate_filters.py` — not yet written.
 [^gnomadver]: **r4 / r2.1** — gnomAD data releases. v4 (GRCh38, larger sample) is queried first; v2.1 (GRCh37-based, lifted) is the fallback when a site is absent from v4.
 [^hgvs]: **HGVS** — Human Genome Variation Society nomenclature: a standardized string describing a variant by reference sequence and change (e.g. `chr1:g.123A>G`). MyVariant.info accepts it for coordinate lookups.
 [^backoff]: **Exponential backoff** — a retry strategy that waits progressively longer between attempts (here 2s, 4s, 8s) to avoid hammering an overloaded or rate-limited service.
-[^ttl]: **TTL (Time To Live)** — how long a cached entry stays valid before it is considered stale and refreshed (30 days here).
+[^ttl]: **TTL (Time To Live)** — how long a cached entry stays valid before it is considered stale and refreshed (90 days here, covering two monthly upstream refresh cycles).
 [^entrez]: **NCBI Entrez** — NCBI's cross-database search system; queried (V2 only) to resolve gene symbols.
-[^jsonb]: **JSONB** — PostgreSQL's binary JSON column type, which stores parsed JSON and supports indexing/querying of its fields.
-[^cron]: **cron** — a time-based job scheduler on Unix systems; here it would periodically purge cache rows older than the TTL.
