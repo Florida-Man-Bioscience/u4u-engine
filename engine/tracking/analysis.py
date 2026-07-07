@@ -13,6 +13,7 @@ the deploy footprint small and the queries readable.
 """
 from __future__ import annotations
 
+import logging
 import math
 import statistics
 from dataclasses import dataclass, field
@@ -22,9 +23,12 @@ from typing import Any
 from engine.peptides import get_biomarker_panel
 from engine.peptides.biomarkers import BiomarkerMeasurement
 
-from . import bayes, pooling, service
+from . import bayes, healthkit_bridge, pooling, service
 from .biomarker_params import expected_pct_change, params_for
 from .genetics import GeneticProfile, derive_prior
+from .responder_index import PatientHandle, ResponderContext, responder_index
+
+logger = logging.getLogger(__name__)
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -385,6 +389,30 @@ def predict_response(
         )
         prior_mean, prior_sd = prior.mean_pct_change, prior.sd_pct_change
 
+    # ── Responder-index provenance ──
+    # Assemble the feature context and evaluate the responder index so we can
+    # surface which features fired. With only the genetics adapter registered
+    # (today's default) this reports a single genetics feature.
+    responder_features: list[dict[str, Any]] = []
+    if raw is not None:
+        patient = service.get_patient(conn, patient_id)
+        ctx = ResponderContext(
+            peptide_name=peptide_name,
+            profile=profile,
+            patient=PatientHandle(
+                id=patient.id if patient else patient_id,
+                sex=patient.sex if patient else None,
+                birth_year=patient.birth_year if patient else None,
+            ),
+            conn=conn,
+            # Pipeline enrichment (PRS profile, BPC-157 composite) persisted at
+            # from-job time; lets the PRS/BPC-157 adapters fire. Absent → {} →
+            # those adapters no-op, so patients without enrichment are unchanged.
+            extra=service.get_patient_enrichment(conn, patient_id) or {},
+        )
+        idx = responder_index(ctx)
+        responder_features = [f.to_dict() for f in idx.features]
+
     # ── Find the active treatment for this peptide ──
     treatments = service.list_treatments_for_patient(conn, patient_id)
     treatment = next((t for t in treatments if t.peptide_name == peptide_name), None)
@@ -447,21 +475,65 @@ def predict_response(
     population_prior = pooling.estimate_population_prior(
         donors, peptide=peptide_name, biomarker=biomarker_name,
     )
+    # Correlation-aware fusion of the genetic prior with the cohort-pooled
+    # prior. The two are not independent (a cohort's response is itself partly
+    # genetic), so we fuse them under an assumed structural correlation rather
+    # than adding precisions — correcting the genetics×cohort double-counting
+    # that otherwise makes the posterior under-cover. With no cohort
+    # (population_prior is None) this is a no-op and the genetics-only path is
+    # unchanged.
     prior_mean, prior_sd = pooling.combine_priors(
         genetic_mean=prior_mean,
         genetic_sd=prior_sd,
         population=population_prior,
+        correlation=pooling.GENETIC_COHORT_CORRELATION,
     )
+
+    # ── HealthKit proxy observations (conservative, isolated) ──
+    # Wearable proxies (body mass, resting HR) for the *matching* biomarker are
+    # appended as extra likelihood observations, tagged with a higher noise
+    # scale so the joint fit down-weights them relative to clinical labs (see
+    # engine/tracking/healthkit_bridge). Gated so that with no subject mapping
+    # or no proxy samples the fit inputs are identical to the clinical-only
+    # path — behaviour (and the calibration backtest) is byte-for-byte
+    # unchanged. Any failure degrades to the clinical-only fit.
+    fit_observations = observations
+    fit_noise_scales: list[float] | None = None
+    if treatment is not None:
+        try:
+            hk_obs = healthkit_bridge.healthkit_observations(
+                conn, patient_id, peptide_name, biomarker_name, treatment.start_date,
+            )
+        except Exception:
+            # Never let a HealthKit-side failure break the clinical prediction.
+            # All *expected* empty cases (no proxy, no subject, no samples)
+            # already return [] without raising, so reaching here means an
+            # unexpected fault (schema drift, bad connection) worth surfacing.
+            logger.warning(
+                "HealthKit proxy lookup failed for patient=%s peptide=%s "
+                "biomarker=%s; falling back to clinical-only fit",
+                patient_id, peptide_name, biomarker_name, exc_info=True,
+            )
+            hk_obs = []
+        if hk_obs:
+            binding = healthkit_bridge.resolve_proxy(peptide_name, biomarker_name)
+            scale = (
+                binding.noise_scale if binding
+                else healthkit_bridge.WEARABLE_NOISE_SCALE
+            )
+            fit_observations = observations + hk_obs
+            fit_noise_scales = [1.0] * len(observations) + [scale] * len(hk_obs)
 
     fit = (
         bayes.joint_fit_likelihood(
-            observations=observations,
+            observations=fit_observations,
             tau_weeks=tau,
             baseline_prior_mean=baseline_prior_mean,
             baseline_prior_sd=baseline_prior_sd,
             noise_pct=panel_params.noise_pct,
+            noise_scales=fit_noise_scales,
         )
-        if observations else None
+        if fit_observations else None
     )
     if fit is not None:
         likelihood = fit.likelihood
@@ -571,6 +643,7 @@ def predict_response(
         # from the forward projection. None when no measurements exist.
         "last_observed_week": max_w if observations else None,
         "prior": prior.to_dict() if prior else None,
+        "responder_features": responder_features,
         "population_prior": (
             population_prior.to_dict() if population_prior else None
         ),
