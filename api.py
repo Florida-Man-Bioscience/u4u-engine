@@ -233,7 +233,15 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
 
 
 def _run_db_migrations() -> None:
-    """Run pending SQL migrations at startup (no-op when DATABASE_URL is absent)."""
+    """Run pending SQL migrations at startup.
+
+    No-op when DATABASE_URL is absent (SQLite/local dev builds its schema
+    lazily on first use). When DATABASE_URL is set, a migration failure is
+    fatal: we log and re-raise so startup aborts — crash-looping the pod and
+    surfacing the error — rather than serving requests against a half-migrated
+    schema. Silently proceeding is what let missing tracking tables reach
+    production and return HTTP 500 on the first query that needed them.
+    """
     if not _DB_URL:
         return
     try:
@@ -241,7 +249,8 @@ def _run_db_migrations() -> None:
         run_migrations(_DB_URL)
         log.info("Database migrations complete")
     except Exception:
-        log.exception("Database migration failed — proceeding with in-memory job store")
+        log.exception("Database migration failed — aborting startup")
+        raise
 
 
 def _pg_insert_results(job_id: str, variants: list[dict]) -> None:

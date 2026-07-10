@@ -71,3 +71,42 @@ jobs:
           name: tier-a-validation-reports-py${{ matrix.python-version }}
           path: validation/reports/
           if-no-files-found: ignore
+
+  # The default `test` job runs entirely on SQLite. Production is Postgres,
+  # which uses the incremental db/migrations/*.sql chain instead of the
+  # self-healing engine/tracking/schema.sql — so SQL-dialect drift and
+  # unapplied migrations are invisible to that job and only surface as HTTP
+  # 500s in prod. This job boots an ephemeral Postgres (the smoke suite does
+  # this itself via initdb + pg_ctl), applies the full migration chain, and
+  # exercises the real write/read paths against it.
+  postgres-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Put Postgres server binaries on PATH
+        # ubuntu-latest ships PostgreSQL preinstalled, but initdb/pg_ctl live
+        # in a versioned libexec dir that isn't on PATH. The smoke harness
+        # boots its own trust-auth, unix-socket-only cluster as the runner
+        # user, so no system postgres service is needed — only the binaries.
+        run: |
+          PG_BIN="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$PG_BIN" ]; then
+            sudo apt-get update && sudo apt-get install -y postgresql
+            PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
+          fi
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+
+      - name: Install engine
+        run: pip install -e ./engine
+
+      - name: Install test deps
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
+
+      - name: Run Postgres smoke tests
+        run: PG_TESTS=1 pytest tests/test_postgres_smoke.py -v

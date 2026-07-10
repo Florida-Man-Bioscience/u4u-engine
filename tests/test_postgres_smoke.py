@@ -421,3 +421,44 @@ def test_rsid_cache_evicts_on_resolve(pg_database, pg_clean, monkeypatch):
         rsids = [r[0] for r in cur.fetchall()]
     assert "rs_ancient" not in rsids
     assert "rs_new" in rsids
+
+
+# ── Tracking demo-data + prediction paths (the /tracking UI's two 500s) ──────
+
+
+def test_seed_and_predict_against_postgres(pg_database, pg_clean):
+    """Exercise the exact paths the tracking UI hit as HTTP 500s:
+    'Load demo data' (POST /tracking/seed) and 'load profile' (predict).
+
+    Both worked on SQLite yet 500'd in production because the Postgres
+    schema was behind the shipped code. Running them against a fully
+    migrated Postgres here guards against that class of drift — an
+    unapplied migration or a SQLite-only SQL construct would fail this
+    test instead of shipping.
+    """
+    import random
+
+    from engine.tracking import analysis, service
+    from engine.tracking import db as tracking_db
+    from engine.tracking.seed import seed as run_seed
+
+    # 'Load demo data'
+    with tracking_db.get_conn() as conn:
+        stats = run_seed(conn, rng=random.Random(42), n_patients=3, force=False)
+    assert stats["patients"] == 3
+    assert stats["treatments"] >= 3
+    assert stats["measurements"] > 0
+
+    # 'Load profile' → prediction for a seeded patient/peptide. This is the
+    # path that reaches service.get_patient_enrichment (patient_enrichment
+    # table, migration 011).
+    with tracking_db.get_conn() as conn:
+        patient = service.list_patients(conn)[0]
+        treatment = service.list_treatments_for_patient(conn, patient.id)[0]
+        result = analysis.predict_response(
+            conn,
+            patient_id=patient.id,
+            peptide_name=treatment.peptide_name,
+            biomarker_name="CRP",
+        )
+    assert result["posterior"] is not None
