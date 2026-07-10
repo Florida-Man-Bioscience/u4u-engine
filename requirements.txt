@@ -32,7 +32,7 @@ pydantic>=2.6
 # Testing
 pytest>=8.0
 pytest-asyncio>=0.23
-pytest-cov>=4.1
+pytest-cov>=7.1.0
 
 # Utilities
 python-dotenv>=1.0
