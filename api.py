@@ -124,13 +124,36 @@ app      = FastAPI(
 )
 
 # ── CORS — allow configured browser clients to reach the API ───────────────
+# Guard: a wildcard origin combined with credentials is a cross-origin-theft
+# footgun (any site could make credentialed calls). If an operator sets
+# ALLOWED_ORIGINS=*, disable credentials rather than honour the unsafe combo.
+_cors_wildcard = "*" in ALLOWED_ORIGINS
+if _cors_wildcard:
+    log.warning(
+        "ALLOWED_ORIGINS contains '*'; disabling allow_credentials for CORS. "
+        "Set an explicit origin allowlist to use credentialed requests."
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=not _cors_wildcard,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    """Baseline security response headers (defense-in-depth; the gateway may
+    also set these). Applied to every response including errors."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault(
+        "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+    )
+    return response
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 # ── Biomarker tracking router (longitudinal measurements + cohort analysis) ──
@@ -618,10 +641,13 @@ async def analyze(
     422  Unsupported / empty file (caught before background task starts)
     """
     filename   = file.filename or "upload"
-    file_bytes = await file.read()
 
     # ── Size guard (before job is created) ───────────────────────────────────
-    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+    # Read at most max_bytes + 1 so an oversized upload is rejected without
+    # materialising the whole (potentially multi-GB) body into RAM. The gateway
+    # should also enforce an ingress request-body limit (defense-in-depth).
+    max_bytes  = MAX_UPLOAD_MB * 1024 * 1024
+    file_bytes = await file.read(max_bytes + 1)
     if len(file_bytes) > max_bytes:
         raise HTTPException(
             status_code=413,
@@ -668,7 +694,10 @@ async def analyze(
         meds,
     )
 
-    log.info("job=%s queued file=%s size=%d bytes", job_id, filename, len(file_bytes))
+    # Do NOT log the raw filename — genome upload names frequently embed patient
+    # names/MRNs (PHI). Log the extension only, for format debugging.
+    _ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else "(none)"
+    log.info("job=%s queued ext=%s size=%d bytes", job_id, _ext, len(file_bytes))
 
     return JSONResponse(
         status_code=202,

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: this workflow only needs to read the repo.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -37,15 +41,14 @@ jobs:
         run: pip install -e ./engine
 
       - name: Install test deps
-        # The auth/API/tracking tests import the web + auth stack at collection
-        # time. bcrypt in particular is a hard dependency of engine.auth
-        # (imported eagerly from its __init__), so without it pytest errors out
-        # during collection rather than running the suite. These are all pure
-        # wheels (no system libs) and mirror the runtime image's deps.
-        # psycopg2-binary is required since the Postgres migration: db/pool.py
-        # imports psycopg2 at module load and tests/conftest.py pulls it in, so
-        # without it pytest errors during collection (matches requirements.txt).
-        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
+        # The API/tracking/healthkit tests import the web stack at collection
+        # time. These are all pure wheels (no system libs) and mirror the runtime
+        # image's deps. psycopg2-binary is required since the Postgres migration:
+        # db/pool.py imports psycopg2 at module load and tests/conftest.py pulls
+        # it in, so without it pytest errors during collection. pysam lets the
+        # VCF-parser tests (incl. the decompression-bomb variant-cap guard) run
+        # rather than skip.
+        run: pip install pytest responses fastapi httpx python-multipart cryptography psycopg2-binary pysam
 
       - name: Run tests
         run: pytest tests/ -v
