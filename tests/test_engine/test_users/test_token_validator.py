@@ -88,3 +88,15 @@ def test_bad_signature_rejected(monkeypatch, keypair):
     token = _make_token(other)                # but token signed by a different key
     with pytest.raises(tv.TokenError):
         tv.validate_token(token, _SETTINGS)
+
+
+def test_jwks_unavailable_fails_closed(monkeypatch, keypair):
+    """JWKS fetch failure must surface as JwksUnavailable (-> 503), not be
+    swallowed into TokenError (-> 401) or fail open."""
+    def _raise_unavailable(token, jwks_url):
+        raise tv.JwksUnavailable("jwks endpoint unreachable")
+
+    monkeypatch.setattr(tv, "_signing_key_for", _raise_unavailable, raising=True)
+    token = _make_token(keypair)
+    with pytest.raises(tv.JwksUnavailable):
+        tv.validate_token(token, _SETTINGS)
