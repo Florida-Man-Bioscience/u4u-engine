@@ -61,6 +61,15 @@ def get_user_by_authentik_uid(conn, uid: str) -> User | None:
     return User(**_row(row)) if row else None
 
 
+def get_user_by_issuer_sub(conn, issuer: str, sub: str) -> User | None:
+    ph = _ph(conn)
+    row = conn.execute(
+        f"SELECT * FROM users WHERE issuer = {ph} AND authentik_uid = {ph}",
+        (issuer, sub),
+    ).fetchone()
+    return User(**_row(row)) if row else None
+
+
 def list_users(conn) -> list[User]:
     rows = conn.execute(
         "SELECT * FROM users ORDER BY created_at DESC"

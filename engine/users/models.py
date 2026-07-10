@@ -17,6 +17,7 @@ class User:
     email: str | None
     full_name: str | None
     groups: str | None
+    issuer: str
     created_at: str
     last_seen_at: str
     disabled_at: str | None
@@ -33,6 +34,7 @@ class User:
                 if self.groups
                 else []
             ),
+            "issuer": self.issuer,
             "created_at": self.created_at,
             "last_seen_at": self.last_seen_at,
             "disabled_at": self.disabled_at,

@@ -16,11 +16,12 @@ CREATE TABLE IF NOT EXISTS users (
     email           TEXT,
     full_name       TEXT,
     groups          TEXT,
+    issuer          TEXT        NOT NULL DEFAULT 'cluster-authentik',
 
     created_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
     last_seen_at    TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
     disabled_at     TEXT
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_authentik_uid ON users(authentik_uid);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_issuer_uid ON users(issuer, authentik_uid);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
