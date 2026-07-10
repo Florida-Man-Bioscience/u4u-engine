@@ -56,14 +56,6 @@ def get_user(conn, user_id: str) -> User | None:
     return User(**_row(row)) if row else None
 
 
-def get_user_by_authentik_uid(conn, uid: str) -> User | None:
-    ph = _ph(conn)
-    row = conn.execute(
-        f"SELECT * FROM users WHERE authentik_uid = {ph}", (uid,)
-    ).fetchone()
-    return User(**_row(row)) if row else None
-
-
 def get_user_by_issuer_sub(conn, issuer: str, sub: str) -> User | None:
     ph = _ph(conn)
     row = conn.execute(
