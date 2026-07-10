@@ -91,6 +91,8 @@ def required_user(request: Request) -> User:
     except JwksUnavailable:
         raise HTTPException(status_code=503, detail="identity provider unavailable")
     except TokenError:
+        # Unreachable today (current_user swallows TokenError->None); kept
+        # as defense-in-depth if current_user's contract changes.
         raise HTTPException(status_code=401, detail="invalid access token")
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
