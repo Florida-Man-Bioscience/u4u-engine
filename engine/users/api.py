@@ -3,11 +3,11 @@ engine/users/api.py
 ====================
 FastAPI router for app user accounts.
 
-The endpoints assume the deploy has an Authentik forward-auth proxy in
-front: every request that reaches us already carries trusted
-``X-Authentik-*`` headers identifying who the human caller is. The
-router materialises a local users row on first sight and otherwise
-just returns the current row.
+``/users/me`` identifies the caller via a validated OIDC Bearer access
+token (see ``engine.users.deps.required_user``) — the end-user IdP is
+distinct from the cluster-admin Authentik forward-auth proxy fronting
+the deploy. ``GET /users`` remains an admin/operator listing; the
+forward-auth proxy in front decides who can reach it.
 
 Mount in api.py via:
     from engine.users.api import router as users_router
@@ -17,31 +17,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends
 
 from . import service
 from .db import get_conn
+from .deps import required_user
+from .models import User
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me")
-def get_me(request: Request) -> dict[str, Any]:
-    """Return (and lazily create) the user row for the Authentik
-    subject on this request.
+def get_me(user: User = Depends(required_user)) -> dict[str, Any]:
+    """Return the user row for the current request's authenticated
+    subject (OIDC Bearer token, or the dev-bypass user when no OIDC
+    issuer is configured).
 
-    Returns 401 when the proxy hasn't forwarded a subject id —
-    typically because the request bypassed Authentik or the deploy is
-    in open-demo mode without a proxy. The frontend should treat that
-    as 'unauthenticated' rather than retrying.
+    401 when unauthenticated (missing/invalid Bearer token in OIDC
+    mode); 503 when the identity provider's JWKS endpoint is
+    unreachable. See ``engine.users.deps.required_user``.
     """
-    with get_conn() as conn:
-        user = service.upsert_from_headers(conn, request.headers)
-    if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="no authenticated user — Authentik headers missing",
-        )
     return user.to_dict()
 
 
