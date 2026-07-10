@@ -54,7 +54,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 import api  # noqa: E402
 
 
-def _seed_job_with_variant():
+@pytest.fixture(autouse=True)
+def _isolate_users_db(tmp_path, monkeypatch):
+    from engine.users import db as _udb
+    monkeypatch.setattr(_udb, "_DEFAULT_PATH", tmp_path / "users.db")
+    _udb.reset_initialized()
+    yield
+    _udb.reset_initialized()
+
+
+def _seed_job_with_variant(owner):
     job_id = "test-job-acmg"
     variant = {"variant_id": "rs999", "rsid": "rs999",
                "acmg": classify_acmg({"genes": ["X"], "consequence": "missense_variant",
@@ -63,32 +72,35 @@ def _seed_job_with_variant():
         api._jobs[job_id] = {
             "status": "done", "results": {"variants": [variant]},
             "progress": {"step": "Complete", "pct": 100},
+            "created_by_user_id": owner,
         }
     return job_id
 
 
 def test_signoff_endpoint_approves():
-    job_id = _seed_job_with_variant()
-    try:
-        with TestClient(api.app) as c:
+    with TestClient(api.app) as c:
+        me = c.get("/users/me").json()
+        job_id = _seed_job_with_variant(me["id"])
+        try:
             r = c.post(f"/jobs/{job_id}/variants/rs999/acmg-signoff",
                        json={"reviewer": "Dr. C", "action": "approve"})
             assert r.status_code == 200, r.text
             body = r.json()
             assert body["status"] == "signed_off"
             assert body["sign_out"]["reviewer"] == "Dr. C"
-    finally:
-        with api._jobs_lock:
-            api._jobs.pop(job_id, None)
+        finally:
+            with api._jobs_lock:
+                api._jobs.pop(job_id, None)
 
 
 def test_signoff_endpoint_unknown_variant():
-    job_id = _seed_job_with_variant()
-    try:
-        with TestClient(api.app) as c:
+    with TestClient(api.app) as c:
+        me = c.get("/users/me").json()
+        job_id = _seed_job_with_variant(me["id"])
+        try:
             r = c.post(f"/jobs/{job_id}/variants/nope/acmg-signoff",
                        json={"reviewer": "Dr. C", "action": "approve"})
             assert r.status_code == 404
-    finally:
-        with api._jobs_lock:
-            api._jobs.pop(job_id, None)
+        finally:
+            with api._jobs_lock:
+                api._jobs.pop(job_id, None)
