@@ -100,3 +100,35 @@ def test_jwks_unavailable_fails_closed(monkeypatch, keypair):
     token = _make_token(keypair)
     with pytest.raises(tv.JwksUnavailable):
         tv.validate_token(token, _SETTINGS)
+
+
+def test_malformed_token_rejected(monkeypatch, keypair):
+    """A garbage Authorization value must surface as TokenError (-> 401),
+    not an unhandled jwt.exceptions.DecodeError (-> 500).
+
+    A malformed token fails during unverified-header decoding inside
+    PyJWKClient.get_signing_key_from_jwt itself (before any real JWKS
+    lookup would matter), so this genuinely exercises the malformed-input
+    path through the real `_signing_key_for` -> `_client_for` machinery —
+    it does NOT install the fake-JWKS monkeypatch, since that would bypass
+    the exact code path under test. No network call happens because the
+    decode error is raised before any HTTP request would be made.
+    """
+    with pytest.raises(tv.TokenError):
+        tv.validate_token("not-a-jwt-at-all", _SETTINGS)
+
+
+def test_real_jwks_client_error_converted(monkeypatch, keypair):
+    """Exercise the actual `except jwt.PyJWKClientError` conversion line in
+    `_signing_key_for` (the existing fail-closed test bypasses it entirely
+    by monkeypatching `_signing_key_for` itself). Stub out `_client_for` so
+    no network call happens, but let `_signing_key_for`'s own try/except
+    run for real."""
+    class _StubClient:
+        def get_signing_key_from_jwt(self, token):
+            raise jwt.PyJWKClientError("jwks endpoint unreachable")
+
+    monkeypatch.setattr(tv, "_client_for", lambda jwks_url: _StubClient(), raising=True)
+    token = _make_token(keypair)
+    with pytest.raises(tv.JwksUnavailable):
+        tv.validate_token(token, _SETTINGS)

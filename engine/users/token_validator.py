@@ -45,7 +45,18 @@ def _signing_key_for(token: str, jwks_url: str):
 
 
 def validate_token(token: str, settings: OidcSettings) -> dict:
-    signing_key = _signing_key_for(token, settings.jwks_url)
+    try:
+        signing_key = _signing_key_for(token, settings.jwks_url)
+    except JwksUnavailable:
+        raise
+    except jwt.PyJWTError as exc:
+        # A malformed/garbage token (empty, wrong segment count, etc.) fails
+        # inside PyJWKClient.get_signing_key_from_jwt while it decodes the
+        # unverified header — raising jwt.exceptions.DecodeError, which is
+        # NOT a PyJWKClientError and would otherwise escape as an unhandled
+        # 500. Map it to the same TokenError -> 401 contract as a token that
+        # fails real signature/claims verification below.
+        raise TokenError(str(exc)) from exc
     try:
         return jwt.decode(
             token,
