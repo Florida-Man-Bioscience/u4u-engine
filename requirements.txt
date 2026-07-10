@@ -11,7 +11,7 @@ psycopg2-binary>=2.9
 
 # Task Queue
 celery>=5.3
-redis>=5.0
+redis>=8.0.1
 
 # Genomics
 pysam>=0.22
