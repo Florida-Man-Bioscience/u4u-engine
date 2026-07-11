@@ -22,6 +22,25 @@ def test_list_patients_scoped_to_owner():
         assert any(p["id"] == pid for p in listed)
 
 
+def test_list_patients_excludes_foreign_owner():
+    """GET /tracking/patients must be scoped to the caller — a patient
+    owned by someone else must never appear in the list. This is the
+    exact IDOR (mass patient-list leak) the owns() filter in
+    list_patients() closes; deleting that filter must fail this test."""
+    from engine.tracking import db as tdb, service
+
+    with tdb.get_conn() as conn:
+        foreign = service.create_patient(conn, label="THEIRS",
+                                          created_by_user_id="someone-else")
+    with TestClient(api.app) as c:
+        r = c.post("/tracking/patients", json={"label": "MINE"})
+        pid = r.json()["id"]
+        listed = c.get("/tracking/patients").json()
+        listed_ids = {p["id"] for p in listed}
+        assert pid in listed_ids
+        assert foreign.id not in listed_ids
+
+
 def test_foreign_patient_is_404():
     # Seed a patient owned by someone else directly via the service.
     from engine.tracking import db as tdb, service
