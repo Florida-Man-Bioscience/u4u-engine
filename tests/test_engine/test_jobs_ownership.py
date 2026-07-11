@@ -52,3 +52,24 @@ def test_public_job_does_not_leak_owner(monkeypatch):
         jid = _seed_job(me["id"])
         body = c.get(f"/jobs/{jid}").json()
         assert "created_by_user_id" not in body
+
+
+@pytest.mark.parametrize("owner", ["someone-else", None])
+@pytest.mark.parametrize(
+    "url_template",
+    [
+        "/jobs/{jid}/pgx",
+        "/jobs/{jid}/drug/warfarin",
+        "/jobs/{jid}/dossier/BPC-157",
+    ],
+)
+def test_non_owner_job_is_404_on_guarded_read_endpoints(monkeypatch, owner, url_template):
+    """A non-owner (or NULL-owner) job must 404 on every guarded read
+    endpoint, not just GET /jobs/{id}. guard_owner fires before the
+    "job not yet complete" / result-shape logic, so the seeded job's
+    status="complete" (not "done") doesn't matter here -- the ownership
+    check must short-circuit first."""
+    with TestClient(api.app) as c:
+        jid = _seed_job(owner)
+        resp = c.get(url_template.format(jid=jid))
+        assert resp.status_code == 404

@@ -16,6 +16,11 @@ UPDATE users
 
 ALTER TABLE users ALTER COLUMN issuer SET NOT NULL;
 
+-- Lockstep with engine/users/schema.sql's `DEFAULT 'cluster-authentik'`
+-- (SQLite fallback schema). All current insert paths supply `issuer`
+-- explicitly so this is latent today, but keeps the two schemas aligned.
+ALTER TABLE users ALTER COLUMN issuer SET DEFAULT 'cluster-authentik';
+
 -- Replace the single-column uniqueness with the composite.
 DROP INDEX IF EXISTS idx_users_authentik_uid;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_issuer_uid ON users(issuer, authentik_uid);

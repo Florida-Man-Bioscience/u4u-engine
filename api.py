@@ -99,6 +99,15 @@ from contextlib import asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Startup + shutdown hooks. Replaces the deprecated
     ``@app.on_event("startup")`` pattern."""
+    # Fail loud on partial U4U_OIDC_* config before doing anything else --
+    # a misconfigured prod deploy must refuse to boot rather than silently
+    # falling open to dev-bypass (one shared dev user for every caller).
+    from engine.users.oidc import resolve_auth_mode
+    auth_mode = resolve_auth_mode()
+    if auth_mode == "oidc":
+        log.info("Auth mode: oidc")
+    else:
+        log.info("Auth mode: dev-bypass (no OIDC configured)")
     _run_db_migrations()
     _load_jobs_from_store()
     # HealthKit tables (healthkit_*) are created by db/migrate.py (Postgres) or
@@ -657,7 +666,7 @@ async def analyze(
             # NULL in dev (no Authentik headers); the Authentik subject id
             # in prod. Stamped once at job creation and not touched on
             # subsequent _persist_jobs_locked() updates.
-            "created_by_user_id": user.id if user is not None else None,
+            "created_by_user_id": user.id,
         }
         _persist_jobs_locked()
 
