@@ -538,6 +538,16 @@ def seed_demo_data(
 
     body = body or SeedIn()
     with get_conn() as conn:
+        # Refuse the destructive force-wipe against a real (Postgres) database.
+        # `force=True` FK-cascade-deletes and reseeds; that must never be
+        # reachable in production, where the tracking store is Postgres. Additive
+        # seeding, and force against the local SQLite dev DB, stay allowed.
+        if body.force and getattr(conn, "_is_pg", False):
+            raise HTTPException(
+                status_code=403,
+                detail="Refusing force-reseed against a Postgres database "
+                       "(production). Force-wipe is dev/SQLite only.",
+            )
         stats = run_seed(
             conn,
             rng=random.Random(body.seed),

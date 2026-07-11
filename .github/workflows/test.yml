@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: this workflow only needs to read the repo.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -37,15 +41,15 @@ jobs:
         run: pip install -e ./engine
 
       - name: Install test deps
-        # The auth/API/tracking tests import the web + auth stack at collection
-        # time. bcrypt in particular is a hard dependency of engine.auth
-        # (imported eagerly from its __init__), so without it pytest errors out
-        # during collection rather than running the suite. These are all pure
-        # wheels (no system libs) and mirror the runtime image's deps.
-        # psycopg2-binary is required since the Postgres migration: db/pool.py
+        # The auth/API/tracking/healthkit tests import the web + auth stack at
+        # collection time. bcrypt is a hard dependency of engine.auth (imported
+        # eagerly), and pyjwt[crypto]+cryptography back OIDC access-token
+        # validation. These are all pure wheels (no system libs) mirroring the
+        # runtime image's deps. psycopg2-binary is required since db/pool.py
         # imports psycopg2 at module load and tests/conftest.py pulls it in, so
-        # without it pytest errors during collection (matches requirements.txt).
-        run: pip install pytest responses fastapi httpx python-multipart bcrypt pyjwt[crypto] cryptography psycopg2-binary
+        # without it pytest errors during collection. pysam lets the VCF-parser
+        # tests (incl. the decompression-bomb variant-cap guard) run rather than skip.
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt pyjwt[crypto] cryptography psycopg2-binary pysam
 
       - name: Run tests
         run: pytest tests/ -v
@@ -71,3 +75,44 @@ jobs:
           name: tier-a-validation-reports-py${{ matrix.python-version }}
           path: validation/reports/
           if-no-files-found: ignore
+
+  # The default `test` job runs entirely on SQLite. Production is Postgres,
+  # which uses the incremental db/migrations/*.sql chain instead of the
+  # self-healing engine/tracking/schema.sql — so SQL-dialect drift and
+  # unapplied migrations are invisible to that job and only surface as HTTP
+  # 500s in prod. This job boots an ephemeral Postgres (the smoke suite does
+  # this itself via initdb + pg_ctl), applies the full migration chain, and
+  # exercises the real write/read paths against it.
+  postgres-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Put Postgres server binaries on PATH
+        # ubuntu-latest ships PostgreSQL preinstalled, but initdb/pg_ctl live
+        # in a versioned libexec dir that isn't on PATH. The smoke harness
+        # boots its own trust-auth, unix-socket-only cluster as the runner
+        # user, so no system postgres service is needed — only the binaries.
+        run: |
+          PG_BIN="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$PG_BIN" ]; then
+            sudo apt-get update && sudo apt-get install -y postgresql
+            PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
+          fi
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+
+      - name: Install engine
+        run: pip install -e ./engine
+
+      - name: Install test deps
+        # pyjwt[crypto] is needed here too: the smoke suite imports `api`, which
+        # pulls in engine.users.deps -> token_validator -> jwt at collection time.
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt pyjwt[crypto] cryptography psycopg2-binary
+
+      - name: Run Postgres smoke tests
+        run: PG_TESTS=1 pytest tests/test_postgres_smoke.py -v

@@ -28,8 +28,6 @@ aiohttp>=3.9
 # Data
 pydantic>=2.6
 
-# Auth (bcrypt password hashing for /auth/login)
-bcrypt>=4.0
 
 # OIDC access-token validation (end-user auth)
 pyjwt[crypto]>=2.8

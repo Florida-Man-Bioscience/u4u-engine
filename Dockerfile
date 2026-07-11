@@ -77,7 +77,7 @@ COPY data/ data/
 RUN chmod +x /app/scripts/docker-entrypoint.sh \
  && useradd --no-create-home --shell /bin/false appuser \
  && chown -R appuser:appuser /app \
- && chmod 777 /app/data
+ && chmod 700 /app/data
 USER appuser
 
 # Expose the application port

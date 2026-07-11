@@ -1,0 +1,48 @@
+name: security-scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+# Least privilege.
+permissions:
+  contents: read
+
+jobs:
+  python-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install backend deps + pip-audit
+        run: |
+          pip install -e ./engine
+          pip install -r requirements.txt
+          pip install pip-audit
+      - name: Audit installed Python environment
+        # Scans the fully-resolved environment for known CVEs and fails on any
+        # vulnerability with a fix available. NOT --strict: the local editable
+        # `u4u-engine` package isn't on PyPI, and --strict would fail the job on
+        # that unresolvable skip regardless of any real advisory.
+        run: pip-audit --desc
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install frontend deps
+        run: npm ci
+      - name: npm audit (high+ severity)
+        run: npm audit --audit-level=high
