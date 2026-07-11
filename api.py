@@ -183,6 +183,20 @@ def get_completed_job_results(job_id: str) -> dict | None:
         return dict(results) if isinstance(results, dict) else None
 
 
+def get_job_owner(job_id: str) -> str | None:
+    """Return the owning user id for a job, or None if the job is
+    unknown or has no recorded owner.
+
+    Used by the tracking module (engine/tracking/api.py) to guard
+    ``POST /tracking/patients/from-job/{job_id}`` — a caller must not be
+    able to seed a tracking patient from someone else's completed
+    /analyze job.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return job.get("created_by_user_id") if job is not None else None
+
+
 def get_job_filename(job_id: str) -> str | None:
     """Return the original upload filename for a job, or None.
 
