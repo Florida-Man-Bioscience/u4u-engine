@@ -2,14 +2,28 @@
  * Shared API transport layer.
  *
  * Thin wrapper around fetch + XMLHttpRequest that prefixes paths with the
- * configured API base and normalises error handling. Auth lives upstream:
- * the deploy stack puts an Authentik forward-auth proxy in front of the
- * api, so requests from the browser carry no credentials of their own —
- * the proxy stamps trusted X-Authentik-* headers before the api sees the
- * request. The frontend just hits relative paths.
+ * configured API base and normalises error handling. Historically auth
+ * lived entirely upstream (an Authentik forward-auth proxy stamping
+ * trusted X-Authentik-* headers), so requests carried no credentials of
+ * their own. The backend now also accepts an end-user OIDC Bearer access
+ * token (`engine/users/`); the SPA login/token-store UI that would obtain
+ * one is a follow-on task blocked on a real Authentik instance being
+ * provisioned (see CLAUDE.md). Until then `getAccessToken()` always
+ * returns null and every request stays unauthenticated, same as today —
+ * this is just the non-breaking scaffold that later work fills in.
  */
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api/v1";
+
+/**
+ * In-memory access-token accessor. Returns null until the OIDC login flow
+ * (deferred) installs a real token store. Kept as a plain function (not a
+ * module-level variable) so that filling it in later doesn't require
+ * touching every call site.
+ */
+export function getAccessToken(): string | null {
+  return null;
+}
 
 /**
  * Drop-in replacement for `fetch` that prefixes the API base and throws
@@ -25,6 +39,10 @@ export async function authFetch<T>(
   // override (or set to undefined for multipart).
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  const token = getAccessToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
 
@@ -50,5 +68,9 @@ export async function authFetch<T>(
 export function openAuthXhr(method: string, path: string): XMLHttpRequest {
   const xhr = new XMLHttpRequest();
   xhr.open(method, `${API_BASE}${path}`);
+  const token = getAccessToken();
+  if (token) {
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+  }
   return xhr;
 }

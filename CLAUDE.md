@@ -139,6 +139,12 @@ In the SQLite fallback path, the annotation cache lives at `data/annotation_cach
 | `ENABLE_LIFTOVER` | Set to `1` to accept GRCh37 files via pyliftover (requires optional dep) |
 | `PGX_CONFORMAL_CALIBRATION` | Path to validated PGx calibration set; without it, predictions are `uncalibrated` |
 | `HEALTHKIT_REQUIRE_TOKEN` | Set to `1` to require a device bearer token for HealthKit ingestion even in the local SQLite dev path (already required whenever `DATABASE_URL` is set) |
+| `U4U_OIDC_ISSUER` | End-user OIDC issuer URL for validating `Authorization: Bearer` access tokens (`engine/users/`) |
+| `U4U_OIDC_AUDIENCE` | Expected `aud` claim for end-user OIDC access tokens |
+| `U4U_OIDC_JWKS_URL` | JWKS endpoint used to verify end-user OIDC access token signatures |
+| `U4U_CLUSTER_AUTHENTIK_ISSUER` | Issuer URL for the **cluster-admin** Authentik (the forward-auth proxy in front of the app, stamping trusted `X-Authentik-*` headers). Used to tag `issuer` on users upserted from those headers, so that population's `(issuer, sub)` keys stay distinct from end-user OIDC subs (`U4U_OIDC_ISSUER`). Falls back to a placeholder literal when unset (local dev/tests) — unrelated to end-user Bearer token validation |
+
+`U4U_OIDC_ISSUER` / `U4U_OIDC_AUDIENCE` / `U4U_OIDC_JWKS_URL` gate the API's auth mode as a set: unless all three are set, the API runs in **dev-bypass** — every request resolves to a single fixed dev user, no real authentication. When all three are set, a missing or invalid `Authorization: Bearer` token on a protected endpoint gets a `401`; a JWKS endpoint that's unreachable at validation time gets a `503` (fail-closed) rather than silently falling back to anonymous.
 
 > **Deprecated:** `JOB_STORE_KEY` (old Fernet on-disk job snapshot) is no longer used — jobs persist to Postgres when `DATABASE_URL` is set. Setting it only logs a warning.
 
