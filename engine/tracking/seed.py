@@ -115,6 +115,7 @@ def seed(
     n_patients: int = 12,
     today: datetime | None = None,
     force: bool = False,
+    created_by_user_id: str | None = None,
 ) -> dict[str, int]:
     """Populate the tracking DB with synthetic data.
 
@@ -123,6 +124,11 @@ def seed(
 
     With ``force=True``, all existing patients (and their cascade-deleted
     treatments + measurements) are removed before reseeding.
+
+    ``created_by_user_id`` stamps every seeded patient with an owner (the
+    caller who triggered the seed, in dev/demo mode) so the demo data is
+    visible through the owner-scoped ``GET /tracking/patients`` rather
+    than becoming orphaned (unowned) data no one can list.
     """
     rng = rng or random.Random(42)
     today = today or datetime.now()
@@ -151,6 +157,7 @@ def seed(
             sex=sex,
             birth_year=byr,
             notes=f"DEMO / synthetic patient #{i + 1} — not a real patient",
+            created_by_user_id=created_by_user_id,
         )
         patients.append(p)
         stats["patients"] += 1

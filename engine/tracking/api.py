@@ -16,8 +16,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from engine.peptides import PEPTIDE_BIOMARKERS, get_biomarker_panel
-from engine.users.deps import current_user
+from engine.users import oidc
+from engine.users.deps import required_user
 from engine.users.models import User
+from engine.users.ownership import guard_owner, owns
 
 from . import analysis, service
 from .db import get_conn
@@ -34,6 +36,22 @@ def _user_id(user: User | None) -> str | None:
     """Tiny helper — the FastAPI dep yields a User or None; the service
     layer wants the bare id (or None in dev when no Authentik headers)."""
     return user.id if user is not None else None
+
+
+def _require_owned_patient(conn, patient_id: str, user: User) -> service.Patient:
+    """Load the patient and 404 unless ``user`` owns it.
+
+    The owning resource for every per-patient tracking endpoint
+    (treatments, measurements, genetics, predictions, priors) is the
+    patient itself (``patients.created_by_user_id``). This is the single
+    choke point that closes the IDOR: a caller who isn't the owner gets
+    the same 404 whether the id doesn't exist or belongs to someone else.
+    """
+    patient = service.get_patient(conn, patient_id)
+    if patient is None:
+        raise HTTPException(404, "patient not found")
+    guard_owner(getattr(patient, "created_by_user_id", None), user)
+    return patient
 
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -87,7 +105,7 @@ class PatientFromJobIn(BaseModel):
 @router.post("/patients")
 def create_patient(
     body: PatientIn,
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     with get_conn() as conn:
         p = service.create_patient(
@@ -102,23 +120,26 @@ def create_patient(
 
 
 @router.get("/patients")
-def list_patients() -> list[dict[str, Any]]:
+def list_patients(user: User = Depends(required_user)) -> list[dict[str, Any]]:
     with get_conn() as conn:
-        return [p.to_dict() for p in service.list_patients(conn)]
+        return [
+            p.to_dict()
+            for p in service.list_patients(conn)
+            if owns(p.created_by_user_id, user)
+        ]
 
 
 @router.get("/patients/{patient_id}")
-def get_patient(patient_id: str) -> dict[str, Any]:
+def get_patient(patient_id: str, user: User = Depends(required_user)) -> dict[str, Any]:
     with get_conn() as conn:
-        p = service.get_patient(conn, patient_id)
-    if p is None:
-        raise HTTPException(404, "patient not found")
+        p = _require_owned_patient(conn, patient_id, user)
     return p.to_dict()
 
 
 @router.delete("/patients/{patient_id}")
-def delete_patient(patient_id: str) -> dict[str, Any]:
+def delete_patient(patient_id: str, user: User = Depends(required_user)) -> dict[str, Any]:
     with get_conn() as conn:
+        _require_owned_patient(conn, patient_id, user)
         ok = service.delete_patient(conn, patient_id)
     if not ok:
         raise HTTPException(404, "patient not found")
@@ -131,11 +152,10 @@ def delete_patient(patient_id: str) -> dict[str, Any]:
 def create_treatment(
     patient_id: str,
     body: TreatmentIn,
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     with get_conn() as conn:
-        if service.get_patient(conn, patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, patient_id, user)
         if body.peptide_name not in PEPTIDE_BIOMARKERS and get_biomarker_panel(body.peptide_name) is None:
             pass  # allow free-text peptides
         t = service.create_treatment(
@@ -155,8 +175,9 @@ def create_treatment(
 
 
 @router.get("/patients/{patient_id}/treatments")
-def list_treatments(patient_id: str) -> list[dict[str, Any]]:
+def list_treatments(patient_id: str, user: User = Depends(required_user)) -> list[dict[str, Any]]:
     with get_conn() as conn:
+        _require_owned_patient(conn, patient_id, user)
         return [t.to_dict() for t in service.list_treatments_for_patient(conn, patient_id)]
 
 
@@ -165,11 +186,10 @@ def list_treatments(patient_id: str) -> list[dict[str, Any]]:
 @router.post("/measurements")
 def create_measurement(
     body: MeasurementIn,
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     with get_conn() as conn:
-        if service.get_patient(conn, body.patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, body.patient_id, user)
         m = service.create_measurement(
             conn,
             patient_id=body.patient_id,
@@ -188,12 +208,14 @@ def create_measurement(
 @router.post("/measurements/bulk")
 def bulk_measurements(
     body: BulkMeasurementsIn,
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     if not body.measurements:
         raise HTTPException(400, "no measurements provided")
     records = [m.model_dump() for m in body.measurements]
     with get_conn() as conn:
+        for pid in {r["patient_id"] for r in records}:
+            _require_owned_patient(conn, pid, user)
         created = service.bulk_create_measurements(
             conn, records, created_by_user_id=_user_id(user)
         )
@@ -203,7 +225,7 @@ def bulk_measurements(
 @router.post("/measurements/csv")
 async def upload_csv(
     file: UploadFile = File(...),
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     raw = await file.read()
     try:
@@ -214,6 +236,8 @@ async def upload_csv(
     if not records:
         raise HTTPException(400, {"errors": errors})
     with get_conn() as conn:
+        for pid in {r["patient_id"] for r in records}:
+            _require_owned_patient(conn, pid, user)
         created = service.bulk_create_measurements(
             conn, records, created_by_user_id=_user_id(user)
         )
@@ -221,8 +245,13 @@ async def upload_csv(
 
 
 @router.get("/patients/{patient_id}/measurements")
-def list_measurements(patient_id: str, biomarker: str | None = None) -> list[dict[str, Any]]:
+def list_measurements(
+    patient_id: str,
+    biomarker: str | None = None,
+    user: User = Depends(required_user),
+) -> list[dict[str, Any]]:
     with get_conn() as conn:
+        _require_owned_patient(conn, patient_id, user)
         rows = service.list_measurements_for_patient(
             conn, patient_id, biomarker_name=biomarker
         )
@@ -264,10 +293,9 @@ def cohort(
 # ── Genetic profile + Bayesian predictions ──────────────────────────────────
 
 @router.get("/patients/{patient_id}/genetics")
-def get_genetics(patient_id: str) -> dict[str, Any]:
+def get_genetics(patient_id: str, user: User = Depends(required_user)) -> dict[str, Any]:
     with get_conn() as conn:
-        if service.get_patient(conn, patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, patient_id, user)
         raw = service.get_genetic_profile_json(conn, patient_id)
     if raw is None:
         return {"profile": None, "source": None, "created_at": None}
@@ -281,11 +309,14 @@ def get_genetics(patient_id: str) -> dict[str, Any]:
 
 
 @router.post("/patients/{patient_id}/genetics/synthetic")
-def generate_genetics(patient_id: str, seed: int | None = None) -> dict[str, Any]:
+def generate_genetics(
+    patient_id: str,
+    seed: int | None = None,
+    user: User = Depends(required_user),
+) -> dict[str, Any]:
     """Generate (or regenerate) a synthetic genetic profile for a patient."""
     with get_conn() as conn:
-        if service.get_patient(conn, patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, patient_id, user)
         import random
         rng = random.Random(seed) if seed is not None else random.Random()
         profile = generate_synthetic_profile(rng)
@@ -328,14 +359,18 @@ def _extract_enrichment(job_results: dict[str, Any]) -> dict[str, Any]:
 def create_patient_from_job(
     job_id: str,
     body: PatientFromJobIn | None = None,
-    user: User | None = Depends(current_user),
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     """Create a tracking patient pre-populated from a completed /analyze job."""
-    from api import get_completed_job_results, get_job_filename
+    from api import get_completed_job_results, get_job_filename, get_job_owner
 
     job_results = get_completed_job_results(job_id)
     if job_results is None:
         raise HTTPException(404, "job not found or not complete")
+    # A user must not be able to seed a tracking patient from someone
+    # else's genome-analysis job — same 404-not-403 IDOR contract as
+    # every other ownership guard here.
+    guard_owner(get_job_owner(job_id), user)
 
     payload = body or PatientFromJobIn()
     if payload.label:
@@ -436,12 +471,12 @@ def create_patient_from_job(
 
 @router.get("/patients/{patient_id}/predictions")
 def get_predictions(
-    patient_id: str, peptide: str, biomarker: str
+    patient_id: str, peptide: str, biomarker: str,
+    user: User = Depends(required_user),
 ) -> dict[str, Any]:
     """Bayesian prediction for one (patient, peptide, biomarker)."""
     with get_conn() as conn:
-        if service.get_patient(conn, patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, patient_id, user)
         return analysis.predict_response(
             conn,
             patient_id=patient_id,
@@ -451,12 +486,11 @@ def get_predictions(
 
 
 @router.get("/patients/{patient_id}/priors")
-def get_priors(patient_id: str) -> dict[str, Any]:
+def get_priors(patient_id: str, user: User = Depends(required_user)) -> dict[str, Any]:
     """All per-peptide responder-strength priors derived from the patient's
     genetic profile."""
     with get_conn() as conn:
-        if service.get_patient(conn, patient_id) is None:
-            raise HTTPException(404, "patient not found")
+        _require_owned_patient(conn, patient_id, user)
         raw = service.get_genetic_profile_json(conn, patient_id)
     if raw is None:
         return {"priors": []}
@@ -477,12 +511,27 @@ class SeedIn(BaseModel):
 
 
 @router.post("/seed")
-def seed_demo_data(body: SeedIn | None = None) -> dict[str, Any]:
+def seed_demo_data(
+    body: SeedIn | None = None,
+    user: User = Depends(required_user),
+) -> dict[str, Any]:
     """Populate the tracking DB with synthetic demo data.
+
+    Dev/demo only: gated behind ``required_user`` (an authenticated
+    caller) *and* dev-bypass mode (no ``U4U_OIDC_*`` configured, i.e.
+    ``oidc.oidc_settings() is None``). In a configured/prod deployment
+    this always 403s — there's no legitimate reason to mass-seed
+    synthetic patients against a real OIDC-backed environment. Seeded
+    patients are stamped with the calling (dev-bypass) user as owner so
+    they show up via the owner-scoped ``GET /tracking/patients`` instead
+    of becoming orphaned data.
 
     Idempotent by default: returns ``{"skipped": N}`` if patients already
     exist. Pass ``{"force": true}`` to wipe (FK cascade) and reseed.
     """
+    if oidc.oidc_settings() is not None:
+        raise HTTPException(403, "seed endpoint is only available in dev/demo mode")
+
     import random
 
     from .seed import seed as run_seed
@@ -504,5 +553,6 @@ def seed_demo_data(body: SeedIn | None = None) -> dict[str, Any]:
             rng=random.Random(body.seed),
             n_patients=body.patients,
             force=body.force,
+            created_by_user_id=_user_id(user),
         )
     return stats

@@ -112,10 +112,19 @@ def test_create_patient_from_job_carries_real_priors(client):
 
     import api as root_api
 
+    # The job must be owned by the same (dev-bypass) user the TestClient
+    # authenticates as, or create_patient_from_job's ownership guard 404s
+    # it — get that id the same way the API does, by making an
+    # authenticated call and reading back who it stamped as owner.
+    owner_id = client.post("/tracking/patients", json={"label": "owner-probe"}).json()[
+        "created_by_user_id"
+    ]
+
     job_id = str(uuid.uuid4())
     root_api._jobs[job_id] = {
         "status": "done",
         "filename": "alice.vcf.gz",
+        "created_by_user_id": owner_id,
         "results": {
             # Mix of real catalog rsIDs and a noise variant. The TCF7L2
             # T allele should produce a non-zero Semaglutide effect.

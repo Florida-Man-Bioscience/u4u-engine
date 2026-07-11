@@ -128,6 +128,20 @@ def test_migrations_recorded(pg_database):
         applied = [r[0] for r in cur.fetchall()]
     assert "001_initial_schema.sql" in applied
     assert "002_caches_and_tracking.sql" in applied
+    assert "012_user_issuer.sql" in applied
+
+
+def test_users_issuer_column_not_null(pg_database):
+    with psycopg2.connect(pg_database) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT is_nullable FROM information_schema.columns
+            WHERE table_name = 'users' AND column_name = 'issuer'
+            """
+        )
+        row = cur.fetchone()
+    assert row is not None, "users.issuer column should exist after migration 012"
+    assert row[0] == "NO", "users.issuer should be NOT NULL"
 
 
 def test_migrations_idempotent(pg_database):
@@ -222,11 +236,11 @@ def _seed_user(pg_database) -> str:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO users (authentik_uid, username)
-                VALUES (%s, %s)
+                INSERT INTO users (authentik_uid, username, issuer)
+                VALUES (%s, %s, %s)
                 RETURNING id::text
                 """,
-                ("ak-smoke-001", "smoketester"),
+                ("ak-smoke-001", "smoketester", "cluster-authentik"),
             )
             user_id = cur.fetchone()[0]
         conn.commit()

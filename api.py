@@ -47,8 +47,9 @@ from pydantic import BaseModel
 
 from engine import run_pipeline
 from engine.acmg import apply_signoff
-from engine.users.deps import current_user
+from engine.users.deps import current_user, required_user
 from engine.users.models import User
+from engine.users.ownership import guard_owner, owns
 
 # ── Database (Postgres when DATABASE_URL is set, in-memory fallback otherwise) ─
 _DB_URL = os.getenv("DATABASE_URL", "").strip()
@@ -98,6 +99,15 @@ from contextlib import asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Startup + shutdown hooks. Replaces the deprecated
     ``@app.on_event("startup")`` pattern."""
+    # Fail loud on partial U4U_OIDC_* config before doing anything else --
+    # a misconfigured prod deploy must refuse to boot rather than silently
+    # falling open to dev-bypass (one shared dev user for every caller).
+    from engine.users.oidc import resolve_auth_mode
+    auth_mode = resolve_auth_mode()
+    if auth_mode == "oidc":
+        log.info("Auth mode: oidc")
+    else:
+        log.info("Auth mode: dev-bypass (no OIDC configured)")
     _run_db_migrations()
     _load_jobs_from_store()
     # HealthKit tables (healthkit_*) are created by db/migrate.py (Postgres) or
@@ -205,6 +215,20 @@ def get_completed_job_results(job_id: str) -> dict | None:
         return dict(results) if isinstance(results, dict) else None
 
 
+def get_job_owner(job_id: str) -> str | None:
+    """Return the owning user id for a job, or None if the job is
+    unknown or has no recorded owner.
+
+    Used by the tracking module (engine/tracking/api.py) to guard
+    ``POST /tracking/patients/from-job/{job_id}`` — a caller must not be
+    able to seed a tracking patient from someone else's completed
+    /analyze job.
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return job.get("created_by_user_id") if job is not None else None
+
+
 def get_job_filename(job_id: str) -> str | None:
     """Return the original upload filename for a job, or None.
 
@@ -238,6 +262,7 @@ def _public_job(job_id: str, job: dict, include_results: bool = True) -> dict:
     response["variant_count"] = job.get("count")
     response["partial_results"] = list(job.get("partial_results") or [])
     response.pop("_persisted_partial_count", None)
+    response.pop("created_by_user_id", None)
 
     # Surface genome build and analysis completeness even when full results are
     # omitted, so a clinician/UI can see the build used and whether any variant
@@ -613,10 +638,11 @@ async def analyze(
     # Medications are PHI — accept them as a multipart form field, never as a
     # URL query parameter (which would land in access logs / browser history).
     current_medications: str = Form(""),
-    # Soft auth: in prod the Authentik proxy stamps headers and this is
-    # the operator who created the job; in dev (no proxy) it's None and
-    # we record NULL ownership rather than 401-ing.
-    user: User | None = Depends(current_user),
+    # Every new job must have a real owner so ownership guards on the
+    # jobs endpoints can work — dev-bypass supplies a stable dev user
+    # locally; in prod a missing/invalid bearer now 401s here instead
+    # of silently creating an orphaned (NULL-owner) job.
+    user: User = Depends(required_user),
 ):
     """
     Upload a genome file and receive a job_id.
@@ -675,7 +701,7 @@ async def analyze(
             # NULL in dev (no Authentik headers); the Authentik subject id
             # in prod. Stamped once at job creation and not touched on
             # subsequent _persist_jobs_locked() updates.
-            "created_by_user_id": user.id if user is not None else None,
+            "created_by_user_id": user.id,
         }
         _persist_jobs_locked()
 
@@ -710,7 +736,8 @@ async def analyze(
 
 
 @app.get("/jobs/{job_id}")
-def get_job(job_id: str, include_results: bool = True):
+def get_job(job_id: str, include_results: bool = True,
+            user: User = Depends(required_user)):
     """
     Poll job status and retrieve results when complete.
 
@@ -744,23 +771,30 @@ def get_job(job_id: str, include_results: bool = True):
     """
     with _jobs_lock:
         job = _jobs.get(job_id)
-        response = _public_job(job_id, job, include_results=include_results) if job else None
-
-    if not response:
-        raise HTTPException(status_code=404, detail="Job not found or expired.")
+        # Same 404 body as guard_owner's for both "doesn't exist" and
+        # "exists but isn't yours" — a non-owner must not be able to
+        # distinguish the two by inspecting the response.
+        if job is None:
+            raise HTTPException(status_code=404, detail="not found")
+        guard_owner(job.get("created_by_user_id"), user)
+        response = _public_job(job_id, job, include_results=include_results)
 
     return response
 
 
 @app.get("/jobs")
-def list_jobs(limit: int = 20):
+def list_jobs(limit: int = 20, user: User = Depends(required_user)):
     """
-    List recent jobs (status only — no results payload).
-    Useful for ops dashboards. Returns newest first.
+    List recent jobs owned by the caller (status only — no results
+    payload). Useful for ops dashboards. Returns newest first.
     """
     with _jobs_lock:
         snapshot = sorted(
-            [_public_job(jid, j, include_results=False) for jid, j in _jobs.items()],
+            [
+                _public_job(jid, j, include_results=False)
+                for jid, j in _jobs.items()
+                if owns(j.get("created_by_user_id"), user)
+            ],
             key=lambda x: x.get("created_at", ""),
             reverse=True,
         )
@@ -768,7 +802,8 @@ def list_jobs(limit: int = 20):
 
 
 @app.get("/jobs/{job_id}/dossier/{peptide_name}", response_class=HTMLResponse)
-def get_dossier(job_id: str, peptide_name: str):
+def get_dossier(job_id: str, peptide_name: str,
+                 user: User = Depends(required_user)):
     """
     Return the pre-rendered HTML dossier for a specific peptide therapy.
     """
@@ -776,7 +811,8 @@ def get_dossier(job_id: str, peptide_name: str):
         job = _jobs.get(job_id)
 
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail="not found")
+    guard_owner(job.get("created_by_user_id"), user)
 
     if job["status"] != "done":
         raise HTTPException(status_code=409, detail="Job not yet complete")
@@ -795,12 +831,13 @@ def get_dossier(job_id: str, peptide_name: str):
 
 
 @app.get("/jobs/{job_id}/pgx")
-def get_pgx(job_id: str):
+def get_pgx(job_id: str, user: User = Depends(required_user)):
     """Return the full pharmacogenomics profile for a completed job."""
     with _jobs_lock:
         job = _jobs.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail="not found")
+    guard_owner(job.get("created_by_user_id"), user)
     if job["status"] != "done":
         raise HTTPException(status_code=409, detail="Job not yet complete")
     pgx = (job.get("results") or {}).get("pgx_profile")
@@ -810,7 +847,7 @@ def get_pgx(job_id: str):
 
 
 @app.get("/jobs/{job_id}/drug/{drug}")
-def get_drug(job_id: str, drug: str):
+def get_drug(job_id: str, drug: str, user: User = Depends(required_user)):
     """
     Return per-drug PGx evidence for a specific drug: CPIC recommendations,
     matching star-allele phenotypes, contributing PRS, and the conformal
@@ -819,7 +856,8 @@ def get_drug(job_id: str, drug: str):
     with _jobs_lock:
         job = _jobs.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail="not found")
+    guard_owner(job.get("created_by_user_id"), user)
     if job["status"] != "done":
         raise HTTPException(status_code=409, detail="Job not yet complete")
     pgx = (job.get("results") or {}).get("pgx_profile") or {}
@@ -843,7 +881,8 @@ def get_drug(job_id: str, drug: str):
 
 
 @app.post("/jobs/{job_id}/variants/{variant_id}/acmg-signoff")
-def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest):
+def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest,
+                  user: User = Depends(required_user)):
     """
     Record a qualified reviewer's sign-out of a variant's automated ACMG/AMP
     classification (approve the draft, or amend it). Updates and persists the
@@ -852,7 +891,8 @@ def acmg_signoff(job_id: str, variant_id: str, req: AcmgSignoffRequest):
     with _jobs_lock:
         job = _jobs.get(job_id)
         if not job:
-            raise HTTPException(status_code=404, detail="Job not found")
+            raise HTTPException(status_code=404, detail="not found")
+        guard_owner(job.get("created_by_user_id"), user)
         if job["status"] != "done":
             raise HTTPException(status_code=409, detail="Job not yet complete")
 

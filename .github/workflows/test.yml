@@ -41,14 +41,15 @@ jobs:
         run: pip install -e ./engine
 
       - name: Install test deps
-        # The API/tracking/healthkit tests import the web stack at collection
-        # time. These are all pure wheels (no system libs) and mirror the runtime
-        # image's deps. psycopg2-binary is required since the Postgres migration:
-        # db/pool.py imports psycopg2 at module load and tests/conftest.py pulls
-        # it in, so without it pytest errors during collection. pysam lets the
-        # VCF-parser tests (incl. the decompression-bomb variant-cap guard) run
-        # rather than skip.
-        run: pip install pytest responses fastapi httpx python-multipart cryptography psycopg2-binary pysam
+        # The auth/API/tracking/healthkit tests import the web + auth stack at
+        # collection time. bcrypt is a hard dependency of engine.auth (imported
+        # eagerly), and pyjwt[crypto]+cryptography back OIDC access-token
+        # validation. These are all pure wheels (no system libs) mirroring the
+        # runtime image's deps. psycopg2-binary is required since db/pool.py
+        # imports psycopg2 at module load and tests/conftest.py pulls it in, so
+        # without it pytest errors during collection. pysam lets the VCF-parser
+        # tests (incl. the decompression-bomb variant-cap guard) run rather than skip.
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt pyjwt[crypto] cryptography psycopg2-binary pysam
 
       - name: Run tests
         run: pytest tests/ -v
@@ -109,7 +110,9 @@ jobs:
         run: pip install -e ./engine
 
       - name: Install test deps
-        run: pip install pytest responses fastapi httpx python-multipart bcrypt cryptography psycopg2-binary
+        # pyjwt[crypto] is needed here too: the smoke suite imports `api`, which
+        # pulls in engine.users.deps -> token_validator -> jwt at collection time.
+        run: pip install pytest responses fastapi httpx python-multipart bcrypt pyjwt[crypto] cryptography psycopg2-binary
 
       - name: Run Postgres smoke tests
         run: PG_TESTS=1 pytest tests/test_postgres_smoke.py -v

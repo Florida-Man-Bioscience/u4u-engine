@@ -23,6 +23,8 @@
 
             # Auth
             bcrypt
+            pyjwt
+            cryptography
 
             # Utilities
             urllib3

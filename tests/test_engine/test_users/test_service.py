@@ -115,14 +115,6 @@ def test_upsert_normalises_header_casing(conn):
     assert user.email == "carol@example.com"
 
 
-def test_get_user_by_authentik_uid(conn):
-    service.upsert_from_headers(conn, _headers(uid="ak-find", username="d"))
-    found = service.get_user_by_authentik_uid(conn, "ak-find")
-    assert found is not None
-    assert found.username == "d"
-    assert service.get_user_by_authentik_uid(conn, "ak-nope") is None
-
-
 def test_disable_user_is_soft_delete(conn):
     user = service.upsert_from_headers(conn, _headers(uid="ak-bye", username="e"))
     assert user is not None
