@@ -10,8 +10,9 @@ handled by the autouse ``_isolate_dbs`` fixture in this directory's
 conftest.py — these tests run against per-test tmp SQLite files, never
 the real data/users.db or data/biomarker_tracking.db.
 """
-import api
 from fastapi.testclient import TestClient
+
+import api
 
 
 def test_list_patients_scoped_to_owner():
@@ -27,7 +28,8 @@ def test_list_patients_excludes_foreign_owner():
     owned by someone else must never appear in the list. This is the
     exact IDOR (mass patient-list leak) the owns() filter in
     list_patients() closes; deleting that filter must fail this test."""
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
 
     with tdb.get_conn() as conn:
         foreign = service.create_patient(conn, label="THEIRS",
@@ -43,7 +45,8 @@ def test_list_patients_excludes_foreign_owner():
 
 def test_foreign_patient_is_404():
     # Seed a patient owned by someone else directly via the service.
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="THEIRS",
                                         created_by_user_id="someone-else")
@@ -54,7 +57,8 @@ def test_foreign_patient_is_404():
 
 
 def test_foreign_patient_delete_is_404():
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="THEIRS",
                                         created_by_user_id="someone-else")
@@ -66,7 +70,8 @@ def test_foreign_patient_delete_is_404():
 
 
 def test_foreign_patient_treatments_are_404():
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="THEIRS",
                                         created_by_user_id="someone-else")
@@ -80,7 +85,8 @@ def test_foreign_patient_treatments_are_404():
 
 
 def test_foreign_patient_measurements_are_404():
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="THEIRS",
                                         created_by_user_id="someone-else")
@@ -109,7 +115,8 @@ def test_foreign_patient_measurements_are_404():
 
 
 def test_foreign_patient_genetics_are_404():
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="THEIRS",
                                         created_by_user_id="someone-else")
@@ -122,7 +129,8 @@ def test_foreign_patient_genetics_are_404():
 def test_null_owner_patient_is_404():
     """A NULL owner (e.g. a legacy row) is treated the same as someone
     else's — never accessible, never leaked as existing."""
-    from engine.tracking import db as tdb, service
+    from engine.tracking import db as tdb
+    from engine.tracking import service
     with tdb.get_conn() as conn:
         other = service.create_patient(conn, label="ORPHAN", created_by_user_id=None)
     with TestClient(api.app) as c:
@@ -152,8 +160,8 @@ def test_seed_endpoint_403_when_oidc_configured(monkeypatch):
     AND dev-bypass (no OIDC configured). In "configured" (prod-shaped)
     mode it must 403 even for an authenticated caller."""
     from engine.tracking import api as tracking_api
-    from engine.users.models import User
     from engine.users.deps import required_user
+    from engine.users.models import User
 
     fake_user = User(
         id="u1", authentik_uid="u1", username="u1", email=None, full_name=None,
