@@ -16,17 +16,44 @@ longer-term auth target is Authentik device-code flow (see docs/healthkit-storag
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from engine.users.deps import current_user
 from engine.users.models import User
 
 from . import service
-from .auth import enforce_subject, require_device_token
+from .auth import (
+    enforce_subject,
+    enrollment_enabled,
+    is_valid_enrollment_code,
+    require_device_token,
+)
 from .db import get_conn
-from .schemas import IngestBody, IngestResult
+from .schemas import EnrollBody, EnrollResult, IngestBody, IngestResult
 
 router = APIRouter(prefix="/healthkit", tags=["healthkit"])
+
+
+@router.post("/enroll", response_model=EnrollResult)
+def enroll(body: EnrollBody) -> EnrollResult:
+    """Self-service onboarding: exchange a valid invite code for a device token
+    bound to the caller's opaque `subjectId`. No prior token required (this is
+    how a new install gets one). Gated by HEALTHKIT_ENROLL_CODES; disabled when
+    unset. One active token per subject — re-enroll needs the old one revoked."""
+    if not enrollment_enabled():
+        raise HTTPException(status_code=503, detail="Enrollment is not enabled.")
+    if not is_valid_enrollment_code(body.code):
+        raise HTTPException(status_code=403, detail="Invalid enrollment code.")
+
+    with get_conn() as conn:
+        if service.subject_has_active_token(conn, body.subject_id):
+            raise HTTPException(
+                status_code=409,
+                detail="This subject already has an active token; revoke it before re-enrolling.",
+            )
+        token = service.mint_device_token(conn, subject_id=body.subject_id, label="enrolled")
+
+    return EnrollResult(token=token, subject_id=body.subject_id)
 
 
 @router.post("/samples", response_model=IngestResult)
