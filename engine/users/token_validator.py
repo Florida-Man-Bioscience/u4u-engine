@@ -22,11 +22,11 @@ class JwksUnavailable(Exception):
     """JWKS endpoint unreachable — maps to 503 (fail closed)."""
 
 
-_clients: dict[str, "jwt.PyJWKClient"] = {}
+_clients: dict[str, jwt.PyJWKClient] = {}
 _clients_lock = threading.Lock()
 
 
-def _client_for(jwks_url: str) -> "jwt.PyJWKClient":
+def _client_for(jwks_url: str) -> jwt.PyJWKClient:
     with _clients_lock:
         client = _clients.get(jwks_url)
         if client is None:
