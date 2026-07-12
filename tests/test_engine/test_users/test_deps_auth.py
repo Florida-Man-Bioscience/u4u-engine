@@ -56,6 +56,7 @@ def test_valid_token_upserts_and_returns_user(monkeypatch):
 
 
 from engine.users.oidc import OidcSettings  # noqa: E402
+
 _FAKE_SETTINGS = OidcSettings(issuer="https://id.example/app",
                               audience="u4u-web",
                               jwks_url="https://id.example/app/jwks")
