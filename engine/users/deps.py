@@ -88,12 +88,12 @@ def required_user(request: Request) -> User:
     endpoint needed to validate the token is unreachable."""
     try:
         user = current_user(request)
-    except JwksUnavailable:
-        raise HTTPException(status_code=503, detail="identity provider unavailable")
-    except TokenError:
+    except JwksUnavailable as exc:
+        raise HTTPException(status_code=503, detail="identity provider unavailable") from exc
+    except TokenError as exc:
         # Unreachable today (current_user swallows TokenError->None); kept
         # as defense-in-depth if current_user's contract changes.
-        raise HTTPException(status_code=401, detail="invalid access token")
+        raise HTTPException(status_code=401, detail="invalid access token") from exc
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
     return user

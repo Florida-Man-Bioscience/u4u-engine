@@ -52,6 +52,23 @@ def token_required() -> bool:
     return os.getenv("HEALTHKIT_REQUIRE_TOKEN", "").strip().lower() in _TRUTHY
 
 
+def enrollment_codes() -> set[str]:
+    """Valid self-service enrollment codes, from HEALTHKIT_ENROLL_CODES
+    (comma-separated). Empty/unset ⇒ enrollment disabled."""
+    raw = os.getenv("HEALTHKIT_ENROLL_CODES", "")
+    return {c.strip() for c in raw.split(",") if c.strip()}
+
+
+def enrollment_enabled() -> bool:
+    return bool(enrollment_codes())
+
+
+def is_valid_enrollment_code(code: str) -> bool:
+    """Constant-time compare against each configured code."""
+    import hmac
+    return any(hmac.compare_digest(code, valid) for valid in enrollment_codes())
+
+
 def require_device_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> dict | None:

@@ -60,3 +60,18 @@ class IngestBody(BaseModel):
 class IngestResult(BaseModel):
     received: int
     inserted: int
+
+
+class EnrollBody(BaseModel):
+    model_config = _config
+
+    subject_id: str = Field(min_length=1, max_length=128, alias="subjectId")
+    code: str = Field(min_length=1, max_length=128)
+
+
+class EnrollResult(BaseModel):
+    model_config = _config
+
+    # The raw device token, returned once; the app stores it in the Keychain.
+    token: str
+    subject_id: str = Field(serialization_alias="subjectId")

@@ -45,6 +45,36 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def mint_device_token(conn, *, subject_id: str | None, label: str | None) -> str:
+    """Create a device bearer token (optionally bound to `subject_id`) and return
+    the raw value once. Only the SHA-256 hash is stored — same format as
+    scripts/create_healthkit_token.py."""
+    import secrets
+
+    from .auth import hash_token
+
+    raw = "pep_hk_" + secrets.token_urlsafe(32)
+    ph = _ph(conn)
+    conn.execute(
+        f"INSERT INTO healthkit_device_tokens (token_hash, label, subject_id) "
+        f"VALUES ({ph},{ph},{ph})",
+        (hash_token(raw), label, subject_id),
+    )
+    conn.commit()
+    return raw
+
+
+def subject_has_active_token(conn, subject_id: str) -> bool:
+    """Whether a non-revoked token is already bound to this subject."""
+    ph = _ph(conn)
+    row = conn.execute(
+        f"SELECT 1 FROM healthkit_device_tokens "
+        f"WHERE subject_id = {ph} AND NOT revoked LIMIT 1",
+        (subject_id,),
+    ).fetchone()
+    return row is not None
+
+
 def ingest(
     conn,
     *,

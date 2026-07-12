@@ -177,3 +177,49 @@ def test_enforce_subject_read_requires_bound_token():
     with pytest.raises(HTTPException) as e:                       # unbound token → 403 on read
         enforce_subject({"subject_id": None}, "S-1", require_bound=True)
     assert e.value.status_code == 403
+
+
+# ── Enrollment (self-service onboarding) ──────────────────────────────────────
+
+def test_mint_and_bind_device_token(tmp_path):
+    reset_initialized()
+    db = str(tmp_path / "hk.db")
+    with get_conn(path=db) as conn:
+        assert service.subject_has_active_token(conn, "S-enroll") is False
+        raw = service.mint_device_token(conn, subject_id="S-enroll", label="enrolled")
+        assert raw.startswith("pep_hk_")
+        assert service.subject_has_active_token(conn, "S-enroll") is True
+
+
+def test_minted_token_authorizes_that_subject(tmp_path):
+    from engine.healthkit.auth import enforce_subject, hash_token
+    reset_initialized()
+    db = str(tmp_path / "hk.db")
+    with get_conn(path=db) as conn:
+        raw = service.mint_device_token(conn, subject_id="S-bound", label="enrolled")
+        ph = "%s" if getattr(conn, "_is_pg", False) else "?"
+        row = dict(conn.execute(
+            f"SELECT * FROM healthkit_device_tokens WHERE token_hash = {ph}",
+            (hash_token(raw),),
+        ).fetchone())
+    # Bound token may touch its subject, not another.
+    enforce_subject(row, "S-bound")  # no raise
+    try:
+        enforce_subject(row, "S-other")
+        raised = False
+    except Exception:
+        raised = True
+    assert raised
+
+
+def test_enrollment_code_validation(monkeypatch):
+    from engine.healthkit import auth
+    monkeypatch.delenv("HEALTHKIT_ENROLL_CODES", raising=False)
+    assert auth.enrollment_enabled() is False
+    assert auth.is_valid_enrollment_code("anything") is False
+
+    monkeypatch.setenv("HEALTHKIT_ENROLL_CODES", "alpha, bravo")
+    assert auth.enrollment_enabled() is True
+    assert auth.is_valid_enrollment_code("alpha") is True
+    assert auth.is_valid_enrollment_code("bravo") is True
+    assert auth.is_valid_enrollment_code("charlie") is False
