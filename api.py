@@ -47,7 +47,7 @@ from pydantic import BaseModel
 
 from engine import run_pipeline
 from engine.acmg import apply_signoff
-from engine.users.deps import current_user, required_user
+from engine.users.deps import required_user
 from engine.users.models import User
 from engine.users.ownership import guard_owner, owns
 
