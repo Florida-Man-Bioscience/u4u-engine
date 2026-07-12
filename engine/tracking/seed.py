@@ -32,6 +32,7 @@ from . import service
 from .biomarker_params import BIOMARKER_PARAMS as BIOMARKER_PARAMS  # re-export (compat)
 from .biomarker_params import Params, params_for
 from .genetics import (
+    GeneticProfile,
     generate_synthetic_profile,
     responder_strength_from_profile,
 )
@@ -144,7 +145,7 @@ def seed(
         conn.commit()
 
     patients = []
-    profiles: dict[str, GeneticProfile] = {}  # noqa: F821 — forward use only
+    profiles: dict[str, GeneticProfile] = {}
     for i in range(n_patients):
         sex, byr = PATIENT_DEMOGRAPHICS[i % len(PATIENT_DEMOGRAPHICS)]
         if i >= len(PATIENT_DEMOGRAPHICS):
