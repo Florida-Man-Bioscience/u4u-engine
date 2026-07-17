@@ -30,7 +30,7 @@ pydantic>=2.6
 
 
 # OIDC access-token validation (end-user auth)
-pyjwt[crypto]>=2.8
+pyjwt[crypto]>=2.13.0
 cryptography>=42.0
 
 # Testing
