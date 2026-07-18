@@ -23,6 +23,11 @@ RUN pip install --no-cache-dir --prefix=/install "engine/[vcf]"
 # psycopg2-binary backs the Postgres pool in db/pool.py (loaded at import
 # time even with the SQLite fallback active, so it must be present in
 # the runtime image, not just the dev shell's flake.nix).
+# pyjwt[crypto] is the same story: engine/users/token_validator.py does a
+# module-level `import jwt`, which api.py pulls in via engine.users.deps —
+# so a missing pyjwt is not a degraded feature, it crashes the app at import
+# and the pod crash-loops. This list is hand-maintained and does NOT read
+# requirements.txt, so anything imported at app-import time must be added here.
 RUN pip install --no-cache-dir --prefix=/install \
     "fastapi>=0.110" \
     "uvicorn[standard]>=0.29" \
@@ -33,7 +38,9 @@ RUN pip install --no-cache-dir --prefix=/install \
     "sqlalchemy[asyncio]>=2.0" \
     "asyncpg>=0.29" \
     "pydantic>=2.6" \
-    "psycopg2-binary>=2.9"
+    "psycopg2-binary>=2.9" \
+    "pyjwt[crypto]>=2.8" \
+    "cryptography>=42.0"
 
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────

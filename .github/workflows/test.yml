@@ -116,3 +116,22 @@ jobs:
 
       - name: Run Postgres smoke tests
         run: PG_TESTS=1 pytest tests/test_postgres_smoke.py -v
+
+  # CI installs deps with pip lists that are INDEPENDENT of the runtime
+  # Dockerfile, so a package can be present in every test job and still be
+  # missing from the shipped image. That gap shipped a production outage: the
+  # image lacked pyjwt, `api.py` -> engine.users.deps -> token_validator did a
+  # module-level `import jwt`, and the pod crash-looped on startup while CI was
+  # fully green. Build the real image and prove the app imports inside it.
+  docker-import-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build runtime image
+        run: docker build -t u4u-engine:ci .
+
+      - name: App must import inside the runtime image
+        # Catches ModuleNotFoundError for anything pulled in at app-import time
+        # — the exact failure mode that crash-loops the pod in production.
+        run: docker run --rm u4u-engine:ci python -c "import api; print('app import OK')"
