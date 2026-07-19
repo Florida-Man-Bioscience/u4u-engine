@@ -3,8 +3,9 @@ engine/annotators/cache.py
 ===========================
 Shared cache for all external API annotator results.
 
-In production (DATABASE_URL set), results are stored in Postgres using a
-per-thread connection from the shared pool. In local dev / tests (no
+In production (DATABASE_URL set), results are stored in Postgres, borrowing a
+connection from the shared pool per operation and always returning it (holding
+one per thread leaked the pool — see ``_pg_conn``). In local dev / tests (no
 DATABASE_URL, or an explicit db_path is supplied), falls back to an
 in-process SQLite file — the same behavior as before.
 
@@ -16,6 +17,7 @@ import json
 import logging
 import os
 import threading
+from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
@@ -44,31 +46,47 @@ class AnnotationCache:
 
     # ── Postgres path ──────────────────────────────────────────────────────────
 
+    @contextmanager
     def _pg_conn(self):
-        """Per-thread wrapped psycopg2 connection from the shared pool.
+        """Borrow a pooled connection for ONE cache operation, always returning it.
 
-        Checked out once per thread and reused for the lifetime of that thread
-        (typically a single pipeline execution in the ThreadPoolExecutor).
-        Held in autocommit so reads don't open implicit transactions that
-        would sit idle and block concurrent writers on row locks — each
-        SELECT and INSERT … ON CONFLICT is its own atomic statement.
+        This used to check a connection out per thread and stash it in
+        thread-local state for the lifetime of that thread — but nothing ever
+        called ``put_conn``, so every worker thread that touched the cache
+        permanently consumed one of the pool's connections. The pipeline
+        annotates on 8 threads per job, so the pool drained over hours and then
+        every DB-backed request failed with
+        ``psycopg2.pool.PoolError: connection pool exhausted`` — taking down
+        tracking, users and jobs while ``/health`` stayed green.
+
+        Pool checkout is a cheap in-process operation, so borrowing per call is
+        the right trade for guaranteed release. Autocommit so a read doesn't
+        leave an idle transaction sitting on locks — each statement is atomic.
+
+        Yields ``None`` (rather than raising) when Postgres is unavailable, so
+        the cache degrades to live API calls instead of breaking the pipeline.
         """
-        wrapper = getattr(self._local, "pg_conn", None)
-        if wrapper is not None and not wrapper.closed:
-            return wrapper
         if getattr(self._local, "pg_failed", False):
-            return None
+            yield None
+            return
         try:
-            from db.pool import get_raw_conn
+            from db.pool import get_raw_conn, put_conn
             wrapper = get_raw_conn(autocommit=True)
-            self._local.pg_conn = wrapper
-            return wrapper
         except Exception as exc:
             log.warning(
                 "Annotation cache Postgres unavailable: %s — falling back to API calls", exc
             )
             self._local.pg_failed = True
-            return None
+            yield None
+            return
+        try:
+            yield wrapper
+        finally:
+            try:
+                put_conn(wrapper)
+            except Exception:
+                log.warning("Failed returning annotation-cache connection to the pool",
+                            exc_info=True)
 
     # ── SQLite path ────────────────────────────────────────────────────────────
 
@@ -114,19 +132,20 @@ class AnnotationCache:
         or the _MISS sentinel if no entry exists or the cache is unavailable.
         """
         if self._use_pg:
-            conn = self._pg_conn()
-            if conn is None:
-                return _MISS
-            try:
-                row = conn.execute(
-                    "SELECT result_json FROM annotation_cache WHERE source = %s AND lookup_key = %s",
-                    (source, lookup_key),
-                ).fetchone()
-                if row is None:
+            with self._pg_conn() as conn:
+                if conn is None:
                     return _MISS
-                return json.loads(row["result_json"] if isinstance(row, dict) else row[0])
-            except Exception:
-                return _MISS
+                try:
+                    row = conn.execute(
+                        "SELECT result_json FROM annotation_cache "
+                        "WHERE source = %s AND lookup_key = %s",
+                        (source, lookup_key),
+                    ).fetchone()
+                    if row is None:
+                        return _MISS
+                    return json.loads(row["result_json"] if isinstance(row, dict) else row[0])
+                except Exception:
+                    return _MISS
         else:
             conn = self._sqlite_conn()
             if conn is None:
@@ -151,27 +170,28 @@ class AnnotationCache:
         a cheap no-op when nothing has aged out.
         """
         if self._use_pg:
-            conn = self._pg_conn()
-            if conn is None:
-                return
-            try:
-                cur = conn.cursor()
-                cur.execute(
-                    "DELETE FROM annotation_cache "
-                    "WHERE fetched_at < NOW() - INTERVAL '90 days'"
-                )
-                cur.execute(
-                    """
-                    INSERT INTO annotation_cache (source, lookup_key, result_json, fetched_at)
-                    VALUES (%s, %s, %s, NOW())
-                    ON CONFLICT (source, lookup_key) DO UPDATE
-                        SET result_json = EXCLUDED.result_json,
-                            fetched_at  = EXCLUDED.fetched_at
-                    """,
-                    (source, lookup_key, json.dumps(result)),
-                )
-            except Exception:
-                pass
+            with self._pg_conn() as conn:
+                if conn is None:
+                    return
+                try:
+                    cur = conn.cursor()
+                    cur.execute(
+                        "DELETE FROM annotation_cache "
+                        "WHERE fetched_at < NOW() - INTERVAL '90 days'"
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO annotation_cache
+                            (source, lookup_key, result_json, fetched_at)
+                        VALUES (%s, %s, %s, NOW())
+                        ON CONFLICT (source, lookup_key) DO UPDATE
+                            SET result_json = EXCLUDED.result_json,
+                                fetched_at  = EXCLUDED.fetched_at
+                        """,
+                        (source, lookup_key, json.dumps(result)),
+                    )
+                except Exception:
+                    pass
         else:
             conn = self._sqlite_conn()
             if conn is None:

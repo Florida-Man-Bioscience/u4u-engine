@@ -476,3 +476,69 @@ def test_seed_and_predict_against_postgres(pg_database, pg_clean):
             biomarker_name="CRP",
         )
     assert result["posterior"] is not None
+
+
+# ── Connection-pool hygiene ──────────────────────────────────────────────────
+
+
+def test_annotation_cache_returns_connections_to_pool(pg_database, pg_clean):
+    """The caches must not leak pool connections — including across threads.
+
+    Regression test for a production outage: the annotation and regulatory
+    caches checked a connection out of the shared pool per thread and never
+    called put_conn. Every worker thread that touched a cache permanently
+    consumed a pool slot (the pipeline annotates on 8 threads per job), so the
+    pool drained over hours and then every DB-backed endpoint failed with
+    `psycopg2.pool.PoolError: connection pool exhausted` while /health stayed
+    green. Asserting the pool returns to zero in-use is what catches it.
+    """
+    import threading
+
+    import db.pool as pool_mod
+    from engine.annotators.cache import AnnotationCache
+
+    cache = AnnotationCache()
+    assert cache._use_pg is True, "expected Postgres mode under DATABASE_URL"
+
+    def in_use() -> int:
+        pool = pool_mod._pool
+        return len(getattr(pool, "_used", {})) if pool else 0
+
+    # Exercise from several threads, mimicking the pipeline's annotate pool.
+    def worker(n: int) -> None:
+        for i in range(5):
+            cache.put("clinvar", f"rs{n}_{i}", {"n": i})
+            cache.get("clinvar", f"rs{n}_{i}")
+
+    threads = [threading.Thread(target=worker, args=(n,)) for n in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert in_use() == 0, (
+        f"{in_use()} connection(s) still checked out after cache use — "
+        "the cache is leaking pool connections"
+    )
+    # And the cache still works afterwards.
+    assert cache.get("clinvar", "rs0_0") == {"n": 0}
+
+
+def test_regulatory_cache_returns_connections_to_pool(pg_database, pg_clean):
+    """Same leak guard for the regulatory cache."""
+    import db.pool as pool_mod
+    from engine.regulatory.cache import _MISS, RegulatoryCache
+
+    cache = RegulatoryCache()
+    if not getattr(cache, "_use_pg", False):
+        pytest.skip("regulatory cache not in Postgres mode")
+
+    for i in range(5):
+        cache.put("openfda", f"key{i}", {"i": i})
+        cache.get("openfda", f"key{i}", ttl_seconds=3600)
+        cache.get_stale("openfda", f"key{i}")
+
+    pool = pool_mod._pool
+    in_use = len(getattr(pool, "_used", {})) if pool else 0
+    assert in_use == 0, f"{in_use} connection(s) leaked by the regulatory cache"
+    assert cache.get("openfda", "key0", ttl_seconds=3600)[0] != _MISS
