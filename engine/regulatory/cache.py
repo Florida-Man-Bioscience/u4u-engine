@@ -24,6 +24,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
@@ -48,26 +49,39 @@ class RegulatoryCache:
 
     # ── Postgres path ──────────────────────────────────────────────────────────
 
+    @contextmanager
     def _pg_conn(self):
-        wrapper = getattr(self._local, "pg_conn", None)
-        if wrapper is not None and not wrapper.closed:
-            return wrapper
+        """Borrow a pooled connection for ONE cache operation, always returning it.
+
+        This previously cached a connection per thread and never called
+        ``put_conn``, leaking a pool slot per worker thread until the pool
+        drained (``PoolError: connection pool exhausted``) and every DB-backed
+        endpoint 500'd. autocommit keeps each SELECT/INSERT atomic so reads
+        don't hold an idle transaction that blocks writers.
+
+        Yields ``None`` when Postgres is unavailable so callers bypass the cache.
+        """
         if getattr(self._local, "pg_failed", False):
-            return None
+            yield None
+            return
         try:
-            from db.pool import get_raw_conn
-            # autocommit keeps each SELECT/INSERT atomic so reads don't
-            # hold an idle transaction that blocks writers (the same lesson
-            # the annotation cache learned in commit e6063f1).
+            from db.pool import get_raw_conn, put_conn
             wrapper = get_raw_conn(autocommit=True)
-            self._local.pg_conn = wrapper
-            return wrapper
         except Exception as exc:
             log.warning(
                 "Regulatory cache Postgres unavailable: %s — bypassing cache", exc
             )
             self._local.pg_failed = True
-            return None
+            yield None
+            return
+        try:
+            yield wrapper
+        finally:
+            try:
+                put_conn(wrapper)
+            except Exception:
+                log.warning("Failed returning regulatory-cache connection to the pool",
+                            exc_info=True)
 
     # ── SQLite path ────────────────────────────────────────────────────────────
 
@@ -113,30 +127,30 @@ class RegulatoryCache:
         is too old to use.
         """
         if self._use_pg:
-            conn = self._pg_conn()
-            if conn is None:
-                return _MISS, None
-            try:
-                row = conn.execute(
-                    """
-                    SELECT result_json,
-                           EXTRACT(EPOCH FROM fetched_at) AS fetched_at_epoch
-                    FROM regulatory_cache
-                    WHERE source = %s AND lookup_key = %s
-                    """,
-                    (source, lookup_key),
-                ).fetchone()
-                if row is None:
+            with self._pg_conn() as conn:
+                if conn is None:
                     return _MISS, None
-                result_json = row["result_json"] if isinstance(row, dict) else row[0]
-                fetched_at = float(
-                    row["fetched_at_epoch"] if isinstance(row, dict) else row[1]
-                )
-                if time.time() - fetched_at > ttl_seconds:
-                    return _MISS, fetched_at
-                return json.loads(result_json), fetched_at
-            except Exception:
-                return _MISS, None
+                try:
+                    row = conn.execute(
+                        """
+                        SELECT result_json,
+                               EXTRACT(EPOCH FROM fetched_at) AS fetched_at_epoch
+                        FROM regulatory_cache
+                        WHERE source = %s AND lookup_key = %s
+                        """,
+                        (source, lookup_key),
+                    ).fetchone()
+                    if row is None:
+                        return _MISS, None
+                    result_json = row["result_json"] if isinstance(row, dict) else row[0]
+                    fetched_at = float(
+                        row["fetched_at_epoch"] if isinstance(row, dict) else row[1]
+                    )
+                    if time.time() - fetched_at > ttl_seconds:
+                        return _MISS, fetched_at
+                    return json.loads(result_json), fetched_at
+                except Exception:
+                    return _MISS, None
         else:
             conn = self._sqlite_conn()
             if conn is None:
@@ -161,24 +175,24 @@ class RegulatoryCache:
         fetched_at epoch the caller can echo back to the frontend."""
         now = time.time()
         if self._use_pg:
-            conn = self._pg_conn()
-            if conn is None:
+            with self._pg_conn() as conn:
+                if conn is None:
+                    return now
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO regulatory_cache
+                            (source, lookup_key, result_json, fetched_at)
+                        VALUES (%s, %s, %s, to_timestamp(%s))
+                        ON CONFLICT (source, lookup_key) DO UPDATE
+                            SET result_json = EXCLUDED.result_json,
+                                fetched_at  = EXCLUDED.fetched_at
+                        """,
+                        (source, lookup_key, json.dumps(result), now),
+                    )
+                except Exception:
+                    pass
                 return now
-            try:
-                conn.execute(
-                    """
-                    INSERT INTO regulatory_cache
-                        (source, lookup_key, result_json, fetched_at)
-                    VALUES (%s, %s, %s, to_timestamp(%s))
-                    ON CONFLICT (source, lookup_key) DO UPDATE
-                        SET result_json = EXCLUDED.result_json,
-                            fetched_at  = EXCLUDED.fetched_at
-                    """,
-                    (source, lookup_key, json.dumps(result), now),
-                )
-            except Exception:
-                pass
-            return now
 
         conn = self._sqlite_conn()
         if conn is None:
@@ -201,28 +215,28 @@ class RegulatoryCache:
         with a 'stale' badge. Returns ``(value, fetched_at)`` or
         ``(_MISS, None)`` when nothing was ever cached."""
         if self._use_pg:
-            conn = self._pg_conn()
-            if conn is None:
-                return _MISS, None
-            try:
-                row = conn.execute(
-                    """
-                    SELECT result_json,
-                           EXTRACT(EPOCH FROM fetched_at) AS fetched_at_epoch
-                    FROM regulatory_cache
-                    WHERE source = %s AND lookup_key = %s
-                    """,
-                    (source, lookup_key),
-                ).fetchone()
-                if row is None:
+            with self._pg_conn() as conn:
+                if conn is None:
                     return _MISS, None
-                result_json = row["result_json"] if isinstance(row, dict) else row[0]
-                fetched_at = float(
-                    row["fetched_at_epoch"] if isinstance(row, dict) else row[1]
-                )
-                return json.loads(result_json), fetched_at
-            except Exception:
-                return _MISS, None
+                try:
+                    row = conn.execute(
+                        """
+                        SELECT result_json,
+                               EXTRACT(EPOCH FROM fetched_at) AS fetched_at_epoch
+                        FROM regulatory_cache
+                        WHERE source = %s AND lookup_key = %s
+                        """,
+                        (source, lookup_key),
+                    ).fetchone()
+                    if row is None:
+                        return _MISS, None
+                    result_json = row["result_json"] if isinstance(row, dict) else row[0]
+                    fetched_at = float(
+                        row["fetched_at_epoch"] if isinstance(row, dict) else row[1]
+                    )
+                    return json.loads(result_json), fetched_at
+                except Exception:
+                    return _MISS, None
 
         conn = self._sqlite_conn()
         if conn is None:
