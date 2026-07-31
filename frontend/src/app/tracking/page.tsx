@@ -68,9 +68,13 @@ export default function TrackingHome() {
           <h1 className="text-2xl font-semibold">Biomarker tracking</h1>
           <p className="text-sm text-slate-600">
             Track patient measurements over time on peptide therapy. View per-patient
-            longitudinal charts or jump to{" "}
+            longitudinal charts and projections, jump to{" "}
             <Link href="/tracking/cohort" className="text-teal-700 underline">
               cross-patient cohort analysis
+            </Link>
+            , or review{" "}
+            <Link href="/tracking/diagnostics" className="text-teal-700 underline">
+              model diagnostics
             </Link>
             .
           </p>

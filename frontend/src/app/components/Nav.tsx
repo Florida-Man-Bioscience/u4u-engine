@@ -43,6 +43,12 @@ export function Nav() {
             Study
           </Link>
           <Link
+            href="/faq"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            FAQ
+          </Link>
+          <Link
             href="/"
             className="text-zinc-400 hover:text-white transition-colors"
           >

@@ -239,3 +239,47 @@ export interface PredictionResult {
   expected_window: ExpectedWindow;
   prior_expected_window: ExpectedWindow;
 }
+
+// ── Model diagnostics (leave-one-out backtest) ─────────────────────────────
+
+export interface DiagnosticsPoint {
+  patient_id: string;
+  patient_label: string;
+  peptide: string;
+  biomarker: string;
+  weeks_since_start: number;
+  baseline: number;
+  predicted: number;
+  predicted_lo_95: number;
+  predicted_hi_95: number;
+  observed: number;
+  covered: boolean;
+  /** Signed error as a percent of baseline (scale-free). */
+  pct_error: number;
+}
+
+export interface DiagnosticsGroup {
+  label: string;
+  n_points: number;
+  n_series: number;
+  /** Fraction of held-out observations inside the 95% predictive band. */
+  coverage_95: number | null;
+  /** Mean absolute error as a percent of baseline. */
+  mae_pct: number | null;
+  rmse_pct: number | null;
+  /** Mean signed error as a percent of baseline (systematic bias). */
+  bias_pct: number | null;
+}
+
+export interface DiagnosticsResult {
+  method: string;
+  reference_path: string;
+  min_series_points: number;
+  n_patients: number;
+  n_series: number;
+  n_points: number;
+  overall: DiagnosticsGroup;
+  by_peptide: DiagnosticsGroup[];
+  by_biomarker: DiagnosticsGroup[];
+  points: DiagnosticsPoint[];
+}
