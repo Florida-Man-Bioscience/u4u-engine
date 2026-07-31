@@ -122,16 +122,24 @@ export default function PatientDetail({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <header>
-        <Link href="/tracking" className="text-sm text-teal-700 underline">
-          ← Patients
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/tracking" className="text-sm text-teal-700 underline">
+            ← Patients
+          </Link>
+          <h1 className="mt-1 text-2xl font-semibold">Patient {patient.label}</h1>
+          <p className="text-sm text-slate-600">
+            {[patient.sex, patient.birth_year && `b. ${patient.birth_year}`]
+              .filter(Boolean)
+              .join(" · ") || "—"}
+          </p>
+        </div>
+        <Link
+          href="/tracking/diagnostics"
+          className="whitespace-nowrap text-sm text-teal-700 underline"
+        >
+          Model diagnostics →
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Patient {patient.label}</h1>
-        <p className="text-sm text-slate-600">
-          {[patient.sex, patient.birth_year && `b. ${patient.birth_year}`]
-            .filter(Boolean)
-            .join(" · ") || "—"}
-        </p>
       </header>
 
       <section>

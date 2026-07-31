@@ -21,7 +21,7 @@ from engine.users.deps import required_user
 from engine.users.models import User
 from engine.users.ownership import guard_owner, owns
 
-from . import analysis, service
+from . import analysis, diagnostics, service
 from .db import get_conn
 from .genetics import (
     GeneticProfile,
@@ -500,6 +500,32 @@ def get_priors(patient_id: str, user: User = Depends(required_user)) -> dict[str
         r = derive_responder_prior(profile, peptide_name)
         priors.append(r.to_dict())
     return {"priors": priors}
+
+
+# ── Model diagnostics ───────────────────────────────────────────────────────
+
+@router.get("/diagnostics")
+def get_diagnostics(
+    patient_id: str | None = None,
+    user: User = Depends(required_user),
+) -> dict[str, Any]:
+    """Leave-one-out backtest of the Bayesian response model against the
+    caller's recorded measurements.
+
+    Owner-scoped: aggregates over every patient the caller owns, or a single
+    patient when ``patient_id`` is supplied. Returns overall MAE/RMSE (as a
+    percent of baseline), 95% predictive-band coverage, bias, per-peptide and
+    per-biomarker breakdowns, and the raw predicted-vs-observed points.
+    """
+    with get_conn() as conn:
+        if patient_id is not None:
+            patient = _require_owned_patient(conn, patient_id, user)
+            patients = [patient]
+        else:
+            patients = [
+                p for p in service.list_patients(conn) if owns(p.created_by_user_id, user)
+            ]
+        return diagnostics.run_diagnostics(conn, patients)
 
 
 # ── Demo data seed ──────────────────────────────────────────────────────────

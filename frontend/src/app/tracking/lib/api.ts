@@ -2,6 +2,7 @@ import type {
   BiomarkerCatalogEntry,
   CohortPeptideSummary,
   CohortResult,
+  DiagnosticsResult,
   GeneticsResponse,
   Measurement,
   Patient,
@@ -142,6 +143,11 @@ export const seedDemoData = (body: {
     method: "POST",
     body: JSON.stringify(body ?? {}),
   });
+
+export const getDiagnostics = (patientId?: string) => {
+  const qs = patientId ? `?patient_id=${encodeURIComponent(patientId)}` : "";
+  return req<DiagnosticsResult>(`/tracking/diagnostics${qs}`);
+};
 
 export const getCohort = (params: {
   peptide: string;
