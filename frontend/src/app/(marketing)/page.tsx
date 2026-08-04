@@ -31,7 +31,7 @@ const PHILOSOPHY = [
     step: "02",
     title: "Design",
     body: "Turn signals into a clear, individualized options set: variant annotation, pharmacogenomics, receptor and pathway context, and a dossier a licensed clinician can read and decide on.",
-    source: "Maps from Predict + Report (PeptidIQ / PeptOdyssey)",
+    source: "Maps from Predict + Report (u4u-engine / PeptOdyssey)",
   },
   {
     step: "03",
@@ -43,7 +43,7 @@ const PHILOSOPHY = [
 
 const PLATFORM = [
   {
-    num: "01 / PeptidIQ",
+    num: "01 / Engine",
     title: "Genome → response prediction",
     body: "A variant annotation pipeline that scores peptide and hormone response from raw genome files. Pharmacogenomics, GH-axis genetics, and receptor-level variants resolved into structured dossiers.",
     tag: "Engine",
@@ -67,8 +67,20 @@ const PLATFORM = [
 
 const TEAM = [
   {
-    name: "Curtis Dearing",
+    name: "Noah Jones",
     role: "Founder & CEO",
+    img: "/assets/img/noah.webp",
+    imgFallback: "/assets/img/noah.jpg",
+  },
+  {
+    name: "Garrett Knotts",
+    role: "Founder",
+    img: "/assets/img/garrett.webp",
+    imgFallback: "/assets/img/garrett.jpg",
+  },
+  {
+    name: "Curtis Dearing",
+    role: "Chief Vision Officer & CPO of PeptOdyssey",
     img: "/assets/img/curtis.webp",
     imgFallback: "/assets/img/curtis.jpg",
   },
@@ -89,7 +101,7 @@ const TEAM = [
     role: "Clinical & Operations",
     img: "/assets/img/tyler.webp",
     imgFallback: "/assets/img/tyler.jpg",
-  },
+  }
 ] as const;
 
 export default function CompanyHomePage() {
