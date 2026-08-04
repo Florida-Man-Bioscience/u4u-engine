@@ -1,0 +1,505 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Florida Man Bioscience — Peptide-led precision therapeutics",
+  description:
+    "Florida Man Bioscience builds peptide-led precision medicine: genome-aware response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+  alternates: { canonical: "https://flmanbiosci.net/" },
+};
+
+const serif = { fontFamily: "'DM Serif Display', serif" } as const;
+
+const PLATFORM = [
+  {
+    num: "01 / PeptidIQ",
+    title: "Genome → response prediction",
+    body: "A variant annotation pipeline that scores peptide and hormone response from raw genome files. Pharmacogenomics, GH-axis genetics, and receptor-level variants resolved into structured dossiers.",
+    tag: "Engine",
+  },
+  {
+    num: "02 / PeptOdyssey",
+    title: "The patient-facing product",
+    body: "Dossier, longitudinal tracking, and the iOS HealthKit capture loop — translating engine findings into individualized peptide options, safety flags, and measurable follow-up.",
+    tag: "Product",
+    href: "/peptodyssey",
+  },
+  {
+    num: "03 / Tracker",
+    title: "Longitudinal biomarker tracking",
+    body: "A Bayesian tracker that fuses the patient's genetic prior with measured biomarkers to refine the prediction over time — turning each appointment into training data.",
+    tag: "Feedback loop",
+    href: "/tracking",
+  },
+] as const;
+
+const TEAM = [
+  {
+    name: "Curtis Dearing",
+    role: "Founder & CEO",
+    img: "/assets/img/curtis.webp",
+    imgFallback: "/assets/img/curtis.jpg",
+  },
+  {
+    name: "Michael",
+    role: "Chemistry & Delivery",
+    img: "/assets/img/michael.webp",
+    imgFallback: "/assets/img/michael.jpg",
+  },
+  {
+    name: "Jacob",
+    role: "Bioinformatics",
+    img: "/assets/img/jacob.webp",
+    imgFallback: "/assets/img/jacob.jpg",
+  },
+  {
+    name: "Tyler",
+    role: "Clinical & Operations",
+    img: "/assets/img/tyler.webp",
+    imgFallback: "/assets/img/tyler.jpg",
+  },
+] as const;
+
+export default function CompanyHomePage() {
+  return (
+    <div className="bg-white text-[#0d1117]">
+      {/* Company nav */}
+      <header className="sticky top-0 z-50 border-b border-[#edecea] bg-white/85 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6 md:px-7">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[#1a6b4a] to-[#0f4530] text-sm text-white"
+              style={serif}
+              aria-hidden
+            >
+              F
+            </span>
+            <span className="text-lg tracking-tight text-[#0d1117]" style={serif}>
+              Florida Man Bioscience
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm font-medium text-[#3a3f4a] sm:flex">
+            <a href="#platform" className="hover:text-[#1a6b4a]">
+              Platform
+            </a>
+            <a href="#products" className="hover:text-[#1a6b4a]">
+              Programs
+            </a>
+            <a href="#team" className="hover:text-[#1a6b4a]">
+              Team
+            </a>
+            <Link
+              href="/peptodyssey"
+              className="rounded-full bg-[#1a6b4a] px-4 py-2 text-white hover:bg-[#0f4530]"
+            >
+              PeptOdyssey
+            </Link>
+          </nav>
+          <Link
+            href="/peptodyssey"
+            className="rounded-full bg-[#1a6b4a] px-3 py-1.5 text-sm font-medium text-white sm:hidden"
+          >
+            Product
+          </Link>
+        </div>
+      </header>
+
+      <main>
+        {/* Hero */}
+        <section className="border-b border-[#edecea]">
+          <div className="mx-auto grid max-w-[1180px] gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:px-7 md:py-24">
+            <div>
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+                Precision peptide therapeutics
+              </p>
+              <h1
+                className="text-4xl leading-tight text-[#0d1117] md:text-5xl"
+                style={serif}
+              >
+                Peptide medicine,{" "}
+                <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
+                We build the analytics, the trackers, and the delivery platform
+                behind next-generation peptide therapy — so each patient gets the
+                right peptide at the right dose, and we learn from every
+                measurement.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="#platform"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f4530]"
+                >
+                  See the platform <span aria-hidden>→</span>
+                </a>
+                <Link
+                  href="/peptodyssey/analyze"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
+                >
+                  Run an analysis
+                </Link>
+                <a
+                  href="#contact"
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#1a6b4a] hover:underline"
+                >
+                  Partner with us
+                </a>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-[#dbd9d3] bg-[#f5f4f0]">
+              <picture>
+                <source
+                  type="image/webp"
+                  srcSet="/assets/img/neurocreatine.webp"
+                />
+                <img
+                  src="/assets/img/neurocreatine.jpg"
+                  alt="Molecular illustration of a brain peptide concept"
+                  width={1000}
+                  height={750}
+                  className="h-full w-full object-cover"
+                  fetchPriority="high"
+                />
+              </picture>
+            </div>
+          </div>
+        </section>
+
+        {/* Platform */}
+        <section id="platform" className="scroll-mt-24 py-16 md:py-20">
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+              Platform
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+              Three layers, one feedback loop.
+            </h2>
+            <p className="mt-3 max-w-2xl text-[#3a3f4a]">
+              Our platform reads the genome, prescribes the peptide, and learns
+              from the response — all in the same pipeline.
+            </p>
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {PLATFORM.map((card) => {
+                const inner = (
+                  <>
+                    <p className="font-mono text-xs font-medium text-[#6b7280]">
+                      {card.num}
+                    </p>
+                    <h3 className="mt-3 text-xl" style={serif}>
+                      {card.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-[#3a3f4a]">
+                      {card.body}
+                    </p>
+                    <span className="mt-5 inline-flex w-fit rounded-full bg-[#e1f3eb] px-2.5 py-1 text-xs font-semibold text-[#0f4530]">
+                      {card.tag}
+                    </span>
+                  </>
+                );
+                const className =
+                  "flex h-full flex-col rounded-xl border border-[#dbd9d3] bg-[#f5f4f0] p-6 transition hover:border-[#1a6b4a]/35";
+                if ("href" in card && card.href) {
+                  return (
+                    <Link key={card.num} href={card.href} className={className}>
+                      {inner}
+                    </Link>
+                  );
+                }
+                return (
+                  <article key={card.num} className={className}>
+                    {inner}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Programs */}
+        <section
+          id="products"
+          className="scroll-mt-24 border-y border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] space-y-14 px-6 md:px-7">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+                Programs
+              </p>
+              <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+                What we are building.
+              </h2>
+              <p className="mt-3 max-w-2xl text-[#3a3f4a]">
+                From the analytics layer down to molecular delivery, our pipeline
+                is built around peptides — drugs that can be precise, but only if
+                you treat them as a system.
+              </p>
+            </div>
+
+            <div className="grid items-center gap-8 md:grid-cols-2">
+              <div className="overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white">
+                <picture>
+                  <source type="image/webp" srcSet="/assets/img/nanodisk.webp" />
+                  <img
+                    src="/assets/img/nanodisk.jpg"
+                    alt="Nanodisk delivery vehicle illustration"
+                    width={1200}
+                    height={900}
+                    className="w-full object-cover"
+                    loading="lazy"
+                  />
+                </picture>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#92550a]">
+                  Delivery
+                </p>
+                <h3 className="mt-2 text-2xl" style={serif}>
+                  MSP nanodisk delivery
+                </h3>
+                <p className="mt-3 text-[#3a3f4a]">
+                  A membrane-scaffold-protein (MSP) nanodisk platform engineered
+                  to carry peptide and nucleic-acid payloads through tissue
+                  barriers that stop conventional formulations.
+                </p>
+                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
+                  <li>Histone-mimetic disk design with tunable surface chemistry</li>
+                  <li>
+                    siRNA docking modelled <em>in silico</em>
+                  </li>
+                  <li>Active discovery program with bench follow-through</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="grid items-center gap-8 md:grid-cols-2">
+              <div className="order-2 md:order-1">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1e4d8c]">
+                  Discovery
+                </p>
+                <h3 className="mt-2 text-2xl" style={serif}>
+                  Neuro-creatine &amp; CNS peptides
+                </h3>
+                <p className="mt-3 text-[#3a3f4a]">
+                  An early-stage discovery track exploring peptides aimed at the
+                  central nervous system — using the analytics platform to triage
+                  candidates and anchor go/no-go decisions in biomarker data.
+                </p>
+                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
+                  <li>Genome-informed candidate triage</li>
+                  <li>Biomarker-anchored go/no-go decisions</li>
+                </ul>
+              </div>
+              <div className="order-1 overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white md:order-2">
+                <picture>
+                  <source
+                    type="image/webp"
+                    srcSet="/assets/img/neurocreatine.webp"
+                  />
+                  <img
+                    src="/assets/img/neurocreatine.jpg"
+                    alt="Neuro-creatine concept"
+                    width={1000}
+                    height={750}
+                    className="w-full object-cover"
+                    loading="lazy"
+                  />
+                </picture>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats */}
+        <section className="py-12">
+          <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-4 px-6 md:grid-cols-4 md:px-7">
+            {[
+              ["50+", "Biomarkers tracked"],
+              ["7", "Annotation sources"],
+              ["Bayesian", "Posterior updates"],
+              ["Open", "Source engine"],
+            ].map(([n, l]) => (
+              <div
+                key={l}
+                className="rounded-xl border border-[#dbd9d3] bg-white px-4 py-5 text-center"
+              >
+                <div className="text-2xl text-[#1a6b4a]" style={serif}>
+                  {n}
+                </div>
+                <div className="mt-1 text-xs font-medium uppercase tracking-wide text-[#6b7280]">
+                  {l}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Team */}
+        <section
+          id="team"
+          className="scroll-mt-24 border-t border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+              Team
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+              The people behind the science.
+            </h2>
+            <p className="mt-3 max-w-2xl text-[#3a3f4a]">
+              A small team of scientists and engineers who refuse to choose
+              between rigor and speed.
+            </p>
+            <div className="mt-10 grid grid-cols-2 gap-5 md:grid-cols-4">
+              {TEAM.map((m) => (
+                <div
+                  key={m.name}
+                  className="overflow-hidden rounded-xl border border-[#dbd9d3] bg-white"
+                >
+                  <picture>
+                    <source type="image/webp" srcSet={m.img} />
+                    <img
+                      src={m.imgFallback}
+                      alt={`Portrait of ${m.name}`}
+                      width={800}
+                      height={800}
+                      className="aspect-square w-full object-cover"
+                      loading="lazy"
+                    />
+                  </picture>
+                  <div className="p-4">
+                    <div className="font-semibold text-[#0d1117]">{m.name}</div>
+                    <div className="text-sm text-[#6b7280]">{m.role}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-xs text-[#6b7280]">
+              Public marketing roles as shown on the company site. Formal titles
+              and equity structure are internal governance documents — not
+              restated here.
+            </p>
+          </div>
+        </section>
+
+        {/* Contact */}
+        <section
+          id="contact"
+          className="scroll-mt-24 bg-[#0d1117] py-16 text-white md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2d8f61]">
+              Get in touch
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+              Build a peptide program with us.
+            </h2>
+            <p className="mt-3 max-w-xl text-zinc-400">
+              Whether you are a clinician, investor, or scientist — we are open
+              to collaboration on every layer of the stack.
+            </p>
+            <a
+              href="mailto:hello@flmanbiosci.net"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2d8f61]"
+            >
+              hello@flmanbiosci.net <span aria-hidden>→</span>
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-[#1a1f2a] bg-[#08090d] py-12 text-sm text-zinc-400">
+        <div className="mx-auto grid max-w-[1180px] gap-8 px-6 md:grid-cols-4 md:px-7">
+          <div className="md:col-span-1">
+            <div className="flex items-center gap-2 text-white">
+              <span
+                className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-[#1a6b4a] to-[#0f4530] text-xs"
+                style={serif}
+              >
+                F
+              </span>
+              <span style={serif}>Florida Man Bioscience</span>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+              Peptide-led precision medicine. Built in Florida, opened to the
+              world.
+            </p>
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
+              Platform
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <a href="#platform" className="hover:text-white">
+                  PeptidIQ engine
+                </a>
+              </li>
+              <li>
+                <Link href="/peptodyssey" className="hover:text-white">
+                  PeptOdyssey
+                </Link>
+              </li>
+              <li>
+                <Link href="/tracking" className="hover:text-white">
+                  Biomarker tracker
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
+              Product
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/peptodyssey/analyze" className="hover:text-white">
+                  Genome analysis
+                </Link>
+              </li>
+              <li>
+                <Link href="/peptodyssey/privacy" className="hover:text-white">
+                  iOS privacy policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/study" className="hover:text-white">
+                  Validation study
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
+              Company
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <a href="#team" className="hover:text-white">
+                  Team
+                </a>
+              </li>
+              <li>
+                <a href="mailto:hello@flmanbiosci.net" className="hover:text-white">
+                  Contact
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/Florida-Man-Bioscience"
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  GitHub
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="mx-auto mt-10 flex max-w-[1180px] flex-wrap justify-between gap-2 border-t border-white/5 px-6 pt-6 text-xs text-zinc-600 md:px-7">
+          <span>© {new Date().getFullYear()} Florida Man Bioscience. All rights reserved.</span>
+          <span>Built in Florida.</span>
+        </div>
+      </footer>
+    </div>
+  );
+}

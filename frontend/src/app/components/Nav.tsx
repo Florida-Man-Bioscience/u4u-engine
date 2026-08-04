@@ -3,21 +3,35 @@ import Link from "next/link";
 export function Nav() {
   return (
     <header className="bg-[#0d1117] border-b border-[#1a6b4a]/30">
-      <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
-        >
-          <span className="text-[#2d8f61] text-lg">&#x2726;</span>
-          <span
-            className="text-white text-lg tracking-tight"
-            style={{ fontFamily: "'DM Serif Display', serif" }}
+      <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <Link
+            href="/peptodyssey"
+            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity shrink-0"
           >
-            PeptOdyssey
-          </span>
-        </Link>
+            <span className="text-[#2d8f61] text-lg">&#x2726;</span>
+            <span
+              className="text-white text-lg tracking-tight"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
+              PeptOdyssey
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="hidden sm:inline text-xs text-zinc-500 hover:text-zinc-300 transition-colors truncate"
+          >
+            Florida Man Bioscience
+          </Link>
+        </div>
 
-        <nav className="flex items-center gap-5 text-sm">
+        <nav className="flex items-center gap-4 sm:gap-5 text-sm flex-wrap justify-end">
+          <Link
+            href="/peptodyssey/analyze"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            Analyze
+          </Link>
           <Link
             href="/jobs"
             className="text-zinc-400 hover:text-white transition-colors"
@@ -32,13 +46,13 @@ export function Nav() {
           </Link>
           <Link
             href="/regulatory"
-            className="text-zinc-400 hover:text-white transition-colors"
+            className="hidden md:inline text-zinc-400 hover:text-white transition-colors"
           >
             Regulatory
           </Link>
           <Link
             href="/study"
-            className="text-zinc-400 hover:text-white transition-colors"
+            className="hidden md:inline text-zinc-400 hover:text-white transition-colors"
           >
             Study
           </Link>
@@ -49,10 +63,10 @@ export function Nav() {
             FAQ
           </Link>
           <Link
-            href="/"
-            className="text-zinc-400 hover:text-white transition-colors"
+            href="/peptodyssey/privacy"
+            className="hidden lg:inline text-zinc-400 hover:text-white transition-colors"
           >
-            New Analysis
+            Privacy
           </Link>
         </nav>
       </div>
