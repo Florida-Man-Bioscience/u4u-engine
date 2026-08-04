@@ -126,7 +126,7 @@ jobs:
   docker-import-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Build runtime image
         run: docker build -t u4u-engine:ci .
