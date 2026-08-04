@@ -45,7 +45,7 @@ through peptide therapy, made legible.
 | **Regulatory dashboard** | `/regulatory` | Curated + live peptide regulatory context |
 | **Validation study** | `/study` | Informational only — **pending IRB, not recruiting** |
 | **Company home** | `/` (after restructure) | Florida Man Bioscience |
-| **Contact** | `mailto:hello@flmanbiosci.net` | Privacy + product questions |
+| **Contact** | `mailto:noahtjones@gmail.com` | Privacy + product questions |
 
 ---
 
@@ -128,7 +128,7 @@ raw genome ─► PeptidIQ ─► DossierV0 ─► PeptOdyssey (human) ─► bi
 | **App pin** | `peptodyssey` → `AppLinks.privacyPolicy` / `docs/PRIVACY.md` |
 | **Policy status** | Operational draft for TestFlight / App Store disclosure; **counsel review open** |
 | **Last updated (draft)** | 16 July 2026 · Version 1 |
-| **Contact** | hello@flmanbiosci.net |
+| **Contact** | noahtjones@gmail.com |
 
 Hub footer **must** link Privacy. Material policy edits require human/legal
 review — not drive-by marketing changes.
