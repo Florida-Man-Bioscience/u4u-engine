@@ -202,10 +202,10 @@ export function PosteriorChart({
           }
         />
         <Tooltip
-          formatter={(value: number, name: string) => [
+          formatter={(value, name) => [
             unitSuffix
-              ? `${Number(value).toFixed(2)}${unitSuffix}`
-              : Number(value).toFixed(2),
+              ? `${Number(value ?? 0).toFixed(2)}${unitSuffix}`
+              : Number(value ?? 0).toFixed(2),
             name,
           ]}
           labelFormatter={(v) => `${v} weeks`}

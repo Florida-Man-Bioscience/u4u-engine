@@ -78,7 +78,7 @@ export function CohortTrajectoryChart({ result, height = 320 }: Props) {
         />
         <YAxis stroke="#64748b" fontSize={11} domain={["auto", "auto"]} />
         <Tooltip
-          formatter={(value: number, name: string) => [value, name]}
+          formatter={(value, name) => [value, name]}
           labelFormatter={(v) => `${v} weeks`}
         />
         {expectedBand && (
@@ -177,9 +177,9 @@ export function DoseResponseChart({ result, height = 260 }: DoseProps) {
         />
         <YAxis stroke="#64748b" fontSize={11} />
         <Tooltip
-          formatter={(value: number, name: string) => {
+          formatter={(value, name) => {
             if (name === "median") return [value, "median value"];
-            if (name === "pct") return [value === null ? "—" : `${value}%`, "Δ vs baseline"];
+            if (name === "pct") return [value == null ? "—" : `${value}%`, "Δ vs baseline"];
             return [value, name];
           }}
           labelFormatter={(v) => `dose: ${v}`}

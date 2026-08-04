@@ -104,7 +104,7 @@ export function BiomarkerLineChart({
           labelFormatter={(v) =>
             useWeeks ? `${v} weeks` : new Date(Number(v)).toLocaleString()
           }
-          formatter={(value: number) => [value, "value"]}
+          formatter={(value) => [value, "value"]}
         />
         {expectedBand && (
           <ReferenceArea
