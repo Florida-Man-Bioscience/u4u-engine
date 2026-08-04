@@ -2,13 +2,44 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Florida Man Bioscience — Peptide-led precision therapeutics",
+  title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
   description:
-    "Florida Man Bioscience builds peptide-led precision medicine: genome-aware response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+    "Florida Man Bioscience builds the analytics, trackers, and delivery platform behind precision peptide therapy — genome-aware response prediction, longitudinal biomarkers, and research delivery science.",
   alternates: { canonical: "https://flmanbiosci.net/" },
+  openGraph: {
+    title: "Florida Man Bioscience",
+    description:
+      "Peptide medicine, matched to the genome. Analytics, trackers, and a delivery research platform.",
+    url: "https://flmanbiosci.net/",
+    siteName: "Florida Man Bioscience",
+    type: "website",
+  },
 };
 
 const serif = { fontFamily: "'DM Serif Display', serif" } as const;
+
+/** Public three-leg story (Detect→Design→Deliver). Maps the internal
+ *  Read→Predict→Report→Track→Deliver loop without inventing clinical claims. */
+const PHILOSOPHY = [
+  {
+    step: "01",
+    title: "Detect",
+    body: "Read the genome and capture real-world signals — raw VCF or consumer genetics files, plus longitudinal biomarkers from labs and consented HealthKit capture.",
+    source: "Maps from Read + measure in the U4U loop",
+  },
+  {
+    step: "02",
+    title: "Design",
+    body: "Turn signals into a clear, individualized options set: variant annotation, pharmacogenomics, receptor and pathway context, and a dossier a licensed clinician can read and decide on.",
+    source: "Maps from Predict + Report (PeptidIQ / PeptOdyssey)",
+  },
+  {
+    step: "03",
+    title: "Deliver",
+    body: "Close the loop over time with Bayesian biomarker tracking — and, on a longer research horizon, molecule-delivery science (MSP nanodisk). Software ships first; delivery stays research-stage.",
+    source: "Maps from Track + Deliver in the company platform",
+  },
+] as const;
 
 const PLATFORM = [
   {
@@ -16,6 +47,7 @@ const PLATFORM = [
     title: "Genome → response prediction",
     body: "A variant annotation pipeline that scores peptide and hormone response from raw genome files. Pharmacogenomics, GH-axis genetics, and receptor-level variants resolved into structured dossiers.",
     tag: "Engine",
+    href: "/peptodyssey/analyze",
   },
   {
     num: "02 / PeptOdyssey",
@@ -79,6 +111,9 @@ export default function CompanyHomePage() {
             </span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#3a3f4a] sm:flex">
+            <a href="#philosophy" className="hover:text-[#1a6b4a]">
+              Philosophy
+            </a>
             <a href="#platform" className="hover:text-[#1a6b4a]">
               Platform
             </a>
@@ -120,24 +155,24 @@ export default function CompanyHomePage() {
                 <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
-                We build the analytics, the trackers, and the delivery platform
-                behind next-generation peptide therapy — so each patient gets the
-                right peptide at the right dose, and we learn from every
+                We build the analytics, the trackers, and the delivery research
+                platform behind precision peptide therapy — so each patient can
+                be matched more carefully, and the system learns from every
                 measurement.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href="#platform"
+                <Link
+                  href="/peptodyssey"
                   className="inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f4530]"
                 >
-                  See the platform <span aria-hidden>→</span>
-                </a>
-                <Link
-                  href="/peptodyssey/analyze"
+                  Explore PeptOdyssey <span aria-hidden>→</span>
+                </Link>
+                <a
+                  href="#philosophy"
                   className="inline-flex items-center gap-2 rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
                 >
-                  Run an analysis
-                </Link>
+                  Detect → Design → Deliver
+                </a>
                 <a
                   href="#contact"
                   className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#1a6b4a] hover:underline"
@@ -145,6 +180,10 @@ export default function CompanyHomePage() {
                   Partner with us
                 </a>
               </div>
+              <p className="mt-5 max-w-lg text-xs leading-relaxed text-[#6b7280]">
+                Decision-support and research tooling with a licensed clinician in
+                the loop. Not a medical device; not a guarantee of clinical outcomes.
+              </p>
             </div>
             <div className="overflow-hidden rounded-2xl border border-[#dbd9d3] bg-[#f5f4f0]">
               <picture>
@@ -165,6 +204,55 @@ export default function CompanyHomePage() {
           </div>
         </section>
 
+        {/* Detect → Design → Deliver */}
+        <section
+          id="philosophy"
+          className="scroll-mt-24 border-b border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+              Philosophy
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+              Detect → Design → Deliver
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
+              Public three-leg story of how we work. Internally the platform is
+              also described as{" "}
+              <strong className="font-medium text-[#0d1117]">
+                Read → Predict → Report → Track → Deliver
+              </strong>
+              ; the legs below collapse that loop without inventing new clinical
+              claims.
+            </p>
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {PHILOSOPHY.map((leg) => (
+                <article
+                  key={leg.title}
+                  className="relative overflow-hidden rounded-xl border border-[#dbd9d3] bg-white p-6"
+                >
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1a6b4a] to-[#2dd4bf]" />
+                  <span
+                    className="bg-gradient-to-br from-[#1a6b4a] to-[#2d8f61] bg-clip-text text-3xl text-transparent"
+                    style={serif}
+                  >
+                    {leg.step}
+                  </span>
+                  <h3 className="mt-3 text-xl" style={serif}>
+                    {leg.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[#3a3f4a]">
+                    {leg.body}
+                  </p>
+                  <p className="mt-4 text-[11px] uppercase tracking-wide text-[#6b7280]">
+                    {leg.source}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Platform */}
         <section id="platform" className="scroll-mt-24 py-16 md:py-20">
           <div className="mx-auto max-w-[1180px] px-6 md:px-7">
@@ -175,42 +263,31 @@ export default function CompanyHomePage() {
               Three layers, one feedback loop.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              Our platform reads the genome, prescribes the peptide, and learns
-              from the response — all in the same pipeline.
+              Our platform reads the genome, designs the options set, and learns
+              from the response — software first; delivery research on a longer
+              horizon.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {PLATFORM.map((card) => {
-                const inner = (
-                  <>
-                    <p className="font-mono text-xs font-medium text-[#6b7280]">
-                      {card.num}
-                    </p>
-                    <h3 className="mt-3 text-xl" style={serif}>
-                      {card.title}
-                    </h3>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-[#3a3f4a]">
-                      {card.body}
-                    </p>
-                    <span className="mt-5 inline-flex w-fit rounded-full bg-[#e1f3eb] px-2.5 py-1 text-xs font-semibold text-[#0f4530]">
-                      {card.tag}
-                    </span>
-                  </>
-                );
-                const className =
-                  "flex h-full flex-col rounded-xl border border-[#dbd9d3] bg-[#f5f4f0] p-6 transition hover:border-[#1a6b4a]/35";
-                if ("href" in card && card.href) {
-                  return (
-                    <Link key={card.num} href={card.href} className={className}>
-                      {inner}
-                    </Link>
-                  );
-                }
-                return (
-                  <article key={card.num} className={className}>
-                    {inner}
-                  </article>
-                );
-              })}
+              {PLATFORM.map((card) => (
+                <Link
+                  key={card.num}
+                  href={card.href}
+                  className="flex h-full flex-col rounded-xl border border-[#dbd9d3] bg-[#f5f4f0] p-6 transition hover:border-[#1a6b4a]/35"
+                >
+                  <p className="font-mono text-xs font-medium text-[#6b7280]">
+                    {card.num}
+                  </p>
+                  <h3 className="mt-3 text-xl" style={serif}>
+                    {card.title}
+                  </h3>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-[#3a3f4a]">
+                    {card.body}
+                  </p>
+                  <span className="mt-5 inline-flex w-fit rounded-full bg-[#e1f3eb] px-2.5 py-1 text-xs font-semibold text-[#0f4530]">
+                    {card.tag}
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
@@ -429,6 +506,11 @@ export default function CompanyHomePage() {
               Platform
             </h4>
             <ul className="space-y-2">
+              <li>
+                <a href="#philosophy" className="hover:text-white">
+                  Detect → Design → Deliver
+                </a>
+              </li>
               <li>
                 <a href="#platform" className="hover:text-white">
                   PeptidIQ engine
