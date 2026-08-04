@@ -102,7 +102,7 @@ export default function FaqPage() {
         <p className="mt-1 text-sm text-slate-600">
           Peptide genomics, the science behind the projections, and how we hold
           the model accountable. Still stuck? Start with a{" "}
-          <Link href="/" className="text-teal-700 underline">
+          <Link href="/peptodyssey/analyze" className="text-teal-700 underline">
             new analysis
           </Link>
           .

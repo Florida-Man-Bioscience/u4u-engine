@@ -3,9 +3,13 @@ import "./globals.css";
 import { Nav } from "./components/Nav";
 
 export const metadata: Metadata = {
-  title: "PeptOdyssey — Precision Peptide Genomics",
+  title: {
+    default: "Florida Man Bioscience — Peptide medicine, matched to the genome",
+    template: "%s · Florida Man Bioscience",
+  },
   description:
-    "Upload your genome and discover which peptide therapies align with your unique biology.",
+    "Florida Man Bioscience builds the analytics, trackers, and delivery research platform behind precision peptide therapy.",
+  metadataBase: new URL("https://flmanbiosci.net"),
 };
 
 export default function RootLayout({

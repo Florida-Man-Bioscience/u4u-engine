@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "PeptOdyssey Privacy Policy — Florida Man Bioscience",
+  title: {
+    absolute: "PeptOdyssey Privacy Policy — Florida Man Bioscience",
+  },
   description:
     "Privacy policy for the PeptOdyssey iOS research app: HealthKit data types, purpose, retention, deletion, and contact.",
   alternates: {

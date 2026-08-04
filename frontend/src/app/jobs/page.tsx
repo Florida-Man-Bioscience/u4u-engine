@@ -72,7 +72,7 @@ export default function JobsListPage() {
                     <p className="text-red-700 font-medium">Failed to load jobs</p>
                     <p className="text-sm text-red-600">{error}</p>
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => router.push("/peptodyssey/analyze")}
                         className="rounded-lg bg-blue-700 text-white px-5 py-2 text-sm font-medium hover:bg-blue-800 transition-colors"
                     >
                         Back to upload
@@ -96,7 +96,7 @@ export default function JobsListPage() {
                     </p>
                 </div>
                 <button
-                    onClick={() => router.push("/")}
+                    onClick={() => router.push("/peptodyssey/analyze")}
                     className="rounded-lg bg-blue-700 text-white px-4 py-2 text-sm font-medium hover:bg-blue-800 transition-colors"
                 >
                     + New Analysis
@@ -108,7 +108,7 @@ export default function JobsListPage() {
                     <span className="text-4xl">📂</span>
                     <p className="text-zinc-500">No jobs yet.</p>
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => router.push("/peptodyssey/analyze")}
                         className="text-blue-700 text-sm font-medium hover:underline"
                     >
                         Upload a genome file to get started →
