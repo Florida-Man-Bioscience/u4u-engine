@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Nav } from "./components/Nav";
 
 export const metadata: Metadata = {
-  title: "PeptOdyssey — Precision Peptide Genomics",
+  title: {
+    default: "Florida Man Bioscience — Peptide-led precision therapeutics",
+    template: "%s · Florida Man Bioscience",
+  },
   description:
-    "Upload your genome and discover which peptide therapies align with your unique biology.",
+    "Florida Man Bioscience builds peptide-led precision medicine: genome-aware response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+  metadataBase: new URL("https://flmanbiosci.net"),
+  openGraph: {
+    type: "website",
+    siteName: "Florida Man Bioscience",
+    url: "https://flmanbiosci.net/",
+    title: "Florida Man Bioscience — Peptide-led precision therapeutics",
+    description:
+      "Genome-aware peptide response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+    images: [{ url: "/assets/img/mark.png" }],
+  },
 };
 
 export default function RootLayout({
@@ -15,9 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-[#f5f4f0]">
-        <Nav />
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <body className="antialiased min-h-screen bg-[#f5f4f0] text-[#0d1117]">
+        {children}
       </body>
     </html>
   );
