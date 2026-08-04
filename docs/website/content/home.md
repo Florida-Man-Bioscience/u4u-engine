@@ -29,7 +29,7 @@ next-generation peptide therapy — so each patient can get the right peptide
 at the right dose *for them*, and the system learns from every measurement.
 
 **Primary CTA:** [Explore PeptOdyssey →](/peptodyssey/)  
-**Secondary CTA:** [Partner with us](mailto:hello@flmanbiosci.net)
+**Secondary CTA:** [Partner with us](mailto:noahtjones@gmail.com)
 
 ---
 
@@ -55,7 +55,7 @@ The delivery layer is **research-stage**.
 **One line:** Peptide medicine, matched to the genome — and it gets smarter
 every time a patient is measured.
 
-**Contact:** [hello@flmanbiosci.net](mailto:hello@flmanbiosci.net) ·
+**Contact:** [noahtjones@gmail.com](mailto:noahtjones@gmail.com) ·
 [github.com/Florida-Man-Bioscience](https://github.com/Florida-Man-Bioscience)
 
 **Brand voice (from company brand guide):** clear over clever; confident, not
@@ -164,7 +164,7 @@ genome + biomarkers  →    predict + individualized   →   learn over time
 | **Analyze (genome upload)** | Today live at `/` tool UI; IA target [`/peptodyssey/analyze`](/peptodyssey/analyze) | Implementation task moves tool off company root |
 | **Tracking UI** | [`/tracking`](/tracking) (IA: nest under `/peptodyssey/tracking`) | Biomarker tracking product surface |
 | **Study (informational)** | [`/study`](/study) | Observational pipeline validation — **pending IRB / not recruiting** |
-| **Contact / partner** | `mailto:hello@flmanbiosci.net` | Clinics, collaborators, investors |
+| **Contact / partner** | `mailto:noahtjones@gmail.com` | Clinics, collaborators, investors |
 
 ### Secondary (cards only — no fake “Launch app”)
 

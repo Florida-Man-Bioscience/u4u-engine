@@ -487,10 +487,10 @@ export default function CompanyHomePage() {
               to collaboration on every layer of the stack.
             </p>
             <a
-              href="mailto:hello@flmanbiosci.net"
+              href="mailto:noahtjones@gmail.com"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2d8f61]"
             >
-              hello@flmanbiosci.net <span aria-hidden>→</span>
+              noahtjones@gmail.com <span aria-hidden>→</span>
             </a>
           </div>
         </section>
@@ -573,7 +573,7 @@ export default function CompanyHomePage() {
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@flmanbiosci.net" className="hover:text-white">
+                <a href="mailto:noahtjones@gmail.com" className="hover:text-white">
                   Contact
                 </a>
               </li>

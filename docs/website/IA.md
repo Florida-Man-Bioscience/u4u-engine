@@ -134,7 +134,7 @@ flmanbiosci.net/                          Company home
 ├── #who / #what / #philosophy            In-page sections (or /about later)
 ├── #products                             Product cards / doorways
 ├── #team                                 Team
-├── #contact                              Contact (mailto hello@flmanbiosci.net)
+├── #contact                              Contact (mailto noahtjones@gmail.com)
 │
 ├── /peptodyssey/                         PeptOdyssey product hub
 │   ├── /privacy                          **FROZEN** App Store / TestFlight privacy

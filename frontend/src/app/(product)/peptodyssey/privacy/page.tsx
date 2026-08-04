@@ -44,8 +44,8 @@ export default function PeptodysseyPrivacyPage() {
           PeptOdyssey (“the app”) is operated by{" "}
           <strong className="text-[#0d1117]">Florida Man Bioscience</strong>{" "}
           (“we”, “us”). Contact for privacy and data requests:{" "}
-          <a className="text-[#1a6b4a] underline" href="mailto:hello@flmanbiosci.net">
-            hello@flmanbiosci.net
+          <a className="text-[#1a6b4a] underline" href="mailto:noahtjones@gmail.com">
+            noahtjones@gmail.com
           </a>
           .
         </p>
@@ -226,8 +226,8 @@ export default function PeptodysseyPrivacyPage() {
           <li>
             <strong className="text-[#0d1117]">Request deletion</strong> of
             previously uploaded data by emailing{" "}
-            <a className="text-[#1a6b4a] underline" href="mailto:hello@flmanbiosci.net">
-              hello@flmanbiosci.net
+            <a className="text-[#1a6b4a] underline" href="mailto:noahtjones@gmail.com">
+              noahtjones@gmail.com
             </a>{" "}
             with identifiers that let us locate your records.
           </li>
@@ -262,8 +262,8 @@ export default function PeptodysseyPrivacyPage() {
         </h2>
         <p>
           Questions or data requests:{" "}
-          <a className="text-[#1a6b4a] underline" href="mailto:hello@flmanbiosci.net">
-            hello@flmanbiosci.net
+          <a className="text-[#1a6b4a] underline" href="mailto:noahtjones@gmail.com">
+            noahtjones@gmail.com
           </a>
           <br />
           Florida Man Bioscience · flmanbiosci.net
