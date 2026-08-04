@@ -5,6 +5,13 @@ which runs on the self-hosted **hwcopeland homelab Kubernetes cluster**, not on 
 standalone VPS. If you are debugging "why isn't my change live" or "why won't the
 pod start," start here.
 
+> **Website / content / TestFlight privacy ops spine:**  
+> [`docs/website/OPS_RUNBOOK.md`](./website/OPS_RUNBOOK.md) — FMB content paths,
+> what HTTPRoute serves today (u4u-engine Next vs fmb-website), privacy URL gate,
+> safe change procedure, and Hermes skill discovery. Use that doc for flmanbiosci.net
+> *product/site* work; keep this file for cluster failure modes and GitOps mechanics.
+
+
 > **Two deployment paths — don't confuse them.**
 > - **Production (this doc):** RKE2 Kubernetes + Flux GitOps on the hwcopeland
 >   cluster, serving `https://flmanbiosci.net`. Releases are automatic on push to
