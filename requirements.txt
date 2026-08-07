@@ -1,6 +1,6 @@
 # Core
 fastapi>=0.110
-uvicorn[standard]>=0.51.0
+uvicorn[standard]>=0.52.1
 python-multipart>=0.0.32
 
 # Database
