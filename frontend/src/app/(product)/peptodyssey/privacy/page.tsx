@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     "Privacy policy for the PeptOdyssey iOS research app: HealthKit data types, purpose, retention, deletion, and contact.",
   alternates: {
-    canonical: "https://flmanbiosci.net/peptodyssey/privacy",
+    canonical: "https://peptodyssey.flmanbiosci.net/privacy",
   },
 };
 
@@ -172,7 +172,7 @@ export default function PeptodysseyPrivacyPage() {
             Data is stored in a PostgreSQL database on our research backend
             (reachable via{" "}
             <code className="rounded bg-[#edecea] px-1.5 py-0.5 font-mono text-[0.9em]">
-              https://flmanbiosci.net/api/v1
+              https://api.peptodyssey.flmanbiosci.net
             </code>
             ).
           </li>

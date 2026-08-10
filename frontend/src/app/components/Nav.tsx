@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { COMPANY_ORIGIN, PRODUCT_PRIVACY_PATH } from "@/lib/site";
 
 export function Nav() {
   return (
@@ -17,12 +18,12 @@ export function Nav() {
               PeptOdyssey
             </span>
           </Link>
-          <Link
-            href="/"
+          <a
+            href={COMPANY_ORIGIN}
             className="hidden sm:inline text-xs text-zinc-500 hover:text-zinc-300 transition-colors truncate"
           >
             Florida Man Bioscience
-          </Link>
+          </a>
         </div>
 
         <nav className="flex items-center gap-4 sm:gap-5 text-sm flex-wrap justify-end">
@@ -63,7 +64,7 @@ export function Nav() {
             FAQ
           </Link>
           <Link
-            href="/peptodyssey/privacy"
+            href={PRODUCT_PRIVACY_PATH}
             className="hidden lg:inline text-zinc-400 hover:text-white transition-colors"
           >
             Privacy
