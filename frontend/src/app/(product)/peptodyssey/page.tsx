@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "PeptOdyssey",
   description:
     "PeptOdyssey — precision peptide genomics: genome analysis, longitudinal biomarker tracking, regulatory context, and the iOS research app privacy policy.",
-  alternates: { canonical: "https://flmanbiosci.net/peptodyssey" },
+  alternates: { canonical: "https://peptodyssey.flmanbiosci.net/peptodyssey" },
 };
 
 const serif = { fontFamily: "'DM Serif Display', serif" } as const;
@@ -84,7 +84,7 @@ export default function PeptodysseyHubPage() {
             New analysis
           </Link>
           <Link
-            href="/peptodyssey/privacy"
+            href="/privacy"
             className="inline-flex items-center rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
           >
             Privacy policy
