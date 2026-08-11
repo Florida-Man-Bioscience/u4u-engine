@@ -18,5 +18,10 @@ export const LEGACY_PRIVACY_URL = `${COMPANY_ORIGIN}/peptodyssey/privacy`;
 
 export const CYTOGATE_HOST = "cytogate.flmanbiosci.net";
 export const U4U_PRIVACY_HOST = "u4u-privacy.flmanbiosci.net";
+export const NANODISK_HOST = "nanodisk.flmanbiosci.net";
+export const DRUG_DESIGN_HOST = "drug-design.flmanbiosci.net";
 export const CYTOGATE_ORIGIN = `https://${CYTOGATE_HOST}`;
 export const U4U_PRIVACY_ORIGIN = `https://${U4U_PRIVACY_HOST}`;
+export const NANODISK_ORIGIN = `https://${NANODISK_HOST}`;
+export const DRUG_DESIGN_ORIGIN = `https://${DRUG_DESIGN_HOST}`;
+export const PROTEIN_CHEMISTRY_URL = `${DRUG_DESIGN_ORIGIN}/protein-chemistry/`;
