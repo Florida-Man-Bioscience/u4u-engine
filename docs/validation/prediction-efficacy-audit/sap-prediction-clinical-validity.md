@@ -134,6 +134,14 @@ Account for: loss to follow-up (suggest 20–30%), site clustering, dual primary
 
 Record final N in SAP v1.0 before enrollment.
 
+**Ops distinction (do not conflate):** clinical ops currently plans an enrollment
+**headcount target of ~1,000 consented participants** across peptide strata
+(GLP-1–heavy), with site network and funnel math in
+[`docs/enrollment-strategy.md`](../../enrollment-strategy.md). That ops target is
+**not** a substitute for this section’s powered primary-completer N. Report both
+numbers once SAP v1.0 is locked (e.g. “enroll up to 1,000; primary analysis on
+N_c GLP-1 completers at t*”).
+
 ---
 
 ## 7. Missing data
