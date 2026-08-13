@@ -5,7 +5,7 @@
 **Date:** [submission date]
 **Re:** Request for determination that the described analytical-validation activities are **Not Human Subjects Research**[^nhsr] (Tier A) and **Exempt**[^exempt] (Tier B) under 45 CFR 46[^cfr46]
 
-> **Purpose of this memo.** This requests a written determination for two categories of pipeline *performance-testing* activity that do **not** involve intervention/interaction with living individuals or identifiable private information. It does **not** cover any prospective enrollment, identifiable data, or return of results — those are submitted separately as the prospective observational clinic-partnership study (expedited review; informed consent + HIPAA authorization). A companion roadmap is on file (`docs/irb-setup-plan.md`); the underlying validation science is detailed in `docs/clinical-validation-plan.md` §9–§12.
+> **Purpose of this memo.** This requests a written determination for two categories of pipeline *performance-testing* activity that do **not** involve intervention/interaction with living individuals or identifiable private information. It does **not** cover any prospective enrollment, identifiable data, or return of results — those are submitted separately as the prospective observational clinic-partnership study (expedited review; informed consent + HIPAA authorization). A companion roadmap is on file (`docs/irb-setup-plan.md`); enrollment operations for that separate study are in `docs/enrollment-strategy.md`; the underlying validation science is detailed in `docs/clinical-validation-plan.md` §9–§12.
 
 ---
 
