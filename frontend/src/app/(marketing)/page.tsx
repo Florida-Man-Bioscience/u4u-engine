@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { COMPANY_ORIGIN } from "@/lib/site";
+import {
+  COMPANY_ORIGIN,
+  CYTOGATE_ORIGIN,
+  PRODUCT_ORIGIN,
+  U4U_PRIVACY_ORIGIN,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
@@ -62,7 +67,23 @@ const PLATFORM = [
     title: "Longitudinal biomarker tracking",
     body: "A Bayesian tracker that fuses the patient's genetic prior with measured biomarkers to refine the prediction over time — turning each appointment into training data.",
     tag: "Feedback loop",
-    href: "/tracking",
+    href: PRODUCT_ORIGIN + "/tracking",
+  },
+] as const;
+
+/** Public portfolio landings (separate hosts; not PeptOdyssey surfaces). */
+const PORTFOLIO = [
+  {
+    name: "CytoGate",
+    body: "Flow-cytometry compensation and gating research tooling — a separate public portfolio surface.",
+    href: CYTOGATE_ORIGIN + "/",
+    tag: "Portfolio",
+  },
+  {
+    name: "u4u-privacy",
+    body: "Consumer-genome research utilities (VCF, imputation, ancestry) with a privacy-first posture.",
+    href: U4U_PRIVACY_ORIGIN + "/",
+    tag: "Portfolio",
   },
 ] as const;
 
@@ -302,6 +323,36 @@ export default function CompanyHomePage() {
                 </Link>
               ))}
             </div>
+            <div className="mt-8">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b7280]">
+                Other FMB surfaces
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {PORTFOLIO.map((card) => (
+                  <a
+                    key={card.name}
+                    href={card.href}
+                    rel="noopener noreferrer"
+                    className="flex flex-col rounded-xl border border-dashed border-[#dbd9d3] bg-white p-5 transition hover:border-[#1a6b4a]/40"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-lg text-[#0d1117]" style={serif}>
+                        {card.name}
+                      </h3>
+                      <span className="rounded-full bg-[#f5f4f0] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                        {card.tag}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-[#3a3f4a]">
+                      {card.body}
+                    </p>
+                    <span className="mt-3 text-sm font-medium text-[#1a6b4a]">
+                      Open →
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -526,7 +577,25 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <a href="#platform" className="hover:text-white">
-                  PeptidIQ engine
+                  PeptOdyssey engine
+                </a>
+              </li>
+              <li>
+                <a
+                  href={CYTOGATE_ORIGIN + "/"}
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  CytoGate
+                </a>
+              </li>
+              <li>
+                <a
+                  href={U4U_PRIVACY_ORIGIN + "/"}
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  u4u-privacy
                 </a>
               </li>
               <li>
