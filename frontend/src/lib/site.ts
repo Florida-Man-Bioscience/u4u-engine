@@ -19,7 +19,12 @@ export const PRODUCT_API_HOST = PRODUCT_HOST;
 
 export const PRODUCT_PRIVACY_PATH = "/privacy";
 export const PRODUCT_PRIVACY_URL = `${PRODUCT_ORIGIN}${PRODUCT_PRIVACY_PATH}`;
-/** Frozen legacy URL — must keep working via 301. */
+/**
+ * Frozen App Store / TestFlight privacy URL.
+ * Must keep working as HTTP 200 on the company apex (or 301→200 once
+ * peptodyssey.flmanbiosci.net DNS + gateway cutover land via iac PR #96).
+ * Do not ship FE-only 301s to PRODUCT_HOST before that DNS exists.
+ */
 export const LEGACY_PRIVACY_URL = `${COMPANY_ORIGIN}/peptodyssey/privacy`;
 
 /** Legacy dual-route (unprefixed engine paths). Prefer PRODUCT_API_ORIGIN. */

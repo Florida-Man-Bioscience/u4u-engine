@@ -1,44 +1,34 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COMPANY_HOST, PRODUCT_HOST, PRODUCT_ORIGIN } from "@/lib/site";
-
-/** Paths that belong on the PeptOdyssey product host. */
-const PRODUCT_PREFIXES = [
-  "/jobs",
-  "/tracking",
-  "/regulatory",
-  "/study",
-  "/faq",
-  "/peptodyssey",
-  "/privacy",
-  "/api/v1",
-];
+import { PRODUCT_HOST } from "@/lib/site";
 
 function hostOnly(host: string | null): string {
   if (!host) return "";
   return host.split(":")[0].toLowerCase();
 }
 
+/**
+ * Host-aware routing helpers.
+ *
+ * Cross-host apex → product redirects belong in the Cilium HTTPRoute
+ * (iac theswamp/httproute.yaml) and must ship **with** DNS for
+ * peptodyssey.flmanbiosci.net. Doing them in Next alone ships a 301 to a
+ * host that does not resolve yet and breaks the frozen TestFlight URL
+ * https://flmanbiosci.net/peptodyssey/privacy (must end 200).
+ *
+ * Until gateway+DNS cutover, company apex and app.* continue to serve the
+ * product tree in-process (same Next deployment).
+ */
 export function middleware(request: NextRequest) {
   const host = hostOnly(request.headers.get("host"));
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Apex / www: send product traffic to the product subdomain.
-  if (host === COMPANY_HOST || host === `www.${COMPANY_HOST}`) {
-    if (pathname === "/peptodyssey/privacy" || pathname.startsWith("/peptodyssey/privacy/")) {
-      const url = new URL(`${PRODUCT_ORIGIN}/privacy`);
-      url.search = search;
-      return NextResponse.redirect(url, 301);
-    }
-    if (PRODUCT_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-      const url = new URL(`${PRODUCT_ORIGIN}${pathname}${search}`);
-      return NextResponse.redirect(url, 301);
-    }
-  }
-
-  // Product host: keep /peptodyssey/privacy as alias → /privacy
+  // Product host: keep /peptodyssey/privacy as alias → /privacy (canonical).
   if (host === PRODUCT_HOST) {
-    if (pathname === "/peptodyssey/privacy" || pathname.startsWith("/peptodyssey/privacy/")) {
+    if (
+      pathname === "/peptodyssey/privacy" ||
+      pathname.startsWith("/peptodyssey/privacy/")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/privacy";
       return NextResponse.redirect(url, 301);

@@ -24,6 +24,11 @@ Human-subjects process (UF sIRB, consent, BAA/DUA, reliance) is owned by
 `docs/irb-plan-glp1.md` / `docs/irb-plan.md`. PEAP supplies scientific readiness
 for the **predictor**, not clinic contracting.
 
+**Enrollment operations** (how the prospective observational cohort reaches its
+ops headcount — clinic network, funnel, strata, gates):  
+[`docs/enrollment-strategy.md`](../enrollment-strategy.md).  
+Ops target (~1,000 enrolled) ≠ powered primary completer N until SAP §6 is locked.
+
 ## Non-claims
 
 Nothing in this directory asserts that the software is clinically validated or

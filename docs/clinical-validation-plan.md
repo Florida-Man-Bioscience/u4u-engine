@@ -821,6 +821,8 @@ Clinical utility asks whether using the pipeline improves outcomes or decisions 
 
 Because it is prospective, with participant enrollment/consent and clinic-held PHI, this study is **not** exempt secondary-data research. It is **minimal-risk observational research eligible for expedited IRB review** (45 CFR 46.110, categories 5 and/or 4/7), requiring **informed consent plus HIPAA authorization** and a **BAA/DUA with each partner clinic** (§18.3-§18.4). Because FMB only observes and never supplies or directs the compounds — even the unapproved peptides, under an adverse-event-observation posture — the study remains **outside IND** under 21 CFR 312.2(b).
 
+**Enrollment operations** (clinic-first site network, funnel stages, GLP-1–heavy strata, ops headcount target ~1,000 enrolled, pre-FPI gates, and the distinction from powered primary-completer N in the SAP) live in **`docs/enrollment-strategy.md`**. IRB submission mechanics remain in `docs/irb-plan.md` / `docs/irb-setup-plan.md`; PEAP Gate C readiness is in `docs/validation/prediction-efficacy-audit/`.
+
 All human-subjects evidence generation requires **IRB approval, informed consent, and ICH-GCP conduct** (§18), and should be reported per **STARD** (diagnostic accuracy) and **SPIRIT-AI/CONSORT-AI / DECIDE-AI** (AI interventions). The IRB of record is the **UF sIRB**, with partner sites ceding review via reliance agreements (§18.3).
 
 ### 12.3 Outcome measures and reference standards

@@ -101,7 +101,7 @@ Because the study is prospective, participant-facing, and touches clinic-held PH
 - [ ] Drug-posture declaration: secondary analysis only (no IND)
 
 **Lane C (Expedited) — the reframed prospective observational cohort:**
-- [ ] **Protocol** (objectives; correlation of genomic predictions against per-peptide biomarker trajectories; response endpoints per `engine/peptides/measurements.py` — e.g. % weight change and HbA1c change for GLP-1 RAs; enrollment plan; sample size/power; analysis plan)
+- [ ] **Protocol** (objectives; correlation of genomic predictions against per-peptide biomarker trajectories; response endpoints per `engine/peptides/measurements.py` — e.g. % weight change and HbA1c change for GLP-1 RAs; enrollment plan; sample size/power; analysis plan). Ops enrollment detail (clinic-first, ~1,000 enrolled target, strata): `docs/enrollment-strategy.md`
 - [ ] **Informed consent** — includes peptide AE disclosure (GLP-1 profile and the sparse-evidence caveat for unapproved peptides) and disclosure that therapy may be compounded
 - [ ] **HIPAA authorization** for use/disclosure of clinic-held PHI
 - [ ] **BAA and/or DUA with each partner clinic** governing the PHI/biomarker data flow to FMB
@@ -110,7 +110,7 @@ Because the study is prospective, participant-facing, and touches clinic-held PH
 - [ ] **ROR / incidental-findings plan** (ACMG SF[^acmgsf] for the genomic side; peptide response predictions explicitly research-only)
 - [ ] **Financial COI management plan** (FMB's commercial interest in the predictor) - required regardless of lane
 - [ ] **Non-interventional / IND-not-applicable memo** — affirms clinic-prescribes / study-observes across all peptides; cites 21 CFR 312.2(b) for the approved GLP-1 class and the non-interventional basis for unapproved peptides
-- [ ] Recruitment materials (recruit at partner clinics from patients already on peptide therapy)
+- [ ] Recruitment materials (recruit at partner clinics from patients already on peptide therapy; see `docs/enrollment-strategy.md`)
 - [ ] PI CV + qualified-personnel list; **reliance agreements / site-authorization roster (sIRB)**
 
 **Cross-cutting (all lanes):**

@@ -74,6 +74,7 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 - **Recruit at partner clinics from patients already prescribed peptide therapy.** Participants are identified through the partner clinics among patients who are *already* on treatment-as-usual; the study does not solicit anyone to start peptide therapy, and enrollment is never a condition of receiving care.
 - **Avoid coercion / undue influence.** Investigators must not recruit their own students, employees, or subordinates. Recruitment materials and the consent process make clear that participation is voluntary, declining has no effect on the participant's clinical care at the clinic, and the participant may withdraw at any time.
 - **Clinic-held PHI is accessed only under authorization.** Recruitment contact and any use of clinic records proceed under HIPAA authorization and the BAA/DUA with each partner clinic (§4), not through open-ended chart mining.
+- **Enrollment operations (how to reach study headcount).** Site network math, funnel definitions (screened → enrolled → T0 → completer), GLP-1–heavy stratum targets, activation waves, pace gates, and pre-FPI checklist: **`docs/enrollment-strategy.md`** (ops target ~1,000 enrolled; statistical N remains SAP-owned).
 
 ---
 
@@ -83,7 +84,7 @@ Decide this explicitly; it shapes consent, budget, and the data-flow diagram.
 |---|---|
 | **Protocol** | Background, aims, design, reference standards, endpoints, sample size & statistical analysis plan (biostatistician), data flow, COI plan. Build from master plan §9–§12, §16. |
 | **Informed consent form(s) + HIPAA authorization** | Genetic-specific language (§3.5); HIPAA authorization for use of clinic-held PHI (§2, §3.6); separate return-of-results & future-use elements; COI disclosure (§3.3). |
-| **Recruitment materials** | Active — the prospective study recruits at partner clinics from patients already prescribed peptide therapy (§3.6). Voluntary-participation and no-effect-on-care language. |
+| **Recruitment materials** | Active — the prospective study recruits at partner clinics from patients already prescribed peptide therapy (§3.6). Voluntary-participation and no-effect-on-care language. Channel mix, site waves, and prohibited tactics: `docs/enrollment-strategy.md`. |
 | **BAA / DUA with each partner clinic** | Required — partner clinics are HIPAA covered entities. Execute a Business Associate Agreement and/or Data Use Agreement with each clinic before any PHI flows to FMB (§2, §3.6). |
 | **Data Management & Security Plan** | HIPAA/GINA; encryption, access control, retention, de-identification/coding scheme. Depends on API remediation (master plan §13, B-3). |
 | **Data Use Agreement(s)** | For any banked/biobank/dbGaP data (Tier B) in addition to the partner-clinic DUAs above. |
