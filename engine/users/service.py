@@ -156,9 +156,12 @@ def upsert_from_headers(conn, headers: Mapping[str, str]) -> User | None:
     Header lookup is case-insensitive because FastAPI's Headers mapping
     normalises to lowercase.
 
-    These headers always come from the cluster-admin Authentik (the
-    forward-auth proxy in front of the app), so we stamp `issuer` with
-    that IdP's issuer URL — falling back to a placeholder literal when
+    These headers are ONLY trustworthy when the request path is gated by
+    the Authentik outpost (or a trusted internal edge that strips then
+    re-injects them). Direct public API hosts (api-peptodyssey / api /
+    apex /api/v1) MUST strip inbound X-authentik-* at the gateway/edge —
+    never call this helper on untrusted client headers. We stamp `issuer`
+    with the cluster-admin IdP URL — falling back to a placeholder when
     `U4U_CLUSTER_AUTHENTIK_ISSUER` isn't configured (local dev/tests).
     """
     h = {k.lower(): v for k, v in headers.items() if v}
