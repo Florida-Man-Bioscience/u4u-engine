@@ -172,7 +172,7 @@ export default function PeptodysseyPrivacyPage() {
             Data is stored in a PostgreSQL database on our research backend
             (reachable via{" "}
             <code className="rounded bg-[#edecea] px-1.5 py-0.5 font-mono text-[0.9em]">
-              https://api.peptodyssey.flmanbiosci.net
+              https://api-peptodyssey.flmanbiosci.net
             </code>
             ).
           </li>

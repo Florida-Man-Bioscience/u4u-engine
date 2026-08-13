@@ -1,7 +1,9 @@
 /** Canonical public hosts for FMB / PeptOdyssey. */
 export const COMPANY_HOST = "flmanbiosci.net";
 export const PRODUCT_HOST = "peptodyssey.flmanbiosci.net";
-export const PRODUCT_API_HOST = "api.peptodyssey.flmanbiosci.net";
+// Single-label host: Cloudflare Universal SSL / X.509 wildcards match one
+// label only — api.peptodyssey.* is not covered by *.flmanbiosci.net.
+export const PRODUCT_API_HOST = "api-peptodyssey.flmanbiosci.net";
 
 export const COMPANY_ORIGIN = `https://${COMPANY_HOST}`;
 export const PRODUCT_ORIGIN = `https://${PRODUCT_HOST}`;
