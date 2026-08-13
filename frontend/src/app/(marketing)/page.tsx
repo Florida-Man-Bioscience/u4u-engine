@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { COMPANY_ORIGIN, PRODUCT_ORIGIN } from "@/lib/site";
+import { COMPANY_ORIGIN } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
@@ -48,14 +48,14 @@ const PLATFORM = [
     title: "Genome → response prediction",
     body: "A variant annotation pipeline that scores peptide and hormone response from raw genome files. Pharmacogenomics, GH-axis genetics, and receptor-level variants resolved into structured dossiers.",
     tag: "Engine",
-    href: PRODUCT_ORIGIN + "/peptodyssey/analyze",
+    href: "/peptodyssey/analyze",
   },
   {
     num: "02 / PeptOdyssey",
     title: "The patient-facing product",
     body: "Dossier, longitudinal tracking, and the iOS HealthKit capture loop — translating engine findings into individualized peptide options, safety flags, and measurable follow-up.",
     tag: "Product",
-    href: PRODUCT_ORIGIN + "/peptodyssey",
+    href: "/peptodyssey",
   },
   {
     num: "03 / Tracker",
@@ -137,14 +137,14 @@ export default function CompanyHomePage() {
               Team
             </a>
             <Link
-              href={`${PRODUCT_ORIGIN}/peptodyssey`}
+              href={"/peptodyssey"}
               className="rounded-full bg-[#1a6b4a] px-4 py-2 text-white hover:bg-[#0f4530]"
             >
               PeptOdyssey
             </Link>
           </nav>
           <Link
-            href={`${PRODUCT_ORIGIN}/peptodyssey`}
+            href={"/peptodyssey"}
             className="rounded-full bg-[#1a6b4a] px-3 py-1.5 text-sm font-medium text-white sm:hidden"
           >
             Product
@@ -175,7 +175,7 @@ export default function CompanyHomePage() {
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  href={`${PRODUCT_ORIGIN}/peptodyssey`}
+                  href={"/peptodyssey"}
                   className="inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f4530]"
                 >
                   Explore PeptOdyssey <span aria-hidden>→</span>
@@ -530,12 +530,12 @@ export default function CompanyHomePage() {
                 </a>
               </li>
               <li>
-                <Link href={`${PRODUCT_ORIGIN}/peptodyssey`} className="hover:text-white">
+                <Link href={"/peptodyssey"} className="hover:text-white">
                   PeptOdyssey
                 </Link>
               </li>
               <li>
-                <Link href={`${PRODUCT_ORIGIN}/tracking`} className="hover:text-white">
+                <Link href={"/tracking"} className="hover:text-white">
                   Biomarker tracker
                 </Link>
               </li>
@@ -547,17 +547,17 @@ export default function CompanyHomePage() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href={`${PRODUCT_ORIGIN}/peptodyssey/analyze`} className="hover:text-white">
+                <Link href={"/peptodyssey/analyze"} className="hover:text-white">
                   Genome analysis
                 </Link>
               </li>
               <li>
-                <Link href={`${PRODUCT_ORIGIN}/privacy`} className="hover:text-white">
+                <Link href={"/peptodyssey/privacy"} className="hover:text-white">
                   iOS privacy policy
                 </Link>
               </li>
               <li>
-                <Link href={`${PRODUCT_ORIGIN}/study`} className="hover:text-white">
+                <Link href={"/study"} className="hover:text-white">
                   Validation study
                 </Link>
               </li>
