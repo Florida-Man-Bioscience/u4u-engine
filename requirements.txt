@@ -39,4 +39,4 @@ pytest-asyncio>=1.4.0
 pytest-cov>=7.1.0
 
 # Utilities
-python-dotenv>=1.0
+python-dotenv>=1.2.2
