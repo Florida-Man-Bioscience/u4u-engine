@@ -5,11 +5,11 @@ const serif = { fontFamily: "'DM Serif Display', serif" } as const;
 
 type Props = {
   /** Active nav key */
-  active?: "home" | "team" | "peptodyssey";
+  active?: "home" | "team" | "peptodyssey" | "products";
   children: ReactNode;
 };
 
-/** Shared marketing chrome for company pages (home, /team, …). */
+/** Shared marketing chrome for company pages (home, /team, products …). */
 export function CompanyChrome({ active = "home", children }: Props) {
   const link = (key: Props["active"], href: string, label: string) => {
     const isActive = active === key;
@@ -50,7 +50,7 @@ export function CompanyChrome({ active = "home", children }: Props) {
           <nav className="hidden items-center gap-7 text-sm font-medium sm:flex">
             {link("home", "/#philosophy", "Philosophy")}
             {link("home", "/#platform", "Platform")}
-            {link("home", "/#products", "Programs")}
+            {link("products", "/#products", "Programs")}
             {link("team", "/team", "Team")}
             <Link
               href="/peptodyssey"
@@ -78,6 +78,9 @@ export function CompanyChrome({ active = "home", children }: Props) {
             Detect → Design → Deliver
           </div>
           <div className="flex flex-wrap gap-4">
+            <Link href="/#products" className="hover:text-[#1a6b4a]">
+              Programs
+            </Link>
             <Link href="/team" className="hover:text-[#1a6b4a]">
               Team
             </Link>

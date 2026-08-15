@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TeamMemberCard } from "@/components/TeamMemberCard";
-import {
-  COMPANY_ORIGIN,
-  CYTOGATE_ORIGIN,
-  PRODUCT_ORIGIN,
-  U4U_PRIVACY_ORIGIN,
-} from "@/lib/site";
+import { PRODUCT_LIST, productPath } from "@/lib/products";
+import { COMPANY_ORIGIN, PRODUCT_ORIGIN } from "@/lib/site";
 import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 
 export const metadata: Metadata = {
@@ -73,21 +69,13 @@ const PLATFORM = [
   },
 ] as const;
 
-/** Public portfolio landings (separate hosts; not PeptOdyssey surfaces). */
-const PORTFOLIO = [
-  {
-    name: "CytoGate",
-    body: "Flow-cytometry compensation and gating research tooling — a separate public portfolio surface.",
-    href: CYTOGATE_ORIGIN + "/",
-    tag: "Portfolio",
-  },
-  {
-    name: "u4u-privacy",
-    body: "Consumer-genome research utilities (VCF, imputation, ancestry) with a privacy-first posture.",
-    href: U4U_PRIVACY_ORIGIN + "/",
-    tag: "Portfolio",
-  },
-] as const;
+/** Public product / program marketing pages on apex (also mirrored on portfolio hosts). */
+const PORTFOLIO = PRODUCT_LIST.map((p) => ({
+  name: p.name,
+  body: p.cardBody,
+  href: productPath(p.slug),
+  tag: p.tag,
+}));
 
 export default function CompanyHomePage() {
   return (
@@ -288,14 +276,18 @@ export default function CompanyHomePage() {
             </div>
             <div className="mt-8">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b7280]">
-                Other FMB surfaces
+                Product pages
               </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <p className="mt-2 max-w-2xl text-sm text-[#3a3f4a]">
+                Portfolio and research programs with dedicated marketing pages —
+                CytoGate, vector nanodisk, Neurocreatine, U4U Privacy, and
+                next-gen drug development.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PORTFOLIO.map((card) => (
-                  <a
+                  <Link
                     key={card.name}
                     href={card.href}
-                    rel="noopener noreferrer"
                     className="flex flex-col rounded-xl border border-dashed border-[#dbd9d3] bg-white p-5 transition hover:border-[#1a6b4a]/40"
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -310,9 +302,9 @@ export default function CompanyHomePage() {
                       {card.body}
                     </p>
                     <span className="mt-3 text-sm font-medium text-[#1a6b4a]">
-                      Open →
+                      Open product page →
                     </span>
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -358,20 +350,24 @@ export default function CompanyHomePage() {
                   Delivery
                 </p>
                 <h3 className="mt-2 text-2xl" style={serif}>
-                  MSP nanodisk delivery
+                  Vector nanodisk delivery
                 </h3>
                 <p className="mt-3 text-[#3a3f4a]">
-                  A membrane-scaffold-protein (MSP) nanodisk platform engineered
-                  to carry peptide and nucleic-acid payloads through tissue
-                  barriers that stop conventional formulations.
+                  A research-stage delivery program exploring how peptide and
+                  nucleic-acid payloads can be carried more carefully — the
+                  long-horizon Deliver leg of the platform.
                 </p>
                 <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>Histone-mimetic disk design with tunable surface chemistry</li>
-                  <li>
-                    siRNA docking modelled <em>in silico</em>
-                  </li>
-                  <li>Active discovery program with bench follow-through</li>
+                  <li>Molecule delivery as a system, not a side project</li>
+                  <li>Research-first positioning — not a marketed therapeutic</li>
+                  <li>Open to thoughtful scientific partnership</li>
                 </ul>
+                <Link
+                  href={productPath("vector-nanodisk")}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#92550a] hover:underline"
+                >
+                  Vector nanodisk product page <span aria-hidden>→</span>
+                </Link>
               </div>
             </div>
 
@@ -381,17 +377,23 @@ export default function CompanyHomePage() {
                   Discovery
                 </p>
                 <h3 className="mt-2 text-2xl" style={serif}>
-                  Neuro-creatine &amp; CNS peptides
+                  Neurocreatine
                 </h3>
                 <p className="mt-3 text-[#3a3f4a]">
                   An early-stage discovery track exploring peptides aimed at the
-                  central nervous system — using the analytics platform to triage
-                  candidates and anchor go/no-go decisions in biomarker data.
+                  central nervous system — with go/no-go decisions anchored in
+                  measurable signals, not hype.
                 </p>
                 <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>Genome-informed candidate triage</li>
-                  <li>Biomarker-anchored go/no-go decisions</li>
+                  <li>Discovery with discipline</li>
+                  <li>Measurement-minded triage</li>
                 </ul>
+                <Link
+                  href={productPath("neurocreatine")}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1e4d8c] hover:underline"
+                >
+                  Neurocreatine product page <span aria-hidden>→</span>
+                </Link>
               </div>
               <div className="order-1 overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white md:order-2">
                 <picture>
@@ -533,22 +535,41 @@ export default function CompanyHomePage() {
                 </a>
               </li>
               <li>
-                <a
-                  href={CYTOGATE_ORIGIN + "/"}
-                  rel="noopener noreferrer"
-                  className="hover:text-white"
-                >
+                <Link href={productPath("cytogate")} className="hover:text-white">
                   CytoGate
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href={U4U_PRIVACY_ORIGIN + "/"}
-                  rel="noopener noreferrer"
+                <Link
+                  href={productPath("u4u-privacy")}
                   className="hover:text-white"
                 >
-                  u4u-privacy
-                </a>
+                  U4U Privacy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={productPath("vector-nanodisk")}
+                  className="hover:text-white"
+                >
+                  Vector nanodisk
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={productPath("neurocreatine")}
+                  className="hover:text-white"
+                >
+                  Neurocreatine
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={productPath("next-gen-drug-development")}
+                  className="hover:text-white"
+                >
+                  Next-gen drug development
+                </Link>
               </li>
               <li>
                 <Link href={"/peptodyssey"} className="hover:text-white">
