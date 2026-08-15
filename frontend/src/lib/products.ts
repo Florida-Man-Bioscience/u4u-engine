@@ -12,6 +12,7 @@ import {
 } from "@/lib/site";
 
 export type ProductSlug =
+  | "u4u"
   | "cytogate"
   | "vector-nanodisk"
   | "neurocreatine"
@@ -58,6 +59,55 @@ const brandGreen = {
 } as const;
 
 export const PRODUCTS: Record<ProductSlug, ProductPage> = {
+  u4u: {
+    slug: "u4u",
+    name: "U4U",
+    shortName: "U4U",
+    eyebrow: "Flagship platform · Genomics",
+    tagline: "See beyond the file. Unlock genome-aware options.",
+    description:
+      "U4U is Florida Man Bioscience’s genome-aware platform for peptide medicine — turning genetic context into a clearer options set for people and the licensed clinicians who care for them.",
+    metaDescription:
+      "U4U — Florida Man Bioscience’s genome-aware peptide platform. Personalized options from genetic context, with PeptOdyssey as the live product surface. Not a medical device.",
+    cardBody:
+      "Flagship genome-aware platform — personalized peptide options from genetic context, for people and practitioners.",
+    tag: "Flagship",
+    accent: brandGreen,
+    audience:
+      "Individuals exploring genome-informed peptide context, licensed clinicians, and partners building modern care workflows.",
+    pillars: [
+      {
+        title: "Genome-aware options",
+        body: "Turn raw genetics into a clearer picture of peptide-relevant biology — structured for a licensed clinician to read.",
+      },
+      {
+        title: "Personal, not generic",
+        body: "Built around your file and your context, not a one-size handout. The goal is a decision-ready options set.",
+      },
+      {
+        title: "A loop that learns",
+        body: "Pair the first read with follow-up signals over time so the picture can refine as real-world data arrives.",
+      },
+    ],
+    promises: [
+      "Premium, fast-loading product marketing — message over chrome",
+      "Live path into PeptOdyssey analysis and tracking",
+      "Privacy toolkit lane when files should stay local",
+    ],
+    statusNote:
+      "Flagship platform story live on apex; PeptOdyssey is the shipping product surface.",
+    disclaimer:
+      "Research and decision-support software. Not a medical device. Not intended to diagnose, treat, cure, or prevent disease. Does not replace clinical judgment or genetic counseling.",
+    ctaPrimary: {
+      label: "Open PeptOdyssey",
+      href: "/peptodyssey",
+    },
+    ctaSecondary: {
+      label: "Start a genome analysis",
+      href: "/peptodyssey/analyze",
+    },
+  },
+
   cytogate: {
     slug: "cytogate",
     name: "CytoGate",
@@ -301,6 +351,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
 };
 
 export const PRODUCT_LIST: ProductPage[] = [
+  PRODUCTS.u4u,
   PRODUCTS.cytogate,
   PRODUCTS["vector-nanodisk"],
   PRODUCTS.neurocreatine,

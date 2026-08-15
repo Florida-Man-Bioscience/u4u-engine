@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductMarketingPage } from "@/components/ProductMarketingPage";
+import { U4UMarketingPage } from "@/components/U4UMarketingPage";
 import {
   PRODUCT_LIST,
   PRODUCTS,
@@ -51,5 +52,8 @@ export default async function ProductSlugPage({
   const { slug } = await params;
   if (!isProductSlug(slug)) notFound();
   const product = PRODUCTS[slug as ProductSlug];
+  if (slug === "u4u") {
+    return <U4UMarketingPage product={product} />;
+  }
   return <ProductMarketingPage product={product} />;
 }
