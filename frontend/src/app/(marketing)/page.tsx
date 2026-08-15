@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TeamMemberCard } from "@/components/TeamMemberCard";
 import {
   COMPANY_ORIGIN,
   CYTOGATE_ORIGIN,
   PRODUCT_ORIGIN,
   U4U_PRIVACY_ORIGIN,
 } from "@/lib/site";
+import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
@@ -87,45 +89,6 @@ const PORTFOLIO = [
   },
 ] as const;
 
-const TEAM = [
-  {
-    name: "Noah Jones",
-    role: "Founder & CEO",
-    img: "/assets/img/noah.webp",
-    imgFallback: "/assets/img/noah.jpg",
-  },
-  {
-    name: "Garrett Knotts",
-    role: "Founder",
-    img: "/assets/img/garrett.webp",
-    imgFallback: "/assets/img/garrett.jpg",
-  },
-  {
-    name: "Curtis Dearing",
-    role: "Chief Vision Officer & CPO of PeptOdyssey",
-    img: "/assets/img/curtis.webp",
-    imgFallback: "/assets/img/curtis.jpg",
-  },
-  {
-    name: "Michael",
-    role: "Chemistry & Delivery",
-    img: "/assets/img/michael.webp",
-    imgFallback: "/assets/img/michael.jpg",
-  },
-  {
-    name: "Jacob",
-    role: "Bioinformatics",
-    img: "/assets/img/jacob.webp",
-    imgFallback: "/assets/img/jacob.jpg",
-  },
-  {
-    name: "Tyler",
-    role: "Clinical & Operations",
-    img: "/assets/img/tyler.webp",
-    imgFallback: "/assets/img/tyler.jpg",
-  }
-] as const;
-
 export default function CompanyHomePage() {
   return (
     <div className="bg-white text-[#0d1117]">
@@ -154,9 +117,9 @@ export default function CompanyHomePage() {
             <a href="#products" className="hover:text-[#1a6b4a]">
               Programs
             </a>
-            <a href="#team" className="hover:text-[#1a6b4a]">
+            <Link href="/team" className="hover:text-[#1a6b4a]">
               Team
-            </a>
+            </Link>
             <Link
               href={"/peptodyssey"}
               className="rounded-full bg-[#1a6b4a] px-4 py-2 text-white hover:bg-[#0f4530]"
@@ -474,7 +437,7 @@ export default function CompanyHomePage() {
           </div>
         </section>
 
-        {/* Team */}
+        {/* Team preview → full roster on /team */}
         <section
           id="team"
           className="scroll-mt-24 border-t border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
@@ -487,38 +450,27 @@ export default function CompanyHomePage() {
               The people behind the science.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              A small team of scientists and engineers who refuse to choose
-              between rigor and speed.
+              Founders plus the full 2026 Nucleate Activator cohort — Rocky,
+              Kayla, Min, Sasank, and every contributor who built with us.
             </p>
-            <div className="mt-10 grid grid-cols-2 gap-5 md:grid-cols-4">
-              {TEAM.map((m) => (
-                <div
-                  key={m.name}
-                  className="overflow-hidden rounded-xl border border-[#dbd9d3] bg-white"
-                >
-                  <picture>
-                    <source type="image/webp" srcSet={m.img} />
-                    <img
-                      src={m.imgFallback}
-                      alt={`Portrait of ${m.name}`}
-                      width={800}
-                      height={800}
-                      className="aspect-square w-full object-cover"
-                      loading="lazy"
-                    />
-                  </picture>
-                  <div className="p-4">
-                    <div className="font-semibold text-[#0d1117]">{m.name}</div>
-                    <div className="text-sm text-[#6b7280]">{m.role}</div>
-                  </div>
-                </div>
+            <div className="mt-10 grid grid-cols-2 gap-5 md:grid-cols-3">
+              {TEAM_HOMEPAGE_PREVIEW.map((m) => (
+                <TeamMemberCard key={m.id} member={m} compact />
               ))}
             </div>
-            <p className="mt-6 text-xs text-[#6b7280]">
-              Public marketing roles as shown on the company site. Formal titles
-              and equity structure are internal governance documents — not
-              restated here.
-            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <Link
+                href="/team"
+                className="inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f4530]"
+              >
+                Full team &amp; Activator contributors{" "}
+                <span aria-hidden>→</span>
+              </Link>
+              <p className="text-xs text-[#6b7280]">
+                Public marketing roles only. Formal titles and equity are
+                internal governance — not restated here.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -638,9 +590,9 @@ export default function CompanyHomePage() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <a href="#team" className="hover:text-white">
+                <Link href="/team" className="hover:text-white">
                   Team
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="mailto:noahtjones@gmail.com" className="hover:text-white">
