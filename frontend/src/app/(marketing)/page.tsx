@@ -47,11 +47,11 @@ const PHILOSOPHY = [
 
 const PLATFORM = [
   {
-    num: "01 / Engine",
-    title: "Genome → response prediction",
-    body: "A variant annotation pipeline that scores peptide and hormone response from raw genome files. Pharmacogenomics, GH-axis genetics, and receptor-level variants resolved into structured dossiers.",
-    tag: "Engine",
-    href: "/peptodyssey/analyze",
+    num: "01 / U4U",
+    title: "Genome-aware platform",
+    body: "The flagship story: turn genetic context into a clearer peptide options set for people and licensed clinicians — premium product marketing, honest non-goals.",
+    tag: "Flagship",
+    href: productPath("u4u"),
   },
   {
     num: "02 / PeptOdyssey",
@@ -279,9 +279,9 @@ export default function CompanyHomePage() {
                 Product pages
               </p>
               <p className="mt-2 max-w-2xl text-sm text-[#3a3f4a]">
-                Portfolio and research programs with dedicated marketing pages —
-                CytoGate, vector nanodisk, Neurocreatine, U4U Privacy, and
-                next-gen drug development.
+                Flagship U4U plus portfolio programs — CytoGate, vector
+                nanodisk, Neurocreatine, U4U Privacy, and next-gen drug
+                development.
               </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PORTFOLIO.map((card) => (
@@ -528,6 +528,11 @@ export default function CompanyHomePage() {
                 <a href="#philosophy" className="hover:text-white">
                   Detect → Design → Deliver
                 </a>
+              </li>
+              <li>
+                <Link href={productPath("u4u")} className="hover:text-white">
+                  U4U
+                </Link>
               </li>
               <li>
                 <a href="#platform" className="hover:text-white">
