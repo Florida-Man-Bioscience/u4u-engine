@@ -116,6 +116,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "MD/PhD student, University of Florida. Clinical link and U4U intelligence; engine contributor.",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("sasank"),
     initials: "SD",
   },
   {
@@ -126,6 +127,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "MD-PhD student, University of Miami. Safety / contraindication layer for genotype-aware peptide protocols.",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("kayla"),
     initials: "KS",
   },
   {
@@ -136,6 +138,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "Post-doc, Moffitt Cancer Center. Oncology genetics advisor; VR structural biochemistry project lead.",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("rocky"),
     initials: "RT",
   },
   {
@@ -146,6 +149,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "Metabolism biochemistry; mitochondria-focused supplement development (MitoFocus).",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("min"),
     initials: "MP",
   },
   {
@@ -156,6 +160,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "Clinical and public-health researcher guiding clinical and translational strategy.",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("delaney"),
     initials: "DD",
   },
   {
@@ -166,6 +171,7 @@ export const CONTRIBUTORS: TeamMember[] = [
       "Graduate student, MTSU. Engineering lead for platform and infrastructure.",
     tier: "contributor",
     nucleateActivator: true,
+    ...photo("hampton"),
     initials: "HC",
   },
   {
