@@ -148,10 +148,8 @@ export function U4UMarketingPage({ product }: Props) {
               className="max-w-4xl text-[2.6rem] leading-[1.05] tracking-tight text-[#0d1117] md:text-6xl lg:text-[4.25rem]"
               style={companySerif}
             >
-              See beyond the file.
-              <span className="mt-2 block text-[#1a6b4a]">
-                Unlock genome-aware options.
-              </span>
+              Peptide medicine,{" "}
+              <span className="text-[#1a6b4a]">matched to the genome.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#3a3f4a] md:text-xl">
               {product.description}
@@ -197,8 +195,8 @@ export function U4UMarketingPage({ product }: Props) {
               className="text-3xl leading-snug text-[#0d1117] md:text-4xl"
               style={companySerif}
             >
-              Your biology holds the answers —
-              <span className="text-[#1a6b4a]"> we help you read them.</span>
+              Detect. Design. Deliver.
+              <span className="text-[#1a6b4a]"> Software first.</span>
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               U4U is Florida Man Bioscience’s genome-aware platform for peptide
@@ -220,8 +218,7 @@ export function U4UMarketingPage({ product }: Props) {
                   className="mt-2 max-w-xl text-3xl text-[#0d1117] md:text-4xl"
                   style={companySerif}
                 >
-                  A predictive, personalized surface — for people and
-                  practitioners.
+                  PeptidIQ predicts. PeptOdyssey reports. The Tracker learns.
                 </h2>
               </div>
               <p className="max-w-sm text-sm leading-relaxed text-[#6b7280]">
