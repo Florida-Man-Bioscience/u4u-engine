@@ -69,6 +69,19 @@ SCENARIOS: list[Scenario] = [
              sample_weeks=(0.0, 2.0, 4.0, 8.0, 12.0)),
     Scenario("AOD-9604",        (0.3, 0.5),        "mg",  "daily",  "SC",
              sample_weeks=(0.0, 4.0, 8.0, 16.0, 24.0)),
+    # GLP-1 / incretin class — PEAP primary endpoints (weight, HbA1c).
+    # Sample weeks stay inside a typical 24-week observation window so a
+    # leave-one-out diagnostics backtest has ≥3 post-baseline points.
+    Scenario("Semaglutide",     (0.5, 1.0, 1.7, 2.4), "mg", "weekly", "SC",
+             sample_weeks=(0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0)),
+    Scenario("Tirzepatide",     (5.0, 10.0, 15.0), "mg", "weekly", "SC",
+             sample_weeks=(0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0)),
+    Scenario("Liraglutide",     (1.2, 1.8, 3.0),  "mg", "daily",  "SC",
+             sample_weeks=(0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0)),
+    Scenario("Ipamorelin",      (200.0, 300.0),   "mcg", "TID",    "SC",
+             sample_weeks=(0.0, 2.0, 4.0, 8.0, 12.0, 16.0)),
+    Scenario("TB-500",          (2.0, 5.0),       "mg",  "2x/week", "SC",
+             sample_weeks=(0.0, 2.0, 4.0, 8.0, 12.0)),
 ]
 
 
@@ -109,6 +122,19 @@ PATIENT_DEMOGRAPHICS = [
 
 # ── Public entry points ─────────────────────────────────────────────────────
 
+def _weeks_for(scenario: Scenario, *, rich: bool) -> tuple[float, ...]:
+    """Return sample weeks, interpolating midpoints when ``rich`` is on."""
+    weeks = scenario.sample_weeks
+    if not rich or len(weeks) < 2:
+        return weeks
+    extra: list[float] = []
+    for a, b in zip(weeks, weeks[1:]):
+        mid = round((a + b) / 2.0, 2)
+        if mid not in weeks:
+            extra.append(mid)
+    return tuple(sorted(set(weeks) | set(extra)))
+
+
 def seed(
     conn,
     *,
@@ -117,6 +143,7 @@ def seed(
     today: datetime | None = None,
     force: bool = False,
     created_by_user_id: str | None = None,
+    rich: bool = False,
 ) -> dict[str, int]:
     """Populate the tracking DB with synthetic data.
 
@@ -173,11 +200,15 @@ def seed(
                                     source="synthetic")
 
     for p in patients:
-        n_treatments = 1 if rng.random() < 0.55 else 2
+        if rich:
+            n_treatments = rng.randint(2, min(3, len(SCENARIOS)))
+        else:
+            n_treatments = 1 if rng.random() < 0.55 else 2
         chosen = rng.sample(SCENARIOS, k=min(n_treatments, len(SCENARIOS)))
         for k, scenario in enumerate(chosen):
             dose = rng.choice(scenario.doses)
-            days_ago = rng.randint(60, 180) - 14 * k
+            days_lo, days_hi = (140, 280) if rich else (60, 180)
+            days_ago = rng.randint(days_lo, days_hi) - 14 * k
             start_dt = today - timedelta(days=days_ago)
             treatment = service.create_treatment(
                 conn,
@@ -202,8 +233,12 @@ def seed(
             genetic_strength = responder_strength_from_profile(profile, scenario.peptide)
             responder = max(0.0, genetic_strength * rng.gauss(1.0, 0.18))
             dose_f = _dose_factor(dose, scenario.doses)
-            n_markers = min(len(panel.measurements), rng.randint(4, 6))
+            if rich:
+                n_markers = min(len(panel.measurements), 10)
+            else:
+                n_markers = min(len(panel.measurements), rng.randint(4, 6))
             markers = rng.sample(list(panel.measurements), k=n_markers)
+            weeks = _weeks_for(scenario, rich=rich)
 
             for marker in markers:
                 params = _baseline_for(marker)
@@ -219,7 +254,7 @@ def seed(
                                 params.noise_pct,
                                 params.tau_weeks)
 
-                for w in scenario.sample_weeks:
+                for w in weeks:
                     elapsed_weeks = (today - start_dt).days / 7
                     if w > elapsed_weeks + 0.5:
                         continue

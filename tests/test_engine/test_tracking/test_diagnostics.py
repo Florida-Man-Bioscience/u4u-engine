@@ -92,3 +92,43 @@ def test_diagnostics_skips_short_series(conn):
     out = diagnostics.run_diagnostics(conn, [p])
     assert out["n_series"] == 0
     assert out["n_points"] == 0
+
+
+def test_diagnostics_does_not_mix_treatments(conn):
+    """A second peptide's series must not pollute the first peptide's backtest."""
+    p = service.create_patient(conn, label="Mix")
+    t1 = service.create_treatment(
+        conn, patient_id=p.id, peptide_name="CJC-1295",
+        dose=2.0, dose_unit="mg", start_date="2026-01-01",
+    )
+    t2 = service.create_treatment(
+        conn, patient_id=p.id, peptide_name="Semaglutide",
+        dose=1.0, dose_unit="mg", start_date="2026-02-01",
+    )
+    for date, val in [
+        ("2026-01-01", 180.0), ("2026-01-29", 225.0),
+        ("2026-02-26", 255.0), ("2026-03-26", 270.0),
+    ]:
+        service.create_measurement(
+            conn, patient_id=p.id, treatment_id=t1.id,
+            biomarker_name="Serum IGF-1", value=val,
+            measured_at=date, modality="hormone", unit="ng/mL",
+        )
+    for date, val in [
+        ("2026-02-01", 95.0), ("2026-03-01", 90.0),
+        ("2026-04-01", 86.0), ("2026-05-01", 83.0),
+    ]:
+        service.create_measurement(
+            conn, patient_id=p.id, treatment_id=t2.id,
+            biomarker_name="Body weight (GLP-1 RA)", value=val,
+            measured_at=date, modality="physical", unit="kg",
+        )
+    out = diagnostics.run_diagnostics(conn, [p])
+    peptides = {g["label"] for g in out["by_peptide"]}
+    biomarkers = {g["label"] for g in out["by_biomarker"]}
+    assert peptides == {"CJC-1295", "Semaglutide"}
+    assert biomarkers == {"Serum IGF-1", "Body weight (GLP-1 RA)"}
+    assert all(pt["peptide"] != "CJC-1295" or pt["biomarker"] == "Serum IGF-1"
+               for pt in out["points"])
+    assert all(pt["peptide"] != "Semaglutide" or pt["biomarker"] == "Body weight (GLP-1 RA)"
+               for pt in out["points"])
