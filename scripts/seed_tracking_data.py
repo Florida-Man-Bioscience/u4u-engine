@@ -37,6 +37,9 @@ def main() -> int:
                         help="Number of patients to create (default 12).")
     parser.add_argument("--force", action="store_true",
                         help="Wipe existing patients (FK cascade) and reseed.")
+    parser.add_argument("--rich", action="store_true",
+                        help="Denser series: more treatments, more markers, "
+                             "interpolated sample weeks. For diagnostics.")
     args = parser.parse_args()
 
     target = Path(args.db or os.getenv("TRACKING_DB_PATH")
@@ -51,10 +54,9 @@ def main() -> int:
         print(f"removed existing {target}")
 
     db.reset_initialized()
-    conn = get_conn(str(target))
-    stats = seed(conn, rng=random.Random(args.seed),
-                 n_patients=args.patients, force=args.force)
-    conn.close()
+    with get_conn(str(target)) as conn:
+        stats = seed(conn, rng=random.Random(args.seed),
+                     n_patients=args.patients, force=args.force, rich=args.rich)
 
     if stats["skipped"]:
         print(f"tracking DB already has {stats['skipped']} patient(s) — "

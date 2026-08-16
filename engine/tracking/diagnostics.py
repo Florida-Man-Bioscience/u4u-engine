@@ -165,6 +165,8 @@ def _predict_heldout(
         baseline_prior_sd=baseline_prior_sd,
         noise_pct=noise_pct,
     )
+    if fit is None:
+        return None
     baseline = fit.baseline
     baseline_sd = fit.baseline_sd
     # A pre-treatment sample pins the baseline directly; carrying σ_b forward
@@ -287,8 +289,12 @@ def run_diagnostics(conn, patients: list[service.Patient]) -> dict[str, Any]:
 
         for treatment in treatments:
             for biomarker_name, rows in by_biomarker.items():
+                scoped = [
+                    m for m in rows
+                    if m.treatment_id is None or m.treatment_id == treatment.id
+                ]
                 observations: list[tuple[float, float]] = []
-                for m in rows:
+                for m in scoped:
                     w = _weeks_since(treatment.start_date, m.measured_at)
                     if w is None or w < 0:
                         continue
