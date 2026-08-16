@@ -64,7 +64,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     name: "U4U",
     shortName: "U4U",
     eyebrow: "Flagship platform · Genomics",
-    tagline: "See beyond the file. Unlock genome-aware options.",
+    tagline: "Peptide medicine, matched to the genome.",
     description:
       "U4U is Florida Man Bioscience’s genome-aware platform for peptide medicine — turning genetic context into a clearer options set for people and the licensed clinicians who care for them.",
     metaDescription:
