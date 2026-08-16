@@ -128,7 +128,7 @@ def _weeks_for(scenario: Scenario, *, rich: bool) -> tuple[float, ...]:
     if not rich or len(weeks) < 2:
         return weeks
     extra: list[float] = []
-    for a, b in zip(weeks, weeks[1:]):
+    for a, b in zip(weeks, weeks[1:], strict=False):
         mid = round((a + b) / 2.0, 2)
         if mid not in weeks:
             extra.append(mid)
