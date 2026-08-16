@@ -3,19 +3,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Florida Man Bioscience — Peptide-led precision therapeutics",
+    default: "Florida Man Bioscience — Peptide medicine, matched to the genome",
     template: "%s · Florida Man Bioscience",
   },
   description:
-    "Florida Man Bioscience builds peptide-led precision medicine: genome-aware response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+    "Florida Man Bioscience builds genome-aware peptide decision support: PeptidIQ prediction, the PeptOdyssey dossier, biomarker tracking, and research-stage delivery science.",
   metadataBase: new URL("https://flmanbiosci.net"),
   openGraph: {
     type: "website",
     siteName: "Florida Man Bioscience",
     url: "https://flmanbiosci.net/",
-    title: "Florida Man Bioscience — Peptide-led precision therapeutics",
+    title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
     description:
-      "Genome-aware peptide response prediction, longitudinal biomarker tracking, and a delivery platform for next-generation therapeutics.",
+      "Genome-aware peptide decision support, longitudinal biomarker tracking, and research-stage delivery science.",
     images: [{ url: "/assets/img/mark.png" }],
   },
 };
