@@ -8,12 +8,12 @@ import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
   description:
-    "Florida Man Bioscience builds the analytics, trackers, and delivery platform behind precision peptide therapy — genome-aware response prediction, longitudinal biomarkers, and research delivery science.",
+    "Florida Man Bioscience builds genome-aware peptide decision support — PeptidIQ, the PeptOdyssey dossier, biomarker tracking, and research-stage delivery science.",
   alternates: { canonical: `${COMPANY_ORIGIN}/` },
   openGraph: {
     title: "Florida Man Bioscience",
     description:
-      "Peptide medicine, matched to the genome. Analytics, trackers, and a delivery research platform.",
+      "Peptide medicine, matched to the genome. Decision-support software first; delivery stays research-stage.",
     url: `${COMPANY_ORIGIN}/`,
     siteName: "Florida Man Bioscience",
     type: "website",
@@ -22,48 +22,47 @@ export const metadata: Metadata = {
 
 const serif = { fontFamily: "'DM Serif Display', serif" } as const;
 
-/** Public three-leg story (Detect→Design→Deliver). Maps the internal
- *  Read→Predict→Report→Track→Deliver loop without inventing clinical claims. */
+/** Public three-leg story from the company vault (Detect → Design → Deliver). */
 const PHILOSOPHY = [
   {
     step: "01",
     title: "Detect",
-    body: "Read the genome and capture real-world signals — raw VCF or consumer genetics files, plus longitudinal biomarkers from labs and consented HealthKit capture.",
-    source: "Maps from Read + measure in the U4U loop",
+    body: "A personalized multiomic read: genome files plus measured signals, turned into predictors a licensed clinician can use — not a one-size protocol.",
+    source: "Flagship software: PeptidIQ engine + PeptOdyssey dossier",
   },
   {
     step: "02",
     title: "Design",
-    body: "Turn signals into a clear, individualized options set: variant annotation, pharmacogenomics, receptor and pathway context, and a dossier a licensed clinician can read and decide on.",
-    source: "Maps from Predict + Report (u4u-engine / PeptOdyssey)",
+    body: "Structure-guided design and visualization for peptide and protein work — see the molecule before committing the bench. Software-first; not a wet-lab claim.",
+    source: "Stage A design surface: Protein Chemistry / next-gen drug design",
   },
   {
     step: "03",
     title: "Deliver",
-    body: "Close the loop over time with Bayesian biomarker tracking — and, on a longer research horizon, molecule-delivery science (MSP nanodisk). Software ships first; delivery stays research-stage.",
-    source: "Maps from Track + Deliver in the company platform",
+    body: "Research on getting payloads where they are needed — MSP / vector nanodisk science. Optionality on a longer horizon, not a marketed therapeutic.",
+    source: "Research program only. Institutional IP stays held out until cleared.",
   },
 ] as const;
 
 const PLATFORM = [
   {
-    num: "01 / U4U",
-    title: "Genome-aware platform",
-    body: "The flagship story: turn genetic context into a clearer peptide options set for people and licensed clinicians — premium product marketing, honest non-goals.",
-    tag: "Flagship",
+    num: "01 / PeptidIQ",
+    title: "Genome → response prediction",
+    body: "The engine. Variant annotation, pharmacogenomics, receptor and pathway context — structured so a licensed clinician can read it. Internal platform name: U4U.",
+    tag: "Engine",
     href: productPath("u4u"),
   },
   {
     num: "02 / PeptOdyssey",
-    title: "The patient-facing product",
-    body: "Dossier, longitudinal tracking, and the iOS HealthKit capture loop — translating engine findings into individualized peptide options, safety flags, and measurable follow-up.",
+    title: "The clinician- and patient-facing dossier",
+    body: "Decision-support report: safety flags, goal-to-peptide options, citations, and FDA vs investigational labels. The shipping product surface — not a prescription.",
     tag: "Product",
     href: "/peptodyssey",
   },
   {
     num: "03 / Tracker",
     title: "Longitudinal biomarker tracking",
-    body: "A Bayesian tracker that fuses the patient's genetic prior with measured biomarkers to refine the prediction over time — turning each appointment into training data.",
+    body: "A Bayesian tracker that fuses the genetic prior with measured biomarkers so the picture can refine over time. Research / decision-support tooling.",
     tag: "Feedback loop",
     href: PRODUCT_ORIGIN + "/tracking",
   },
@@ -130,7 +129,7 @@ export default function CompanyHomePage() {
           <div className="mx-auto grid max-w-[1180px] gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:px-7 md:py-24">
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
-                Precision peptide therapeutics
+                Detect · Design · Deliver
               </p>
               <h1
                 className="text-4xl leading-tight text-[#0d1117] md:text-5xl"
@@ -140,10 +139,10 @@ export default function CompanyHomePage() {
                 <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
-                We build the analytics, the trackers, and the delivery research
-                platform behind precision peptide therapy — so each patient can
-                be matched more carefully, and the system learns from every
-                measurement.
+                We build the analytics and trackers behind precision peptide
+                therapy, with delivery science on a longer research horizon —
+                so a licensed clinician can match options more carefully, and
+                the system can learn from every measurement.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -178,7 +177,7 @@ export default function CompanyHomePage() {
                 />
                 <img
                   src="/assets/img/neurocreatine.jpg"
-                  alt="Molecular illustration of a brain peptide concept"
+                  alt="Molecular illustration"
                   width={1000}
                   height={750}
                   className="h-full w-full object-cover"
@@ -202,13 +201,13 @@ export default function CompanyHomePage() {
               Detect → Design → Deliver
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-              Public three-leg story of how we work. Internally the platform is
-              also described as{" "}
+              Company vision from the working notes: detect predictors, design
+              therapies, deliver them where they are needed. Internally the
+              software loop is still{" "}
               <strong className="font-medium text-[#0d1117]">
-                Read → Predict → Report → Track → Deliver
+                Read → Predict → Report → Track
               </strong>
-              ; the legs below collapse that loop without inventing new clinical
-              claims.
+              ; delivery is a separate research program.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PHILOSOPHY.map((leg) => (
@@ -248,9 +247,9 @@ export default function CompanyHomePage() {
               Three layers, one feedback loop.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              Our platform reads the genome, designs the options set, and learns
-              from the response — software first; delivery research on a longer
-              horizon.
+              PeptidIQ reads the genome. PeptOdyssey reports it. The Tracker
+              learns from follow-up measurements. Software ships first; delivery
+              stays research-stage.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PLATFORM.map((card) => (
@@ -279,9 +278,9 @@ export default function CompanyHomePage() {
                 Product pages
               </p>
               <p className="mt-2 max-w-2xl text-sm text-[#3a3f4a]">
-                Flagship U4U plus portfolio programs — CytoGate, vector
-                nanodisk, Neurocreatine, U4U Privacy, and next-gen drug
-                development.
+                Flagship software first (U4U / PeptOdyssey), then design and
+                lab surfaces, then research programs. Neurocreatine and
+                nanodisk are early / research — not the current wedge.
               </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PORTFOLIO.map((card) => (
@@ -325,9 +324,9 @@ export default function CompanyHomePage() {
                 What we are building.
               </h2>
               <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-                From the analytics layer down to molecular delivery, our pipeline
-                is built around peptides — drugs that can be precise, but only if
-                you treat them as a system.
+                The current wedge is clinic decision-support software. Design
+                visualization is Stage A. Delivery and CNS discovery are
+                research optionality — not marketed products.
               </p>
             </div>
 
@@ -337,7 +336,7 @@ export default function CompanyHomePage() {
                   <source type="image/webp" srcSet="/assets/img/nanodisk.webp" />
                   <img
                     src="/assets/img/nanodisk.jpg"
-                    alt="Nanodisk delivery vehicle illustration"
+                    alt="Molecular illustration"
                     width={1200}
                     height={900}
                     className="w-full object-cover"
@@ -346,53 +345,54 @@ export default function CompanyHomePage() {
                 </picture>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#92550a]">
-                  Delivery
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1a6b4a]">
+                  Shipping wedge
                 </p>
                 <h3 className="mt-2 text-2xl" style={serif}>
-                  Vector nanodisk delivery
+                  PeptOdyssey
                 </h3>
                 <p className="mt-3 text-[#3a3f4a]">
-                  A research-stage delivery program exploring how peptide and
-                  nucleic-acid payloads can be carried more carefully — the
-                  long-horizon Deliver leg of the platform.
+                  Genomics-guided peptide decision support for longevity,
+                  functional, and concierge clinics — a dossier a licensed
+                  clinician can read with the patient. Not a prescription, and
+                  not a guarantee of response.
                 </p>
                 <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>Molecule delivery as a system, not a side project</li>
-                  <li>Research-first positioning — not a marketed therapeutic</li>
-                  <li>Open to thoughtful scientific partnership</li>
+                  <li>VCF / consumer-genome in → structured options out</li>
+                  <li>Safety flags and investigational labels called out</li>
+                  <li>Clinic-first GTM; prescriber stays in the loop</li>
                 </ul>
                 <Link
-                  href={productPath("vector-nanodisk")}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#92550a] hover:underline"
+                  href="/peptodyssey"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1a6b4a] hover:underline"
                 >
-                  Vector nanodisk product page <span aria-hidden>→</span>
+                  Open PeptOdyssey <span aria-hidden>→</span>
                 </Link>
               </div>
             </div>
 
             <div className="grid items-center gap-8 md:grid-cols-2">
               <div className="order-2 md:order-1">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1e4d8c]">
-                  Discovery
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#5b3d8c]">
+                  Design
                 </p>
                 <h3 className="mt-2 text-2xl" style={serif}>
-                  Neurocreatine
+                  Next-gen drug design
                 </h3>
                 <p className="mt-3 text-[#3a3f4a]">
-                  An early-stage discovery track exploring peptides aimed at the
-                  central nervous system — with go/no-go decisions anchored in
-                  measurable signals, not hype.
+                  Structure-guided visualization and design loops for peptide
+                  and protein work — the Design leg. A software surface today,
+                  not a wet-lab or clinical product.
                 </p>
                 <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>Discovery with discipline</li>
-                  <li>Measurement-minded triage</li>
+                  <li>See the structure before committing the bench</li>
+                  <li>Stage A design / viz — no therapeutic claims</li>
                 </ul>
                 <Link
-                  href={productPath("neurocreatine")}
+                  href={productPath("next-gen-drug-development")}
                   className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1e4d8c] hover:underline"
                 >
-                  Neurocreatine product page <span aria-hidden>→</span>
+                  Design-lab page <span aria-hidden>→</span>
                 </Link>
               </div>
               <div className="order-1 overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white md:order-2">
@@ -403,7 +403,7 @@ export default function CompanyHomePage() {
                   />
                   <img
                     src="/assets/img/neurocreatine.jpg"
-                    alt="Neuro-creatine concept"
+                    alt="Structure-guided molecular illustration"
                     width={1000}
                     height={750}
                     className="w-full object-cover"
@@ -419,10 +419,10 @@ export default function CompanyHomePage() {
         <section className="py-12">
           <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-4 px-6 md:grid-cols-4 md:px-7">
             {[
-              ["50+", "Biomarkers tracked"],
+              ["PeptidIQ", "Prediction engine"],
               ["7", "Annotation sources"],
-              ["Bayesian", "Posterior updates"],
-              ["Open", "Source engine"],
+              ["CDS", "Clinician in the loop"],
+              ["Research", "Delivery program"],
             ].map(([n, l]) => (
               <div
                 key={l}
@@ -493,10 +493,10 @@ export default function CompanyHomePage() {
               to collaboration on every layer of the stack.
             </p>
             <a
-              href="mailto:noahtjones@gmail.com"
+              href="mailto:hello@flmanbiosci.net"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2d8f61]"
             >
-              noahtjones@gmail.com <span aria-hidden>→</span>
+              hello@flmanbiosci.net <span aria-hidden>→</span>
             </a>
           </div>
         </section>
@@ -536,7 +536,7 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <a href="#platform" className="hover:text-white">
-                  PeptOdyssey engine
+                  PeptidIQ engine
                 </a>
               </li>
               <li>
@@ -554,7 +554,7 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <Link
-                  href={productPath("vector-nanodisk")}
+                  href="/peptodyssey"
                   className="hover:text-white"
                 >
                   Vector nanodisk
@@ -562,7 +562,7 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <Link
-                  href={productPath("neurocreatine")}
+                  href={productPath("next-gen-drug-development")}
                   className="hover:text-white"
                 >
                   Neurocreatine
@@ -621,7 +621,7 @@ export default function CompanyHomePage() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:noahtjones@gmail.com" className="hover:text-white">
+                <a href="mailto:hello@flmanbiosci.net" className="hover:text-white">
                   Contact
                 </a>
               </li>

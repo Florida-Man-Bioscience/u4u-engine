@@ -72,9 +72,9 @@ export default function PeptodysseyHubPage() {
           PeptOdyssey
         </h1>
         <p className="max-w-2xl text-[#3a3f4a]">
-          Precision peptide genomics from Florida Man Bioscience. Start a genome
-          analysis, follow biomarkers over time, or open the iOS research-app
-          privacy policy used for TestFlight.
+          Decision-support surface from Florida Man Bioscience: genome analysis,
+          a clinician-readable dossier, and biomarker follow-up. Not a
+          prescription. iOS research-app privacy lives here for TestFlight.
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <Link

@@ -33,7 +33,7 @@ function photo(slug: string): Pick<TeamMember, "img" | "imgFallback"> {
   };
 }
 
-/** Founding team — order: CEO, CVO, core, reserved founders. */
+/** Founding team — public marketing roles only; no equity % on this page. */
 export const FOUNDERS: TeamMember[] = [
   {
     id: "noah",
@@ -49,9 +49,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "curtis",
     name: "Curtis Dearing",
-    role: "Co-founder · CVO · CPO, PeptOdyssey",
+    role: "Co-founder · PeptOdyssey",
     blurb:
-      "Chief Vision Officer and PeptOdyssey product lead. Core builder of the U4U engine and patient-facing product.",
+      "Co-founder. Core builder of the U4U / PeptidIQ engine and the PeptOdyssey product surface.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("curtis"),
@@ -62,7 +62,7 @@ export const FOUNDERS: TeamMember[] = [
     name: "Garrett Knotts",
     role: "Co-founder · Omics",
     blurb:
-      "Core founder. Omics and mitochondria-focused product threads (including MitoFocus).",
+      "Core founder. Structural biology of calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("garrett"),
@@ -84,7 +84,7 @@ export const FOUNDERS: TeamMember[] = [
     name: "Jacob Davis",
     role: "Founder · Bioinformatics",
     blurb:
-      "Founder. Bioinformatics and immunology; Neurocreatine project leadership.",
+      "Founder. Bioinformatics and immunology.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("jacob"),
@@ -143,7 +143,7 @@ export const CONTRIBUTORS: TeamMember[] = [
     name: "Min Young Park",
     role: "Metabolism · MitoFocus",
     blurb:
-      "Metabolism biochemistry; mitochondria-focused supplement development (MitoFocus).",
+      "Metabolism, adipose biology, and nutrition. Nucleate Activator contributor.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "MP",
@@ -157,6 +157,16 @@ export const CONTRIBUTORS: TeamMember[] = [
     tier: "contributor",
     nucleateActivator: true,
     initials: "DD",
+  },
+  {
+    id: "christopher",
+    name: "Christopher Marais",
+    role: "Activator contributor",
+    blurb:
+      "2026 Nucleate Activator teammate (joined mid-program). Public marketing role only.",
+    tier: "contributor",
+    nucleateActivator: true,
+    initials: "CM",
   },
   {
     id: "hampton",

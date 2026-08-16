@@ -89,17 +89,17 @@ const JOURNEY = [
   {
     step: "01",
     title: "Detect",
-    body: "Read the genome and capture real-world signals — files you control, plus optional biomarkers over time.",
+    body: "PeptidIQ + PeptOdyssey: genome-aware decision support a licensed clinician can read — not a one-size protocol.",
   },
   {
     step: "02",
     title: "Design",
-    body: "Translate signals into an individualized options set a licensed professional can interpret and decide on.",
+    body: "Structure-guided visualization for peptide and protein work. Stage A software — not a wet-lab or therapeutic claim.",
   },
   {
     step: "03",
     title: "Deliver",
-    body: "Follow response over time in software. Molecular delivery remains a longer-horizon research program.",
+    body: "MSP / vector nanodisk research on a longer horizon. Optionality — not a marketed therapeutic.",
   },
 ] as const;
 
@@ -110,7 +110,7 @@ const QUICK = [
   },
   {
     q: "How is this different from PeptOdyssey?",
-    a: "U4U is the platform story and product family. PeptOdyssey is the live patient-facing surface for analysis, tracking, and the iOS research path.",
+    a: "U4U is the internal platform name. PeptidIQ is the prediction engine. PeptOdyssey is the live dossier and tracking surface — including the iOS research path.",
   },
   {
     q: "What about privacy?",
@@ -202,8 +202,8 @@ export function U4UMarketingPage({ product }: Props) {
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               U4U is Florida Man Bioscience’s genome-aware platform for peptide
-              medicine: detect carefully, design an options set, and learn from
-              what happens next — without turning a website into a lab notebook.
+              medicine: Detect is the software wedge (PeptidIQ + PeptOdyssey).
+              Design and Deliver are later legs — labeled as such.
             </p>
           </div>
         </section>

@@ -292,24 +292,27 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
       "Dedicated portfolio host for the toolkit",
       "Company contact for partnership and feedback",
     ],
-    statusNote: "Toolkit / desktop surface under development.",
+    statusNote: "Desktop app: Windows / macOS / Linux installers via product page + GitHub Releases.",
     disclaimer:
       "Consumer and research utilities. Not a medical device. Not a diagnostic service. Does not replace clinical genetic counseling.",
     portfolioOrigin: U4U_PRIVACY_ORIGIN,
-    ctaPrimary: { label: "Talk privacy with us", href: "mailto:hello@flmanbiosci.net?subject=u4u-privacy" },
+    ctaPrimary: {
+      label: "Buy / download Desktop",
+      href: "https://u4u-privacy.flmanbiosci.net/#buy",
+    },
     ctaSecondary: { label: "Explore PeptOdyssey", href: "/peptodyssey" },
   },
 
   "next-gen-drug-development": {
     slug: "next-gen-drug-development",
-    name: "Next-gen drug development",
+    name: "Next-gen drug design",
     shortName: "Drug design lab",
     eyebrow: "Design platform · Lab",
     tagline: "Design the molecule with your eyes open.",
     description:
-      "Our next-generation drug development lab is a structure-guided design platform for peptide and protein work — immersive visualization and disciplined design loops for teams who want to see what they are building before they commit the bench.",
+      "Our next-generation drug design lab is a structure-guided visualization platform for peptide and protein work — immersive views and disciplined design loops. Software-first Stage A — not a wet-lab or clinical product.",
     metaDescription:
-      "Next-gen drug development lab from Florida Man Bioscience — structure-guided design and immersive visualization for peptide and protein programs.",
+      "Next-gen drug design from Florida Man Bioscience — structure-guided visualization for peptide and protein programs. Stage A software; no therapeutic claims.",
     cardBody:
       "Structure-guided design lab — immersive visualization and disciplined loops for peptide and protein work.",
     tag: "Design lab",
@@ -352,11 +355,11 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
 
 export const PRODUCT_LIST: ProductPage[] = [
   PRODUCTS.u4u,
+  PRODUCTS["next-gen-drug-development"],
   PRODUCTS.cytogate,
+  PRODUCTS["u4u-privacy"],
   PRODUCTS["vector-nanodisk"],
   PRODUCTS.neurocreatine,
-  PRODUCTS["u4u-privacy"],
-  PRODUCTS["next-gen-drug-development"],
 ];
 
 export function productPath(slug: ProductSlug): string {
