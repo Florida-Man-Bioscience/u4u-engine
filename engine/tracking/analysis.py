@@ -623,6 +623,21 @@ def predict_response(
         if baseline is not None else bayes.PredictiveCurve(points=[])
     )
 
+    # No-treatment counterfactual: θ ≡ 0. The marker stays at baseline
+    # (plus baseline uncertainty). Used by the patient-chart "treatment
+    # off" toggle — not a clinical claim, just the model's θ=0 curve.
+    untreated = bayes.update(prior_mean=0.0, prior_sd=1e-6, likelihood=None)
+    untreated_predictive = (
+        bayes.predictive_curve(
+            baseline=baseline,
+            posterior=untreated,
+            tau_weeks=tau,
+            week_grid=week_grid,
+            baseline_sd=baseline_sd,
+        )
+        if baseline is not None else bayes.PredictiveCurve(points=[])
+    )
+
     # Bayes-informed expected timeframe: when do we expect the change to
     # show up, and when has it plateaued, given the posterior?
     posterior_window = bayes.expected_window(posterior=posterior, tau_weeks=tau)
@@ -651,6 +666,7 @@ def predict_response(
         "posterior": posterior.to_dict(),
         "posterior_predictive": posterior_predictive.to_dict(),
         "prior_predictive": prior_predictive.to_dict(),
+        "untreated_predictive": untreated_predictive.to_dict(),
         "expected_window": posterior_window.to_dict(),
         "prior_expected_window": prior_window.to_dict(),
     }

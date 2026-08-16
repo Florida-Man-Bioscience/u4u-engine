@@ -38,6 +38,12 @@ export function BayesianChartGuide() {
           plateaus.
         </p>
         <p>
+          Use the <strong>treatment effect</strong> switch above the charts to
+          flip between the peptide-on posterior and the θ = 0 (no-treatment)
+          baseline. Observed points stay so you can compare. That overlay is a
+          model counterfactual, not a clinical claim.
+        </p>
+        <p>
           Before measurements arrive, the prediction sits on the genetic prior.
           As measurements come in, the posterior shifts toward what the
           trajectory actually shows; the gap between the dashed prior line and

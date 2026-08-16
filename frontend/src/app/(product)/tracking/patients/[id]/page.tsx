@@ -8,6 +8,7 @@ import { BayesianChartGuide } from "../../components/BayesianChartGuide";
 import { BiomarkerLineChart } from "../../components/BiomarkerLineChart";
 import { GeneticsCard } from "../../components/GeneticsCard";
 import { PosteriorChart } from "../../components/PosteriorChart";
+import { TreatmentEffectToggle } from "../../components/TreatmentEffectToggle";
 import {
   getBiomarkerCatalog,
   getPatient,
@@ -35,6 +36,7 @@ export default function PatientDetail({
   const [catalog, setCatalog] = useState<BiomarkerCatalogEntry[]>([]);
   const [activeTreatmentId, setActiveTreatmentId] = useState<string>("");
   const [predictions, setPredictions] = useState<Record<string, PredictionResult>>({});
+  const [treatmentOn, setTreatmentOn] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -205,9 +207,18 @@ export default function PatientDetail({
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
-          Longitudinal charts ({grouped.length})
-        </h2>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
+            Longitudinal charts ({grouped.length})
+          </h2>
+          {grouped.length > 0 && (
+            <TreatmentEffectToggle
+              treatmentOn={treatmentOn}
+              onChange={setTreatmentOn}
+              peptideName={activeTreatment?.peptide_name}
+            />
+          )}
+        </div>
         {grouped.length > 0 && <BayesianChartGuide />}
         {grouped.length === 0 && (
           <p className="text-sm text-slate-500">No measurements yet.</p>
@@ -216,9 +227,9 @@ export default function PatientDetail({
           const expected = catalog.find((c) => c.name === name) ?? null;
           const start = activeTreatment?.start_date ?? null;
           const prediction = predictions[name] ?? null;
-          const post = prediction?.posterior;
-          const prior = prediction?.prior;
-          const cohort = prediction?.population_prior ?? null;
+          const post = treatmentOn ? prediction?.posterior : null;
+          const prior = treatmentOn ? prediction?.prior : null;
+          const cohort = treatmentOn ? (prediction?.population_prior ?? null) : null;
           return (
             <div key={name} className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="mb-2 flex items-baseline justify-between">
@@ -285,6 +296,7 @@ export default function PatientDetail({
                   treatmentStartIso={start}
                   expected={expected}
                   prediction={prediction}
+                  treatmentOn={treatmentOn}
                 />
               ) : (
                 <BiomarkerLineChart
