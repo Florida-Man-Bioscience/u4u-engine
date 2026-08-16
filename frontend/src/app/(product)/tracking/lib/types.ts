@@ -236,6 +236,8 @@ export interface PredictionResult {
   posterior: Posterior;
   posterior_predictive: PredictiveCurve;
   prior_predictive: PredictiveCurve;
+  /** θ = 0 counterfactual (treatment off). Flat at baseline. Absent on older APIs. */
+  untreated_predictive?: PredictiveCurve;
   expected_window: ExpectedWindow;
   prior_expected_window: ExpectedWindow;
 }

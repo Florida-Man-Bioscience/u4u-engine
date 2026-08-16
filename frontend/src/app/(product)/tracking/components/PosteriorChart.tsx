@@ -21,6 +21,8 @@ interface Props {
   treatmentStartIso: string | null;
   expected: BiomarkerCatalogEntry | null;
   prediction: PredictionResult | null;
+  /** When false, plot the θ = 0 (no-treatment) counterfactual. */
+  treatmentOn?: boolean;
   height?: number;
 }
 
@@ -36,6 +38,7 @@ export function PosteriorChart({
   treatmentStartIso,
   expected,
   prediction,
+  treatmentOn = true,
   height = 320,
 }: Props) {
   if (!treatmentStartIso) {
@@ -62,18 +65,38 @@ export function PosteriorChart({
   const preTreatmentCount = scatterAll.filter((p) => p.x < 0).length;
   const scatter = scatterAll.filter((p) => p.x >= 0);
 
+  const curveSource = (() => {
+    if (treatmentOn) return prediction?.posterior_predictive ?? null;
+    if (prediction?.untreated_predictive?.points?.length) {
+      return prediction.untreated_predictive;
+    }
+    // Older API without untreated_predictive: flat baseline on the same weeks.
+    const weeks = prediction?.posterior_predictive.points ?? [];
+    const b = prediction?.baseline;
+    if (b == null || weeks.length === 0) return null;
+    return {
+      points: weeks.map((p) => ({
+        weeks_since_start: p.weeks_since_start,
+        mean: b,
+        lo_95: b,
+        hi_95: b,
+      })),
+    };
+  })();
+
   const band =
-    prediction?.posterior_predictive.points.map((p) => ({
+    curveSource?.points.map((p) => ({
       x: p.weeks_since_start,
       mean: p.mean,
       range: [p.lo_95, p.hi_95] as [number, number],
     })) ?? [];
 
-  const priorBand =
-    prediction?.prior_predictive.points.map((p) => ({
-      x: p.weeks_since_start,
-      prior_mean: p.mean,
-    })) ?? [];
+  const priorBand = treatmentOn
+    ? (prediction?.prior_predictive.points.map((p) => ({
+        x: p.weeks_since_start,
+        prior_mean: p.mean,
+      })) ?? [])
+    : [];
 
   const xMax = Math.max(
     ...scatter.map((p) => p.x),
@@ -126,6 +149,7 @@ export function PosteriorChart({
   // on THIS chart (the meaning depends on direction — increase / decrease
   // / variable — and shading colour swaps accordingly).
   const shadingMeta = (() => {
+    if (!treatmentOn) return null;
     const w = prediction?.expected_window;
     const direction = w?.direction ?? expected?.direction ?? null;
     if (!direction) return null;
@@ -261,6 +285,7 @@ export function PosteriorChart({
           // the static panel range when no prediction is available.
           const w = prediction?.expected_window;
           const priorW = prediction?.prior_expected_window;
+          if (!treatmentOn) return null;
           const x1 = w ? w.weeks_min : (expected?.timeframe_weeks_min ?? null);
           const x2 = w ? w.weeks_max : (expected?.timeframe_weeks_max ?? null);
           if (x1 === null && x2 === null) return null;
@@ -323,7 +348,7 @@ export function PosteriorChart({
         <Area
           data={band}
           dataKey="range"
-          name="posterior 95% CI"
+          name={treatmentOn ? "posterior 95% CI" : "no-treatment 95% CI"}
           stroke="transparent"
           fill="#0f766e"
           fillOpacity={0.16}
@@ -343,7 +368,7 @@ export function PosteriorChart({
         <Line
           data={band}
           dataKey="mean"
-          name="posterior mean"
+          name={treatmentOn ? "posterior mean" : "no-treatment (baseline)"}
           stroke="#0f766e"
           strokeWidth={2}
           dot={false}
@@ -375,11 +400,11 @@ export function PosteriorChart({
               aria-hidden
             />
             <span>
-              <strong>Teal band</strong> wrapping the posterior mean line:
-              the 95% credible interval — where the model thinks the next
-              measurement is likely to land at each week. When the band
-              hugs the bottom of the chart, the model is predicting little
-              to no change.
+              <strong>{treatmentOn ? "Teal band" : "Teal band (no treatment)"}</strong>{" "}
+              wrapping the {treatmentOn ? "posterior" : "baseline"} mean line:
+              {treatmentOn
+                ? " the 95% credible interval — where the model thinks the next measurement is likely to land at each week. When the band hugs the bottom of the chart, the model is predicting little to no change."
+                : " the θ = 0 counterfactual (peptide off). The marker is predicted to stay at baseline. Observed points are unchanged so you can compare them to this line."}
             </span>
           </p>
         )}

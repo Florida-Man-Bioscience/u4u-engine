@@ -26,6 +26,11 @@ def test_predict_response_returns_full_payload(conn):
     assert result["posterior"]["mean_pct_change"] is not None
     assert result["posterior_predictive"]["points"]
     assert result["prior_predictive"]["points"]
+    assert result["untreated_predictive"]["points"]
+    baseline = result["baseline"]
+    assert baseline is not None
+    untreated_means = [p["mean"] for p in result["untreated_predictive"]["points"]]
+    assert all(abs(m - baseline) < 1e-3 for m in untreated_means)
 
 
 def test_predict_response_without_treatment_falls_back_to_prior(conn):
