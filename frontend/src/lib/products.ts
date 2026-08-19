@@ -61,17 +61,17 @@ const brandGreen = {
 export const PRODUCTS: Record<ProductSlug, ProductPage> = {
   u4u: {
     slug: "u4u",
-    name: "U4U",
-    shortName: "U4U",
-    eyebrow: "Flagship platform · Genomics",
+    name: "PeptOdyssey",
+    shortName: "PeptOdyssey",
+    eyebrow: "Flagship platform · Decision support",
     tagline: "Peptide medicine, matched to the genome.",
     description:
-      "U4U is Florida Man Bioscience’s genome-aware platform for peptide medicine — turning genetic context into a clearer options set for people and the licensed clinicians who care for them.",
+      "PeptOdyssey is Florida Man Bioscience’s genome-aware peptide platform — engine, clinician-readable dossier, iOS research capture, and longitudinal tracker in one product. It turns genetic context into a clearer options set for licensed clinicians and the people they care for.",
     metaDescription:
-      "U4U — Florida Man Bioscience’s genome-aware peptide platform. Personalized options from genetic context, with PeptOdyssey as the live product surface. Not a medical device.",
+      "PeptOdyssey — Florida Man Bioscience’s genome-aware peptide platform. Engine, dossier, iOS capture, and tracker. Not a medical device.",
     cardBody:
-      "Flagship genome-aware platform — personalized peptide options from genetic context, for people and practitioners.",
-    tag: "Flagship",
+      "The shipping platform: genome → structured dossier → biomarker follow-up, with a licensed clinician in the loop.",
+    tag: "Platform",
     accent: brandGreen,
     audience:
       "Individuals exploring genome-informed peptide context, licensed clinicians, and partners building modern care workflows.",
@@ -95,7 +95,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
       "Privacy toolkit lane when files should stay local",
     ],
     statusNote:
-      "Flagship platform story live on apex; PeptOdyssey is the shipping product surface.",
+      "Shipping product surface for analysis, dossier, tracking, and iOS research capture.",
     disclaimer:
       "Research and decision-support software. Not a medical device. Not intended to diagnose, treat, cure, or prevent disease. Does not replace clinical judgment or genetic counseling.",
     ctaPrimary: {
@@ -284,7 +284,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
       },
       {
         title: "Kin to PeptOdyssey",
-        body: "Part of the broader U4U / FMB family: genome-aware products with different surfaces for different trust models.",
+        body: "Part of the Florida Man Bioscience family: genome-aware products with different surfaces for different trust models.",
       },
     ],
     promises: [

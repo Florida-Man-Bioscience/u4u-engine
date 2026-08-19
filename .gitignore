@@ -111,3 +111,6 @@ validation/reference/*.vcf.gz
 validation/reference/*.bam
 validation/reference/*.bai
 validation/reference/*.xlsx
+
+# Linked git worktrees (never commit checkout contents)
+.worktrees/

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s · Florida Man Bioscience",
   },
   description:
-    "Florida Man Bioscience builds genome-aware peptide decision support: PeptidIQ prediction, the PeptOdyssey dossier, biomarker tracking, and research-stage delivery science.",
+    "Florida Man Bioscience builds PeptOdyssey — genome-aware peptide decision support, a clinician-readable dossier, biomarker tracking, and research-stage delivery science.",
   metadataBase: new URL("https://flmanbiosci.net"),
   openGraph: {
     type: "website",

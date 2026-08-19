@@ -53,12 +53,6 @@ export function CompanyChrome({ active = "home", children }: Props) {
             {link("products", "/#products", "Programs")}
             {link("team", "/team", "Team")}
             <Link
-              href="/products/u4u"
-              className="text-[#3a3f4a] hover:text-[#1a6b4a]"
-            >
-              U4U
-            </Link>
-            <Link
               href="/peptodyssey"
               className="rounded-full bg-[#1a6b4a] px-4 py-2 text-white hover:bg-[#0f4530]"
             >
@@ -86,9 +80,6 @@ export function CompanyChrome({ active = "home", children }: Props) {
           <div className="flex flex-wrap gap-4">
             <Link href="/#products" className="hover:text-[#1a6b4a]">
               Programs
-            </Link>
-            <Link href="/products/u4u" className="hover:text-[#1a6b4a]">
-              U4U
             </Link>
             <Link href="/team" className="hover:text-[#1a6b4a]">
               Team

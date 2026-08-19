@@ -49,9 +49,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "curtis",
     name: "Curtis Dearing",
-    role: "Co-founder · PeptOdyssey",
+    role: "Chief Vision Officer · CPO, PeptOdyssey",
     blurb:
-      "Co-founder. Core builder of the U4U / PeptidIQ engine and the PeptOdyssey product surface.",
+      "Chief Vision Officer and CPO of PeptOdyssey. Core builder of the engine and the clinician-facing product surface.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("curtis"),
@@ -60,7 +60,7 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "garrett",
     name: "Garrett Knotts",
-    role: "Co-founder · Omics",
+    role: "Founder",
     blurb:
       "Core founder. Structural biology of calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
     tier: "founder",
@@ -111,9 +111,9 @@ export const CONTRIBUTORS: TeamMember[] = [
   {
     id: "sasank",
     name: "Sasank Desaraju",
-    role: "Clinical anchor · U4U contributor",
+    role: "Clinical anchor · PeptOdyssey contributor",
     blurb:
-      "MD/PhD student, University of Florida. Clinical link and U4U intelligence; engine contributor.",
+      "MD/PhD student, University of Florida. Clinical link and PeptOdyssey engine contributor.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "SD",
