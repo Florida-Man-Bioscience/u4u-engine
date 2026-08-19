@@ -8,7 +8,7 @@ import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
   description:
-    "Florida Man Bioscience builds genome-aware peptide decision support — PeptidIQ, the PeptOdyssey dossier, biomarker tracking, and research-stage delivery science.",
+    "Florida Man Bioscience builds PeptOdyssey — genome-aware peptide decision support, a clinician-readable dossier, biomarker tracking, and research-stage delivery science.",
   alternates: { canonical: `${COMPANY_ORIGIN}/` },
   openGraph: {
     title: "Florida Man Bioscience",
@@ -28,7 +28,7 @@ const PHILOSOPHY = [
     step: "01",
     title: "Detect",
     body: "A personalized multiomic read: genome files plus measured signals, turned into predictors a licensed clinician can use — not a one-size protocol.",
-    source: "Flagship software: PeptidIQ engine + PeptOdyssey dossier",
+    source: "Flagship software: PeptOdyssey (engine + dossier)",
   },
   {
     step: "02",
@@ -46,17 +46,17 @@ const PHILOSOPHY = [
 
 const PLATFORM = [
   {
-    num: "01 / PeptidIQ",
-    title: "Genome → response prediction",
-    body: "The engine. Variant annotation, pharmacogenomics, receptor and pathway context — structured so a licensed clinician can read it. Internal platform name: U4U.",
+    num: "01 / Engine",
+    title: "Genome → structured response",
+    body: "Variant annotation, pharmacogenomics, receptor and pathway context — scored so a licensed clinician can read it. This is the analysis core of PeptOdyssey.",
     tag: "Engine",
-    href: productPath("u4u"),
+    href: "/peptodyssey/analyze",
   },
   {
-    num: "02 / PeptOdyssey",
-    title: "The clinician- and patient-facing dossier",
-    body: "Decision-support report: safety flags, goal-to-peptide options, citations, and FDA vs investigational labels. The shipping product surface — not a prescription.",
-    tag: "Product",
+    num: "02 / Dossier",
+    title: "The clinician- and patient-facing report",
+    body: "Decision-support report: safety flags, goal-to-peptide options, citations, and FDA vs investigational labels. Not a prescription.",
+    tag: "Dossier",
     href: "/peptodyssey",
   },
   {
@@ -244,12 +244,11 @@ export default function CompanyHomePage() {
               Platform
             </p>
             <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
-              Three layers, one feedback loop.
+              One platform. A loop that learns.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              PeptidIQ reads the genome. PeptOdyssey reports it. The Tracker
-              learns from follow-up measurements. Software ships first; delivery
-              stays research-stage.
+              PeptOdyssey is the product: engine, dossier, iOS research capture,
+              and tracker. Software ships first; delivery stays research-stage.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PLATFORM.map((card) => (
@@ -278,9 +277,9 @@ export default function CompanyHomePage() {
                 Product pages
               </p>
               <p className="mt-2 max-w-2xl text-sm text-[#3a3f4a]">
-                Flagship software first (U4U / PeptOdyssey), then design and
-                lab surfaces, then research programs. Neurocreatine and
-                nanodisk are early / research — not the current wedge.
+                PeptOdyssey first, then design and lab surfaces, then research
+                programs. Neurocreatine and nanodisk are early / research — not
+                the current wedge.
               </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PORTFOLIO.map((card) => (
@@ -306,6 +305,42 @@ export default function CompanyHomePage() {
                   </Link>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Verification / trust — after the product loop, not the hero */}
+        <section
+          id="verification"
+          className="scroll-mt-24 border-t border-[#edecea] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+              Trust
+            </p>
+            <h2 className="mt-2 max-w-3xl text-3xl md:text-4xl" style={serif}>
+              Independent peptide verification matters.
+            </h2>
+            <p className="mt-4 max-w-2xl text-[#3a3f4a]">
+              Without a third-party check, a clinic may not be injecting what
+              the label says. Independent analysis has shown only a fraction of
+              tested samples match the label. PeptOdyssey is decision-support
+              for licensed clinicians — not a substitute for identity testing
+              of the vial.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/regulatory"
+                className="inline-flex items-center gap-2 rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
+              >
+                Regulatory dashboard
+              </Link>
+              <Link
+                href="/study"
+                className="inline-flex items-center gap-2 rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
+              >
+                Validation study
+              </Link>
             </div>
           </div>
         </section>
@@ -419,7 +454,7 @@ export default function CompanyHomePage() {
         <section className="py-12">
           <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-4 px-6 md:grid-cols-4 md:px-7">
             {[
-              ["PeptidIQ", "Prediction engine"],
+              ["PeptOdyssey", "Shipping platform"],
               ["7", "Annotation sources"],
               ["CDS", "Clinician in the loop"],
               ["Research", "Delivery program"],
@@ -530,14 +565,9 @@ export default function CompanyHomePage() {
                 </a>
               </li>
               <li>
-                <Link href={productPath("u4u")} className="hover:text-white">
-                  U4U
+                <Link href="/peptodyssey" className="hover:text-white">
+                  PeptOdyssey
                 </Link>
-              </li>
-              <li>
-                <a href="#platform" className="hover:text-white">
-                  PeptidIQ engine
-                </a>
               </li>
               <li>
                 <Link href={productPath("cytogate")} className="hover:text-white">
@@ -549,12 +579,12 @@ export default function CompanyHomePage() {
                   href={productPath("u4u-privacy")}
                   className="hover:text-white"
                 >
-                  U4U Privacy
+                  u4u-privacy
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/peptodyssey"
+                  href={productPath("vector-nanodisk")}
                   className="hover:text-white"
                 >
                   Vector nanodisk
@@ -562,7 +592,7 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <Link
-                  href={productPath("next-gen-drug-development")}
+                  href={productPath("neurocreatine")}
                   className="hover:text-white"
                 >
                   Neurocreatine
@@ -574,11 +604,6 @@ export default function CompanyHomePage() {
                   className="hover:text-white"
                 >
                   Next-gen drug development
-                </Link>
-              </li>
-              <li>
-                <Link href={"/peptodyssey"} className="hover:text-white">
-                  PeptOdyssey
                 </Link>
               </li>
               <li>

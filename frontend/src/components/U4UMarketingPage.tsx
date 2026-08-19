@@ -89,7 +89,7 @@ const JOURNEY = [
   {
     step: "01",
     title: "Detect",
-    body: "PeptidIQ + PeptOdyssey: genome-aware decision support a licensed clinician can read — not a one-size protocol.",
+    body: "PeptOdyssey: genome-aware decision support a licensed clinician can read — not a one-size protocol.",
   },
   {
     step: "02",
@@ -105,12 +105,12 @@ const JOURNEY = [
 
 const QUICK = [
   {
-    q: "Is U4U a medical device?",
-    a: "No. U4U is research and decision-support software from Florida Man Bioscience. It does not diagnose, treat, cure, or prevent disease.",
+    q: "Is PeptOdyssey a medical device?",
+    a: "No. PeptOdyssey is research and decision-support software from Florida Man Bioscience. It does not diagnose, treat, cure, or prevent disease.",
   },
   {
-    q: "How is this different from PeptOdyssey?",
-    a: "U4U is the internal platform name. PeptidIQ is the prediction engine. PeptOdyssey is the live dossier and tracking surface — including the iOS research path.",
+    q: "What happened to PeptidIQ / U4U?",
+    a: "PeptidIQ was the old name for this platform. U4U is an internal engineering name. Publicly there is one product: PeptOdyssey — engine, dossier, tracker, and iOS research capture.",
   },
   {
     q: "What about privacy?",
@@ -199,9 +199,9 @@ export function U4UMarketingPage({ product }: Props) {
               <span className="text-[#1a6b4a]"> Software first.</span>
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
-              U4U is Florida Man Bioscience’s genome-aware platform for peptide
-              medicine: Detect is the software wedge (PeptidIQ + PeptOdyssey).
-              Design and Deliver are later legs — labeled as such.
+              PeptOdyssey is Florida Man Bioscience’s genome-aware peptide
+              platform. Detect is the software wedge. Design and Deliver are
+              later legs — labeled as such.
             </p>
           </div>
         </section>
@@ -218,7 +218,7 @@ export function U4UMarketingPage({ product }: Props) {
                   className="mt-2 max-w-xl text-3xl text-[#0d1117] md:text-4xl"
                   style={companySerif}
                 >
-                  PeptidIQ predicts. PeptOdyssey reports. The Tracker learns.
+                  The engine predicts. The dossier reports. The tracker learns.
                 </h2>
               </div>
               <p className="max-w-sm text-sm leading-relaxed text-[#6b7280]">
@@ -431,7 +431,7 @@ export function U4UMarketingPage({ product }: Props) {
                 className="mt-3 text-3xl md:text-4xl"
                 style={companySerif}
               >
-                Take the next step with U4U.
+                Take the next step with PeptOdyssey.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-[#d7ebe1]">
                 Start a PeptOdyssey analysis, explore the privacy toolkit, or
@@ -452,7 +452,7 @@ export function U4UMarketingPage({ product }: Props) {
                   U4U Privacy
                 </Link>
                 <a
-                  href="mailto:hello@flmanbiosci.net?subject=U4U"
+                  href="mailto:hello@flmanbiosci.net?subject=PeptOdyssey"
                   className="inline-flex min-h-11 items-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white hover:border-white/60"
                 >
                   Contact the team
