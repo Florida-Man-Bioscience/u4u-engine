@@ -10,3 +10,5 @@ Plan project `p-01184334`.
 | [`content/SOURCES.md`](./content/SOURCES.md) | `t-fmbweb-content` | Source paths + gaps |
 
 Task deliverable paths `content/*` map here as `docs/website/content/*` inside `u4u-engine`.
+
+Path hygiene (live vs static vs clinic outbox): [`ORG_PLAN.md`](./ORG_PLAN.md).
