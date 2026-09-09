@@ -81,7 +81,11 @@ export function ProductMarketingPage({ product }: Props) {
                       alt={product.heroImage.alt}
                       width={1000}
                       height={750}
-                      className="h-full w-full object-cover"
+                      className={
+                        product.screenshots
+                          ? "h-full w-full bg-[#111827] object-contain"
+                          : "h-full w-full object-cover"
+                      }
                       fetchPriority="high"
                     />
                   </picture>
@@ -136,7 +140,7 @@ export function ProductMarketingPage({ product }: Props) {
               className="mt-2 max-w-2xl text-3xl text-[#0d1117] md:text-4xl"
               style={companySerif}
             >
-              Marketing that stays honest.
+              {product.pillarsHeading ?? "Marketing that stays honest."}
             </h2>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {product.pillars.map((pillar) => (
@@ -160,6 +164,45 @@ export function ProductMarketingPage({ product }: Props) {
             </div>
           </div>
         </section>
+
+        {product.screenshots && product.screenshots.length > 0 ? (
+          <section className="border-b border-[#edecea] bg-[#0d1117] py-16 md:py-20">
+            <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+              <p
+                className="text-xs font-bold uppercase tracking-[0.14em]"
+                style={{ color: product.accent.wash }}
+              >
+                Screenshots
+              </p>
+              <h2
+                className="mt-2 max-w-2xl text-3xl text-white md:text-4xl"
+                style={companySerif}
+              >
+                {product.screenshotsHeading ?? "See the product."}
+              </h2>
+              <div className="mt-10 grid gap-6 md:grid-cols-2">
+                {product.screenshots.map((shot) => (
+                  <figure key={shot.src} className="overflow-hidden rounded-2xl border border-white/10 bg-[#111827]">
+                    <picture>
+                      {shot.webp ? <source type="image/webp" srcSet={shot.webp} /> : null}
+                      <img
+                        src={shot.src}
+                        alt={shot.alt}
+                        width={1440}
+                        height={900}
+                        className="w-full object-contain"
+                        loading="lazy"
+                      />
+                    </picture>
+                    <figcaption className="px-4 py-3 text-sm leading-relaxed text-zinc-400">
+                      {shot.caption}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {/* Promises + disclaimer */}
         <section className="border-b border-[#edecea] bg-[#f5f4f0] py-16 md:py-20">

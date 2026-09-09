@@ -41,7 +41,11 @@ export type ProductPage = {
   tag: string;
   accent: ProductAccent;
   heroImage?: { src: string; webp?: string; alt: string };
+  /** Optional product-page gallery (bench shots, not stock biotech). */
+  screenshots?: { src: string; webp?: string; alt: string; caption: string }[];
   audience: string;
+  pillarsHeading?: string;
+  screenshotsHeading?: string;
   pillars: { title: string; body: string }[];
   promises: string[];
   statusNote: string;
@@ -112,41 +116,65 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     slug: "cytogate",
     name: "CytoGate",
     shortName: "CytoGate",
-    eyebrow: "Lab software · Portfolio",
-    tagline: "See your flow data with clarity.",
+    eyebrow: "Lab software · Flow cytometry",
+    tagline: "See the matrix. Gate with intent.",
     description:
-      "CytoGate is Florida Man Bioscience’s flow-analysis product surface — built for scientists who need trustworthy views of complex cell data, without wrestling brittle desktop stacks.",
+      "CytoGate is Florida Man Bioscience’s flow-cytometry product. CytoCrunch is the desktop bench — compensation and QC you can inspect, plus an optional Assistant that proposes gates and experiment-design checklists. You Apply. Auto-gate still works if the Assistant is off.",
     metaDescription:
-      "CytoGate — flow cytometry analysis software from Florida Man Bioscience. Clear gating and strategy tools for real lab workflows.",
+      "CytoGate — flow cytometry desktop (CytoCrunch) from Florida Man Bioscience. Compensation, QC, auto-gate, and a propose-only Assistant. Research software. Not a medical device.",
     cardBody:
-      "Flow analysis software for modern labs — clearer views of complex cell data, built for real workflows.",
+      "Compensation, QC, and gating for real FCS sessions — with an optional propose-only Assistant.",
     tag: "Lab software",
     accent: {
       label: "#0e5a8a",
       wash: "#e8f1f8",
       solid: "#0e5a8a",
     },
-    audience: "Core facilities, immunology labs, and research teams that live in FCS files.",
+    heroImage: {
+      src: "/assets/img/cytogate-bench.png",
+      webp: "/assets/img/cytogate-bench.webp",
+      alt: "CytoCrunch bench: FSC-A × SSC-A density plot, strategy tree, Time QC strip, and compensation inspector",
+    },
+    screenshots: [
+      {
+        src: "/assets/img/cytogate-bench.png",
+        webp: "/assets/img/cytogate-bench.webp",
+        alt: "CytoCrunch bench with synthetic FCS, gating tools, Time QC, and CompQC controls",
+        caption: "The bench — plots, strategy, Time QC, and compensation on one surface.",
+      },
+      {
+        src: "/assets/img/cytogate-matrix.png",
+        webp: "/assets/img/cytogate-matrix.webp",
+        alt: "CytoGate graphic: compensation matrix with the line See the matrix. Gate with intent.",
+        caption: "Compensation you can inspect — not a black box.",
+      },
+    ],
+    audience:
+      "Core facilities, immunology labs, and research teams whose panels outgrew brittle stacks.",
+    pillarsHeading: "What the bench actually does.",
+    screenshotsHeading: "The bench.",
     pillars: [
       {
-        title: "Built for real sessions",
-        body: "Designed around the pace of experimental work — not demos that fall apart when files get large or panels get dense.",
+        title: "Compensation you can inspect",
+        body: "Matrix, spillover, and CompQC live on the inspector — nudge a coefficient and see the plot, instead of trusting a hidden unmix.",
       },
       {
-        title: "Clarity over clutter",
-        body: "A calmer interface for strategy and review so your team spends time on biology, not fighting the tool.",
+        title: "QC before the argument",
+        body: "Time QC, clean-events, auto-gate, and FMO are first-class. Argue about biology after the file has been through QC — not before.",
       },
       {
-        title: "Part of the FMB family",
-        body: "A dedicated product surface under Florida Man Bioscience — with room to grow into releases, docs, and training.",
+        title: "Propose, then Apply",
+        body: "Optional Assistant suggests gates and a panel/FMO checklist from summaries. No raw FCS to a vendor. Nothing applies until you do.",
       },
     ],
     promises: [
-      "Product-focused experience for flow analysis",
-      "Portfolio host reserved for CytoGate releases",
+      "Desktop bench (CytoCrunch) for FCS sessions",
+      "Compensation, Time QC, auto-gate, FMO, and CompQC on the inspector",
+      "Optional Assistant: propose-only — human Apply, Auto-gate still works offline",
       "Company-backed support path via hello@flmanbiosci.net",
     ],
-    statusNote: "Product surface under active development.",
+    statusNote:
+      "Desktop bench under active development. Research software — not a clinical release.",
     disclaimer:
       "Research and laboratory software. Not a medical device. Not intended to diagnose, treat, cure, or prevent disease.",
     portfolioOrigin: CYTOGATE_ORIGIN,
