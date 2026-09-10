@@ -30,6 +30,9 @@ export function CompanyChrome({ active = "home", children }: Props) {
 
   return (
     <div className="bg-white text-[#0d1117]">
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <header className="sticky top-0 z-50 border-b border-[#edecea] bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6 md:px-7">
           <Link href="/" className="flex items-center gap-2.5">
@@ -63,11 +66,11 @@ export function CompanyChrome({ active = "home", children }: Props) {
             href="/peptodyssey"
             className="rounded-full bg-[#1a6b4a] px-3 py-1.5 text-sm font-medium text-white sm:hidden"
           >
-            Product
+            PeptOdyssey
           </Link>
         </div>
       </header>
-      {children}
+      <main id="main">{children}</main>
       <footer className="border-t border-[#edecea] bg-[#f5f4f0] py-10">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-4 px-6 text-sm text-[#6b7280] md:flex-row md:items-center md:justify-between md:px-7">
           <div>
@@ -86,6 +89,9 @@ export function CompanyChrome({ active = "home", children }: Props) {
             </Link>
             <Link href="/peptodyssey" className="hover:text-[#1a6b4a]">
               PeptOdyssey
+            </Link>
+            <Link href="/products/cytogate" className="hover:text-[#1a6b4a]">
+              CytoGate
             </Link>
             <a
               href="https://github.com/Florida-Man-Bioscience"
