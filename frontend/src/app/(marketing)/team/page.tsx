@@ -105,7 +105,7 @@ export default function TeamPage() {
           <Section
             eyebrow="Founding team"
             title="Six founders."
-            intro="Public roles as shown on the company site. Formal titles and equity structure live in internal governance — not restated here."
+            intro="Public roles describe the work. Skills, not equity — no invented C-suite titles and no unit counts on this page."
           >
             {FOUNDERS.map((m) => (
               <TeamMemberCard key={m.id} member={m} />
@@ -117,7 +117,7 @@ export default function TeamPage() {
           <Section
             eyebrow="2026 Nucleate Activator"
             title="Contributors who built with us."
-            intro="Everyone who joined the Activator cohort and extended build — clinical, safety, oncology genetics, metabolism, engineering, GTM, and ops. Includes Rocky Truong, Kayla Schwartz, Min Young Park, Sasank Desaraju, and the full contributor bench."
+            intro="Everyone who joined the Activator cohort and extended build — clinical, safety, oncology genetics, metabolism, engineering, GTM, and ops. Named contributors: Sasank Desaraju, Kayla Schwartz, Rocky Truong, Min Young Park, Delaney Ding, Christopher Marais, Hampton Copeland, and Jeran Fox."
           >
             {CONTRIBUTORS.map((m) => (
               <TeamMemberCard key={m.id} member={m} />
