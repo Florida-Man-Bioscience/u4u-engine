@@ -93,6 +93,9 @@ const SECONDARY_PROGRAMS = PRODUCT_LIST.filter((p) =>
 export default function CompanyHomePage() {
   return (
     <div className="bg-white text-[#0d1117]">
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       {/* Company nav */}
       <header className="sticky top-0 z-50 border-b border-[#edecea] bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6 md:px-7">
@@ -137,7 +140,7 @@ export default function CompanyHomePage() {
         </div>
       </header>
 
-      <main>
+      <main id="main">
         {/* Hero — shipping wedge, not equal-weight philosophy */}
         <section className="border-b border-[#edecea]">
           <div className="mx-auto grid max-w-[1180px] gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:px-7 md:py-24">
