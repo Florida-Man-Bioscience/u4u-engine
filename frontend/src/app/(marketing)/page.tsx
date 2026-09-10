@@ -74,6 +74,7 @@ const PLATFORM = [
 const STATUS_BY_SLUG: Record<string, string> = {
   u4u: "Shipping",
   "next-gen-drug-development": "Stage A",
+  "discovery-informatics": "Wave 0",
   cytogate: "Lab software",
   "vector-nanodisk": "Research",
   neurocreatine: "Early",
@@ -587,6 +588,14 @@ export default function CompanyHomePage() {
                   className="hover:text-white"
                 >
                   Next-gen drug design
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={productPath("discovery-informatics")}
+                  className="hover:text-white"
+                >
+                  Discovery Informatics
                 </Link>
               </li>
               <li>

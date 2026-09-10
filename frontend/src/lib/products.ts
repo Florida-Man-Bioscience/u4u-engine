@@ -17,7 +17,8 @@ export type ProductSlug =
   | "vector-nanodisk"
   | "neurocreatine"
   | "u4u-privacy"
-  | "next-gen-drug-development";
+  | "next-gen-drug-development"
+  | "discovery-informatics";
 
 export type ProductAccent = {
   /** Small label color */
@@ -387,11 +388,63 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     },
     ctaSecondary: { label: "Company home", href: "/" },
   },
+
+  "discovery-informatics": {
+    slug: "discovery-informatics",
+    name: "Discovery Informatics",
+    shortName: "Discovery Informatics",
+    eyebrow: "Research software · Wave 0",
+    tagline:
+      "A jailed science-agent OS: PI ask → routed evidence → versioned artifacts + METHODS + cannots.",
+    description:
+      "Discovery Informatics is Florida Man Bioscience’s science-agent operating system. A PI ask is routed, identifiers are normalized, the smallest public-API skill set runs, and the desk gets versioned artifacts plus METHODS and cannots. Wave 0 productization — not a shipping SaaS login.",
+    metaDescription:
+      "Discovery Informatics — a jailed science-agent OS from Florida Man Bioscience. PI ask to routed evidence, versioned artifacts, METHODS, and cannots. Wave 0 research software. Not a medical device.",
+    cardBody:
+      "Jailed science-agent OS: PI ask → routed evidence → artifacts + METHODS + cannots. Wave 0, unpriced.",
+    tag: "Science-agent OS",
+    accent: brandGreen,
+    audience:
+      "Lab PIs and informatics leads who want a jailed agent loop on their own desk — not a gene we found, not a grant writer.",
+    pillarsHeading: "The loop, not a result.",
+    pillars: [
+      {
+        title: "Ask → route → artifacts",
+        body: "Normalize IDs, run the smallest skill set, write versioned files. Parallel only on independent lanes.",
+      },
+      {
+        title: "METHODS and cannots",
+        body: "Every run records methods and what the public APIs or corpus could not support. Missing is not false.",
+      },
+      {
+        title: "Tenant jail",
+        body: "Exclusive worktrees, localhost RAG sidecar, customer desk. The factory ships empty of anyone else’s trees.",
+      },
+    ],
+    promises: [
+      "Wave 0 productization — not a SaaS login",
+      "Unpriced SKUs: DI-OS Core, DI-RAG Sidecar, DI-Jail, DI-ELN Logistics",
+      "Related: Protein Chemistry is the structure/VR design surface",
+    ],
+    statusNote:
+      "Wave 0 productization. Research software — not a shipping SaaS login.",
+    disclaimer:
+      "Research software. Not a medical device. Not grant submission. Not intended to diagnose, treat, cure, or prevent disease. Occupancy is not a requirement. Missing in a corpus is not a negative result. Strategy that commits the bench escalates to the PI.",
+    ctaPrimary: {
+      label: "Open a conversation",
+      href: "mailto:hello@flmanbiosci.net?subject=Discovery%20Informatics",
+    },
+    ctaSecondary: {
+      label: "Protein Chemistry",
+      href: "/products/next-gen-drug-development",
+    },
+  },
 };
 
 export const PRODUCT_LIST: ProductPage[] = [
   PRODUCTS.u4u,
   PRODUCTS["next-gen-drug-development"],
+  PRODUCTS["discovery-informatics"],
   PRODUCTS.cytogate,
   PRODUCTS["u4u-privacy"],
   PRODUCTS["vector-nanodisk"],
