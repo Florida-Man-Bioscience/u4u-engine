@@ -140,7 +140,7 @@ export function ProductMarketingPage({ product }: Props) {
               className="mt-2 max-w-2xl text-3xl text-[#0d1117] md:text-4xl"
               style={companySerif}
             >
-              {product.pillarsHeading ?? "Marketing that stays honest."}
+              {product.pillarsHeading ?? "What this program is."}
             </h2>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {product.pillars.map((pillar) => (
@@ -166,7 +166,10 @@ export function ProductMarketingPage({ product }: Props) {
         </section>
 
         {product.screenshots && product.screenshots.length > 0 ? (
-          <section className="border-b border-[#edecea] bg-[#0d1117] py-16 md:py-20">
+          <section
+            id="screenshots"
+            className="border-b border-[#edecea] bg-[#0d1117] py-16 md:py-20"
+          >
             <div className="mx-auto max-w-[1180px] px-6 md:px-7">
               <p
                 className="text-xs font-bold uppercase tracking-[0.14em]"
@@ -182,7 +185,10 @@ export function ProductMarketingPage({ product }: Props) {
               </h2>
               <div className="mt-10 grid gap-6 md:grid-cols-2">
                 {product.screenshots.map((shot) => (
-                  <figure key={shot.src} className="overflow-hidden rounded-2xl border border-white/10 bg-[#111827]">
+                  <figure
+                    key={`${shot.src}-${shot.caption}`}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-[#111827]"
+                  >
                     <picture>
                       {shot.webp ? <source type="image/webp" srcSet={shot.webp} /> : null}
                       <img
@@ -190,11 +196,11 @@ export function ProductMarketingPage({ product }: Props) {
                         alt={shot.alt}
                         width={1440}
                         height={900}
-                        className="w-full object-contain"
+                        className="w-full bg-[#111827] object-contain"
                         loading="lazy"
                       />
                     </picture>
-                    <figcaption className="px-4 py-3 text-sm leading-relaxed text-zinc-400">
+                    <figcaption className="px-4 py-3.5 text-sm leading-relaxed text-zinc-300">
                       {shot.caption}
                     </figcaption>
                   </figure>

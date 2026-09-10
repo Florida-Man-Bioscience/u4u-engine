@@ -15,21 +15,6 @@ import {
 
 type Props = { product: ProductPage };
 
-const HIGHLIGHTS = [
-  {
-    title: "Genome-aware options",
-    body: "Turn raw genetics into a clearer picture of peptide-relevant biology — structured for a licensed clinician to read.",
-  },
-  {
-    title: "Personal, not generic",
-    body: "Built around your file and your context, not a one-size handout. The goal is a decision-ready options set.",
-  },
-  {
-    title: "A loop that learns",
-    body: "Pair the first read with follow-up signals over time so the picture can refine as real-world data arrives.",
-  },
-] as const;
-
 /** Editorial “insight tiles” — qualitative, not invented lab values. */
 const INSIGHT_TILES = [
   {
@@ -39,8 +24,8 @@ const INSIGHT_TILES = [
   },
   {
     label: "Options set",
-    title: "What to consider next",
-    body: "A structured dossier style surface: priorities, cautions, and open questions a clinician can act on.",
+    title: "A dossier, not a prescription",
+    body: "Priorities, cautions, and open questions a licensed clinician can read. Software does not write the order.",
   },
   {
     label: "Safety posture",
@@ -50,17 +35,17 @@ const INSIGHT_TILES = [
   {
     label: "Follow-up",
     title: "How the story continues",
-    body: "Room to fuse genetic priors with measured biomarkers so each check-in can tighten the picture.",
+    body: "Room to fuse genetic priors with measured biomarkers so each check-in can tighten the picture — still under clinical judgment.",
   },
   {
     label: "Privacy lane",
     title: "Trust models that fit",
-    body: "Cloud product surfaces when you choose them — and a local-first toolkit when you want files to stay put.",
+    body: "Product surfaces when you choose them — and a local-first toolkit when you want files to stay put.",
   },
   {
     label: "Research path",
     title: "Built to mature",
-    body: "Software ships first. Delivery science and discovery programs sit alongside — labeled as research when they are.",
+    body: "Software ships first. Delivery science and parked discovery sit alongside — labeled as research when they are.",
   },
 ] as const;
 
@@ -71,12 +56,12 @@ const AUDIENCES = [
     points: [
       "Bring a genome file you already have (or plan to obtain).",
       "See peptide-relevant context without wading through raw VCF noise.",
-      "Leave with something you can take to a licensed clinician — not a self-prescription.",
+      "Leave with a dossier you can take to a licensed clinician — not a self-prescription.",
     ],
   },
   {
     who: "For clinicians & partners",
-    title: "A dossier, not a black box.",
+    title: "A dossier, not a prescription.",
     points: [
       "Structured outputs meant to be reviewed, not rubber-stamped by software.",
       "Clear non-goals: not a diagnostic device, not autonomous prescribing.",
@@ -107,6 +92,10 @@ const QUICK = [
   {
     q: "Is PeptOdyssey a medical device?",
     a: "No. PeptOdyssey is research and decision-support software from Florida Man Bioscience. It does not diagnose, treat, cure, or prevent disease.",
+  },
+  {
+    q: "Does it prescribe peptides?",
+    a: "No. It produces a structured dossier. A licensed clinician stays in the loop. It is decision support, not a prescription.",
   },
   {
     q: "What happened to PeptidIQ / U4U?",
@@ -148,7 +137,7 @@ export function U4UMarketingPage({ product }: Props) {
               className="max-w-4xl text-[2.6rem] leading-[1.05] tracking-tight text-[#0d1117] md:text-6xl lg:text-[4.25rem]"
               style={companySerif}
             >
-              Peptide medicine,{" "}
+              Peptide options,{" "}
               <span className="text-[#1a6b4a]">matched to the genome.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#3a3f4a] md:text-xl">
@@ -156,7 +145,7 @@ export function U4UMarketingPage({ product }: Props) {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-2">
-              {HIGHLIGHTS.map((h) => (
+              {product.pillars.map((h) => (
                 <span
                   key={h.title}
                   className="rounded-full border border-[#d5d0c6] bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-[#0f4530] backdrop-blur"
@@ -200,8 +189,9 @@ export function U4UMarketingPage({ product }: Props) {
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               PeptOdyssey is Florida Man Bioscience’s genome-aware peptide
-              platform. Detect is the software wedge. Design and Deliver are
-              later legs — labeled as such.
+              platform. Detect is the software wedge — a dossier for a licensed
+              clinician, not a prescription. Design and Deliver are later legs,
+              labeled as such.
             </p>
           </div>
         </section>
@@ -218,7 +208,7 @@ export function U4UMarketingPage({ product }: Props) {
                   className="mt-2 max-w-xl text-3xl text-[#0d1117] md:text-4xl"
                   style={companySerif}
                 >
-                  The engine predicts. The dossier reports. The tracker learns.
+                  The engine annotates. The dossier reports. A clinician decides.
                 </h2>
               </div>
               <p className="max-w-sm text-sm leading-relaxed text-[#6b7280]">
@@ -347,10 +337,10 @@ export function U4UMarketingPage({ product }: Props) {
               className="mt-2 max-w-2xl text-3xl text-[#0d1117] md:text-4xl"
               style={companySerif}
             >
-              Marketing that stays honest.
+              A dossier a clinician can read.
             </h2>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {HIGHLIGHTS.map((h) => (
+              {product.pillars.map((h) => (
                 <article
                   key={h.title}
                   className="rounded-2xl border border-[#e0dbd1] p-6"

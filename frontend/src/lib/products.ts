@@ -68,40 +68,41 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     name: "PeptOdyssey",
     shortName: "PeptOdyssey",
     eyebrow: "Flagship platform · Decision support",
-    tagline: "Peptide medicine, matched to the genome.",
+    tagline: "Peptide options, matched to the genome.",
     description:
-      "PeptOdyssey is Florida Man Bioscience’s genome-aware peptide platform — engine, clinician-readable dossier, iOS research capture, and longitudinal tracker in one product. It turns genetic context into a clearer options set for licensed clinicians and the people they care for.",
+      "PeptOdyssey is Florida Man Bioscience’s shipping platform — engine, clinician-readable dossier, iOS research capture, and tracker. It turns a genetic file into a structured options set. A licensed clinician stays in the loop. The dossier is not a prescription.",
     metaDescription:
-      "PeptOdyssey — Florida Man Bioscience’s genome-aware peptide platform. Engine, dossier, iOS capture, and tracker. Not a medical device.",
+      "PeptOdyssey — Florida Man Bioscience’s genome-aware peptide platform. Engine, clinician-readable dossier, iOS capture, and tracker. Not a prescription. Not a medical device.",
     cardBody:
-      "The shipping platform: genome → structured dossier → biomarker follow-up, with a licensed clinician in the loop.",
+      "Shipping platform: genome → structured dossier → follow-up, with a licensed clinician in the loop. A dossier, not a prescription.",
     tag: "Platform",
     accent: brandGreen,
     audience:
       "Individuals exploring genome-informed peptide context, licensed clinicians, and partners building modern care workflows.",
+    pillarsHeading: "A dossier a clinician can read.",
     pillars: [
       {
         title: "Genome-aware options",
-        body: "Turn raw genetics into a clearer picture of peptide-relevant biology — structured for a licensed clinician to read.",
+        body: "Turn a genetic file into peptide-relevant context — structured so a licensed clinician can actually read it.",
       },
       {
-        title: "Personal, not generic",
-        body: "Built around your file and your context, not a one-size handout. The goal is a decision-ready options set.",
+        title: "Dossier, not a prescription",
+        body: "Priorities, cautions, and open questions. Software does not prescribe. A clinician stays in the loop.",
       },
       {
         title: "A loop that learns",
-        body: "Pair the first read with follow-up signals over time so the picture can refine as real-world data arrives.",
+        body: "Pair the first read with follow-up signals so the picture can refine — still under clinical judgment.",
       },
     ],
     promises: [
-      "Premium, fast-loading product marketing — message over chrome",
+      "Clinician in the loop — dossier, not a prescription",
       "Live path into PeptOdyssey analysis and tracking",
       "Privacy toolkit lane when files should stay local",
     ],
     statusNote:
       "Shipping product surface for analysis, dossier, tracking, and iOS research capture.",
     disclaimer:
-      "Research and decision-support software. Not a medical device. Not intended to diagnose, treat, cure, or prevent disease. Does not replace clinical judgment or genetic counseling.",
+      "Research and decision-support software. Not a medical device. Not a prescription. Not intended to diagnose, treat, cure, or prevent disease. Does not replace clinical judgment or genetic counseling.",
     ctaPrimary: {
       label: "Open PeptOdyssey",
       href: "/peptodyssey",
@@ -140,7 +141,8 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
         src: "/assets/img/cytogate-bench.png",
         webp: "/assets/img/cytogate-bench.webp",
         alt: "CytoCrunch bench with synthetic FCS, gating tools, Time QC, and CompQC controls",
-        caption: "The bench — plots, strategy, Time QC, and compensation on one surface.",
+        caption:
+          "The bench — synthetic FCS, FSC-A × SSC-A, strategy tree, Time QC, and compensation on one surface.",
       },
       {
         src: "/assets/img/cytogate-matrix.png",
@@ -152,7 +154,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     audience:
       "Core facilities, immunology labs, and research teams whose panels outgrew brittle stacks.",
     pillarsHeading: "What the bench actually does.",
-    screenshotsHeading: "The bench.",
+    screenshotsHeading: "The bench — synthetic FCS.",
     pillars: [
       {
         title: "Compensation you can inspect",
@@ -186,50 +188,50 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     slug: "vector-nanodisk",
     name: "Vector nanodisk",
     shortName: "Nanodisk",
-    eyebrow: "Delivery research · Program",
-    tagline: "A research path for getting molecules where they need to go.",
+    eyebrow: "Delivery research · Optionality",
+    tagline: "A research option — not a marketed therapeutic.",
     description:
-      "Our vector nanodisk program explores a next-generation delivery vehicle for peptide and nucleic-acid payloads — the long-horizon “Deliver” leg of the Florida Man Bioscience platform.",
+      "Vector nanodisk (MSP) is a research-stage delivery concept for peptide and nucleic-acid payloads — the long-horizon Deliver leg of Detect → Design → Deliver. It is optionality on the books, not a product you can buy and not a drug we sell.",
     metaDescription:
-      "Vector nanodisk delivery research at Florida Man Bioscience — research-stage molecule delivery for peptide and nucleic-acid programs. Not a marketed therapeutic.",
+      "Vector nanodisk — research-stage delivery optionality at Florida Man Bioscience. Not a marketed therapeutic. Not an approved product.",
     cardBody:
-      "Research-stage delivery science — a long-horizon path for peptide and nucleic-acid payloads.",
+      "Research optionality for payload delivery — not a marketed therapeutic.",
     tag: "Delivery research",
     accent: {
       label: "#92550a",
       wash: "#faf0e4",
       solid: "#92550a",
     },
-    heroImage: {
-      src: "/assets/img/nanodisk.jpg",
-      webp: "/assets/img/nanodisk.webp",
-      alt: "Illustration of a nanodisk delivery concept",
-    },
-    audience: "Partners, investors, and collaborators evaluating FMB’s delivery research optionality.",
+    audience:
+      "Partners and collaborators who already understand this is research optionality, not a SKU.",
+    pillarsHeading: "Research optionality — labeled as such.",
     pillars: [
       {
-        title: "Delivery as a system",
-        body: "We treat delivery as part of the same loop as matching and measurement — not a disconnected side project.",
+        title: "Not a product you buy",
+        body: "This page describes a research program. Not a drug, not a device, not a clinic offering.",
       },
       {
-        title: "Patient-relevant ambition",
-        body: "Many promising molecules fail less on design than on access. This program studies how to carry payloads more carefully across barriers.",
+        title: "Same platform, later leg",
+        body: "Detect is software. Design is Stage A visualization. Deliver sits further out on the clock.",
       },
       {
-        title: "Research first",
-        body: "This is a scientific program with public notes and a reserved product host — not a marketed drug or clinical offering.",
+        title: "No assignment on this page",
+        body: "We do not preview owners, licensors, or university vehicles here. Scientific collaboration talk only.",
       },
     ],
     promises: [
-      "Transparent research-stage positioning",
-      "Aligned with Detect → Design → Deliver",
-      "Separable IP and program documentation as work matures",
+      "Research-stage positioning only — no purchase path",
+      "No therapeutic or efficacy claims",
+      "Contact for scientific conversation, not a license pitch",
     ],
-    statusNote: "Research-stage molecule layer. Not a shipped therapeutic.",
+    statusNote: "Research optionality. Not a shipped or marketed therapeutic.",
     disclaimer:
       "Research program only. Not an approved drug, biologic, or clinical product. No outcome guarantees. Not intended to diagnose, treat, cure, or prevent disease.",
     portfolioOrigin: NANODISK_ORIGIN,
-    ctaPrimary: { label: "Partner on delivery research", href: "mailto:hello@flmanbiosci.net?subject=Vector%20nanodisk" },
+    ctaPrimary: {
+      label: "Ask about delivery research",
+      href: "mailto:hello@flmanbiosci.net?subject=Vector%20nanodisk",
+    },
     ctaSecondary: { label: "Company home", href: "/" },
   },
 
@@ -237,90 +239,93 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     slug: "neurocreatine",
     name: "Neurocreatine",
     shortName: "Neurocreatine",
-    eyebrow: "Discovery · CNS program",
-    tagline: "Exploring peptides aimed at the mind and nervous system.",
+    eyebrow: "Parked · Early discovery",
+    tagline: "An early CNS note — not a lead program.",
     description:
-      "Neurocreatine is an early discovery track exploring CNS-oriented peptide concepts — using Florida Man Bioscience’s analytics posture to triage ideas and keep go/no-go decisions grounded in measurable signals.",
+      "Neurocreatine is a parked, early discovery track for CNS-oriented peptide ideas. It is on the roster so the portfolio is complete. It is not a consumer product, not a supplement, and not what Florida Man Bioscience leads with.",
     metaDescription:
-      "Neurocreatine — early-stage CNS peptide discovery from Florida Man Bioscience. Research program; not a marketed product.",
+      "Neurocreatine — parked early CNS peptide discovery at Florida Man Bioscience. Not a lead program. Not a marketed product.",
     cardBody:
-      "Early-stage CNS discovery — peptide concepts guided by measurement and careful triage.",
-    tag: "Discovery",
+      "Parked early discovery — CNS peptide ideas, not a lead product.",
+    tag: "Parked discovery",
     accent: {
       label: "#1e4d8c",
       wash: "#e9eef7",
       solid: "#1e4d8c",
     },
-    heroImage: {
-      src: "/assets/img/neurocreatine.jpg",
-      webp: "/assets/img/neurocreatine.webp",
-      alt: "Molecular illustration of a brain peptide concept",
-    },
-    audience: "Scientific collaborators and partners interested in CNS peptide discovery.",
+    audience:
+      "Scientific collaborators who already know this track exists. Not a consumer audience.",
+    pillarsHeading: "Why this page is quiet.",
     pillars: [
       {
-        title: "Discovery with discipline",
-        body: "We prioritize clear decision points over hype — candidates earn the next experiment.",
+        title: "Parked, not launched",
+        body: "Early notes, not a campaign. We keep the page so the roster is honest.",
       },
       {
-        title: "Measurement-minded",
-        body: "Ideas are framed around signals you can track, so learning compounds as the program matures.",
+        title: "No lead, no claims",
+        body: "Nothing here is a protocol, a pill, or a clinical offer.",
       },
       {
-        title: "Tied to the platform",
-        body: "Neurocreatine sits inside the same FMB philosophy as our software loop: detect carefully, design deliberately, deliver only when ready.",
+        title: "Earns the next experiment",
+        body: "If it ever moves, it will earn the next measurement. It has not.",
       },
     ],
     promises: [
-      "Early-stage discovery framing (no product claims)",
-      "Aligned with genome-aware and biomarker thinking",
-      "Open to thoughtful scientific collaboration",
+      "Explicit parked status — not a shipping product",
+      "No consumer, supplement, or clinical claims",
+      "Conversation only if you already know why you are asking",
     ],
-    statusNote: "Early discovery track. Not a consumer or clinical product.",
+    statusNote: "Parked early discovery. Do not treat this as a shipping product.",
     disclaimer:
       "Research and discovery only. Not a marketed supplement, drug, or medical device. Not intended to diagnose, treat, cure, or prevent disease.",
     ctaPrimary: {
-      label: "Discuss discovery collaboration",
-      href: "mailto:hello@flmanbiosci.net?subject=Neurocreatine",
+      label: "Company home",
+      href: "/",
     },
-    ctaSecondary: { label: "Company home", href: "/" },
+    ctaSecondary: {
+      label: "See the shipping platform",
+      href: "/products/u4u",
+    },
   },
 
   "u4u-privacy": {
     slug: "u4u-privacy",
     name: "U4U Privacy",
     shortName: "u4u-privacy",
-    eyebrow: "Genomics toolkit · Portfolio",
-    tagline: "Your genome stays where you put it.",
+    eyebrow: "Genomics toolkit · Local-first",
+    tagline: "Work the file on hardware you control.",
     description:
-      "u4u-privacy is a local-first consumer genomics toolkit — utilities for working with genetic files on hardware you control, with a privacy-first posture by design.",
+      "u4u-privacy is a local-first consumer genomics toolkit. Variant work and related utilities run on Windows, macOS, or Linux you own. The starting assumption is not “upload everything.”",
     metaDescription:
-      "u4u-privacy — local-first consumer genomics toolkit from Florida Man Bioscience. Privacy-first utilities for genetic files you control.",
+      "u4u-privacy — local-first consumer genomics toolkit from Florida Man Bioscience. Process genetic files on hardware you control. Not a diagnostic service.",
     cardBody:
-      "Local-first consumer genomics — tools that keep raw genetic data under your control.",
+      "Local-first genomics toolkit — process genetic files on hardware you control.",
     tag: "Privacy toolkit",
     accent: brandGreen,
-    audience: "Privacy-conscious individuals, researchers, and builders who refuse “upload everything” defaults.",
+    audience:
+      "Privacy-conscious individuals, researchers, and builders who refuse “upload everything” defaults.",
+    pillarsHeading: "Local-first, on purpose.",
     pillars: [
       {
-        title: "Local-first by default",
-        body: "Process and explore on machines you trust. We design so sensitive files do not need a third-party cloud as the starting assumption.",
+        title: "Your machine first",
+        body: "Pipelines are designed to run locally. Network is an opt-in (for example a public reference), not the default hop.",
       },
       {
-        title: "Clear boundaries",
-        body: "Straightforward product language about what leaves your device — and what never has to.",
+        title: "Files you already have",
+        body: "Consumer genotype exports and common genomic formats are in scope — without making a vendor the first stop.",
       },
       {
-        title: "Kin to PeptOdyssey",
-        body: "Part of the Florida Man Bioscience family: genome-aware products with different surfaces for different trust models.",
+        title: "A different trust model",
+        body: "PeptOdyssey is the clinic-facing dossier. This toolkit is for when the file should stay put.",
       },
     ],
     promises: [
-      "Privacy-first product posture",
-      "Dedicated portfolio host for the toolkit",
-      "Company contact for partnership and feedback",
+      "Desktop installers: Windows / macOS / Linux",
+      "Local-first posture — no upload-everything default",
+      "Not a diagnostic service; not a substitute for genetic counseling",
     ],
-    statusNote: "Desktop app: Windows / macOS / Linux installers via product page + GitHub Releases.",
+    statusNote:
+      "Desktop app: Windows / macOS / Linux installers via the product host and GitHub Releases.",
     disclaimer:
       "Consumer and research utilities. Not a medical device. Not a diagnostic service. Does not replace clinical genetic counseling.",
     portfolioOrigin: U4U_PRIVACY_ORIGIN,
@@ -335,41 +340,44 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     slug: "next-gen-drug-development",
     name: "Next-gen drug design",
     shortName: "Drug design lab",
-    eyebrow: "Design platform · Lab",
-    tagline: "Design the molecule with your eyes open.",
+    eyebrow: "Design platform · Stage A",
+    tagline: "See the structure. Design in software — not a wet lab.",
     description:
-      "Our next-generation drug design lab is a structure-guided visualization platform for peptide and protein work — immersive views and disciplined design loops. Software-first Stage A — not a wet-lab or clinical product.",
+      "Next-gen drug design is Florida Man Bioscience’s Stage A surface: local structure visualization (desktop and VR) and a simulated design–build–test–learn loop for peptide and protein work. Software you can look at. Not a wet lab. Not a therapeutic.",
     metaDescription:
-      "Next-gen drug design from Florida Man Bioscience — structure-guided visualization for peptide and protein programs. Stage A software; no therapeutic claims.",
+      "Next-gen drug design from Florida Man Bioscience — Stage A structure visualization for peptide and protein work. Software, not a wet lab. No therapeutic claims.",
     cardBody:
-      "Structure-guided design lab — immersive visualization and disciplined loops for peptide and protein work.",
+      "Stage A design and visualization for peptide and protein work — software, not a wet lab.",
     tag: "Design lab",
     accent: {
       label: "#5b3d8c",
       wash: "#f1ecf8",
       solid: "#5b3d8c",
     },
-    audience: "Drug designers, structural biologists, and R&D leads exploring modern design surfaces.",
+    audience:
+      "Scientists and R&D leads who want a structure-guided design surface, not a robotics brochure.",
+    pillarsHeading: "Stage A — design and visualization.",
     pillars: [
       {
         title: "See the structure",
-        body: "Immersive and desktop views that make spatial relationships legible — so design conversations stay grounded in the molecule.",
+        body: "Desktop and headset views of local structures so design talk stays on the molecule, not a slide deck.",
       },
       {
-        title: "A disciplined loop",
-        body: "Design, evaluate, learn, repeat — with tooling that keeps the economics and decisions of each cycle honest.",
+        title: "A simulated loop",
+        body: "Design, evaluate, and record a cycle with simulated build/test economics. Lab robots are a later stage — not this one.",
       },
       {
-        title: "Software-first stage",
-        body: "A design platform and visualization surface today. Not a wet-lab robotics claim; not a clinical product.",
+        title: "Honest non-goals",
+        body: "No wet-lab claim. No therapeutic claim in the UI. No Stage B hardware.",
       },
     ],
     promises: [
-      "Structure-guided design posture",
-      "Immersive + desktop entry points",
-      "Clear non-goals: no therapeutic claims in the UI",
+      "Stage A software: structure visualization and a simulated design loop",
+      "Desktop and VR entry points",
+      "Explicit non-goals: not a wet lab, not a drug",
     ],
-    statusNote: "Design platform under active development (Stage A software surface).",
+    statusNote:
+      "Stage A design surface under active development. Not a clinical or wet-lab product.",
     disclaimer:
       "Research and design software. Not a medical device. Not a substitute for regulated laboratory processes. No therapeutic claims.",
     portfolioOrigin: DRUG_DESIGN_ORIGIN,
