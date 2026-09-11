@@ -1,8 +1,5 @@
-import json
 import os
 import unittest
-from io import BytesIO
-from unittest.mock import patch
 
 os.environ["LAB_SHARED_TOKEN"] = "test-token"
 
@@ -20,7 +17,6 @@ class HealthTests(unittest.TestCase):
 
 class TurnAuthTests(unittest.TestCase):
     def test_missing_bearer(self):
-        h = server.Handler
         # smoke: TOKEN is set from env at import
         self.assertEqual(server.TOKEN, "test-token")
 

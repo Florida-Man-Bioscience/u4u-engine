@@ -32,7 +32,7 @@ def health() -> dict:
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), format % args))
+        sys.stderr.write(f"{self.address_string()} - {format % args}\n")
 
     def _json(self, code: int, body: dict) -> None:
         raw = json.dumps(body).encode()
