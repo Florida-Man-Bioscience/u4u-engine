@@ -1,9 +1,12 @@
 /**
  * Public company team roster for flmanbiosci.net.
  *
- * Public founder titles: flmanbiosci-ops team-assets.md (operator-hard).
- * Narrative bios: only after t-fmbweb-team-bios has written OK — until
- * then `blurb` stays empty. Do not invent copy here.
+ * Sources (ops, not legal cap table):
+ * - fmb-company/company/team.md (founders)
+ * - PeptidIQ_Pitch_Deck_2026-05-07.pptx “Why Us?”
+ * - FloridaManBioscience_Workshop2.pdf “Meet the team”
+ * - Operator direction: include full Nucleate Activator contributors
+ *   (Rocky, Kayla, Min, Sasank, …)
  *
  * Do not publish equity % or internal reserve semantics on the marketing site.
  */
@@ -14,7 +17,6 @@ export type TeamMember = {
   id: string;
   name: string;
   role: string;
-  /** Empty until t-fmbweb-team-bios lands approved copy. */
   blurb: string;
   tier: TeamTier;
   /** Nucleate Florida / Activator cohort (2026 launch materials). */
@@ -37,7 +39,8 @@ export const FOUNDERS: TeamMember[] = [
     id: "noah",
     name: "Noah T. Jones",
     role: "Founder & CEO",
-    blurb: "",
+    blurb:
+      "Builds the engine and app foundations. Bioinformatics, pipeline architecture, and company operations.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("noah"),
@@ -46,8 +49,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "curtis",
     name: "Curtis Dearing",
-    role: "Chief Vision Officer & CPO of PeptOdyssey",
-    blurb: "",
+    role: "Co-founder · PeptOdyssey",
+    blurb:
+      "Builds the PeptOdyssey engine and the clinician-facing product surface.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("curtis"),
@@ -56,8 +60,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "garrett",
     name: "Garrett Knotts",
-    role: "Founder",
-    blurb: "",
+    role: "Co-founder · Omics",
+    blurb:
+      "Calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("garrett"),
@@ -66,8 +71,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "michael",
     name: "Michael MacNair",
-    role: "Chemistry & Delivery",
-    blurb: "",
+    role: "Co-founder · Structural biology",
+    blurb:
+      "Structural biochemistry and the VR structural-biochemistry platform.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("michael"),
@@ -76,8 +82,8 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "jacob",
     name: "Jacob Davis",
-    role: "Bioinformatics",
-    blurb: "",
+    role: "Founder · Bioinformatics",
+    blurb: "Bioinformatics and immunology.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("jacob"),
@@ -86,8 +92,8 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "tyler",
     name: "Tyler Kopf",
-    role: "Clinical & Operations",
-    blurb: "",
+    role: "Founder · Clinical & operations",
+    blurb: "Clinical and operations; skunkworks and program execution.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("tyler"),
@@ -97,14 +103,15 @@ export const FOUNDERS: TeamMember[] = [
 
 /**
  * Nucleate Activator / program contributors and extended team.
- * Names already public on /team; roles are short labels, not bios.
+ * Full names and public roles from Activator pitch + workshop materials.
  */
 export const CONTRIBUTORS: TeamMember[] = [
   {
     id: "sasank",
     name: "Sasank Desaraju",
     role: "Clinical anchor · PeptOdyssey contributor",
-    blurb: "",
+    blurb:
+      "MD/PhD student, University of Florida. Clinical link and PeptOdyssey engine contributor.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "SD",
@@ -113,7 +120,8 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "kayla",
     name: "Kayla Schwartz",
     role: "Safety & contraindications",
-    blurb: "",
+    blurb:
+      "MD-PhD student, University of Miami. Safety / contraindication layer for genotype-aware peptide protocols.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "KS",
@@ -122,7 +130,8 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "rocky",
     name: "Rocky Truong",
     role: "Oncology genetics · VR structural biochemistry",
-    blurb: "",
+    blurb:
+      "Post-doc, Moffitt Cancer Center. Oncology genetics advisor; VR structural biochemistry project lead.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "RT",
@@ -131,7 +140,8 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "min",
     name: "Min Young Park",
     role: "Metabolism · MitoFocus",
-    blurb: "",
+    blurb:
+      "Metabolism, adipose biology, and nutrition. Nucleate Activator contributor.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "MP",
@@ -140,7 +150,8 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "delaney",
     name: "Delaney Ding",
     role: "Clinical & translational strategy",
-    blurb: "",
+    blurb:
+      "Clinical and public-health researcher guiding clinical and translational strategy.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "DD",
@@ -149,7 +160,7 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "christopher",
     name: "Christopher Marais",
     role: "Activator contributor",
-    blurb: "",
+    blurb: "Joined the 2026 Nucleate Activator cohort mid-program.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "CM",
@@ -158,7 +169,8 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "hampton",
     name: "Hampton Copeland",
     role: "Engineering lead",
-    blurb: "",
+    blurb:
+      "Graduate student, MTSU. Engineering lead for platform and infrastructure.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "HC",
@@ -167,7 +179,7 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "jeran",
     name: "Jeran Fox",
     role: "Marketing & growth",
-    blurb: "",
+    blurb: "GTM and growth; channel and go-to-market execution.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "JF",
@@ -176,7 +188,7 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "ty",
     name: "Ty Dearing",
     role: "Contributor",
-    blurb: "",
+    blurb: "Non-founder contributor supporting company operations and growth.",
     tier: "contributor",
     initials: "TD",
   },
@@ -187,7 +199,8 @@ export const ADVISORS: TeamMember[] = [
     id: "giuseppina",
     name: "Giuseppina Sannino",
     role: "Commercialization advisor",
-    blurb: "",
+    blurb:
+      "Founder & CEO, Auralis Biotech. Commercialization and strategic partnership advisor.",
     tier: "advisor",
     initials: "GS",
   },

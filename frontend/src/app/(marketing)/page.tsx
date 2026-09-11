@@ -8,12 +8,12 @@ import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 export const metadata: Metadata = {
   title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
   description:
-    "Florida Man Bioscience builds PeptOdyssey — genome-aware peptide decision support, a clinician-readable dossier, biomarker tracking, and research-stage delivery science.",
+    "Florida Man Bioscience ships PeptOdyssey: PeptidIQ plus a clinician-readable dossier and biomarker tracking. Design is Stage A. Nanodisk delivery stays research.",
   alternates: { canonical: `${COMPANY_ORIGIN}/` },
   openGraph: {
     title: "Florida Man Bioscience",
     description:
-      "Peptide medicine, matched to the genome. Decision-support software first; delivery stays research-stage.",
+      "PeptOdyssey is the shipping product. Design visualization is Stage A. Delivery science stays research.",
     url: `${COMPANY_ORIGIN}/`,
     siteName: "Florida Man Bioscience",
     type: "website",
@@ -27,34 +27,37 @@ const PHILOSOPHY = [
   {
     step: "01",
     title: "Detect",
-    body: "A personalized multiomic read: genome files plus measured signals, turned into predictors a licensed clinician can use — not a one-size protocol.",
-    source: "Flagship software: PeptOdyssey (engine + dossier)",
+    status: "Shipping",
+    body: "PeptidIQ annotates genome files and measured signals. PeptOdyssey turns that into a clinician-readable dossier. Decision support, not a protocol.",
+    source: "PeptidIQ engine + PeptOdyssey dossier",
   },
   {
     step: "02",
     title: "Design",
-    body: "Structure-guided design and visualization for peptide and protein work — see the molecule before committing the bench. Software-first; not a wet-lab claim.",
-    source: "Stage A design surface: Protein Chemistry / next-gen drug design",
+    status: "Stage A",
+    body: "Next-gen drug design and protein visualization. See the molecule before the bench. A software surface today; not a wet-lab or therapeutic claim.",
+    source: "Protein Chemistry / next-gen drug design",
   },
   {
     step: "03",
     title: "Deliver",
-    body: "Research on getting payloads where they are needed — MSP / vector nanodisk science. Optionality on a longer horizon, not a marketed therapeutic.",
-    source: "Research program only. Institutional IP stays held out until cleared.",
+    status: "Research",
+    body: "MSP / vector nanodisk work on getting payloads where they are needed. Research only. Institutional IP stays held out until cleared.",
+    source: "Held-out research program",
   },
 ] as const;
 
 const PLATFORM = [
   {
-    num: "01 / Engine",
-    title: "Genome → structured response",
+    num: "01 / PeptidIQ",
+    title: "Genome → structured read",
     body: "Variant annotation, pharmacogenomics, receptor and pathway context — scored so a licensed clinician can read it. This is the analysis core of PeptOdyssey.",
     tag: "Engine",
     href: "/peptodyssey/analyze",
   },
   {
     num: "02 / Dossier",
-    title: "The clinician- and patient-facing report",
+    title: "The clinician-facing report",
     body: "Decision-support report: safety flags, goal-to-peptide options, citations, and FDA vs investigational labels. Not a prescription.",
     tag: "Dossier",
     href: "/peptodyssey",
@@ -68,17 +71,32 @@ const PLATFORM = [
   },
 ] as const;
 
-/** Public product / program marketing pages on apex (also mirrored on portfolio hosts). */
-const PORTFOLIO = PRODUCT_LIST.map((p) => ({
-  name: p.name,
-  body: p.cardBody,
-  href: productPath(p.slug),
-  tag: p.tag,
-}));
+const STATUS_BY_SLUG: Record<string, string> = {
+  u4u: "Shipping",
+  "next-gen-drug-development": "Stage A",
+  "discovery-informatics": "Wave 0",
+  cytogate: "Lab software",
+  "vector-nanodisk": "Research",
+  neurocreatine: "Early",
+  "u4u-privacy": "Toolkit",
+};
+
+const SECONDARY_SLUGS = [
+  "next-gen-drug-development",
+  "cytogate",
+  "vector-nanodisk",
+] as const;
+
+const SECONDARY_PROGRAMS = PRODUCT_LIST.filter((p) =>
+  (SECONDARY_SLUGS as readonly string[]).includes(p.slug),
+);
 
 export default function CompanyHomePage() {
   return (
     <div className="bg-white text-[#0d1117]">
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       {/* Company nav */}
       <header className="sticky top-0 z-50 border-b border-[#edecea] bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6 md:px-7">
@@ -99,7 +117,7 @@ export default function CompanyHomePage() {
               Philosophy
             </a>
             <a href="#platform" className="hover:text-[#1a6b4a]">
-              Platform
+              PeptOdyssey
             </a>
             <a href="#products" className="hover:text-[#1a6b4a]">
               Programs
@@ -111,25 +129,25 @@ export default function CompanyHomePage() {
               href={"/peptodyssey"}
               className="rounded-full bg-[#1a6b4a] px-4 py-2 text-white hover:bg-[#0f4530]"
             >
-              PeptOdyssey
+              Open PeptOdyssey
             </Link>
           </nav>
           <Link
             href={"/peptodyssey"}
             className="rounded-full bg-[#1a6b4a] px-3 py-1.5 text-sm font-medium text-white sm:hidden"
           >
-            Product
+            PeptOdyssey
           </Link>
         </div>
       </header>
 
-      <main>
-        {/* Hero */}
+      <main id="main">
+        {/* Hero — shipping wedge, not equal-weight philosophy */}
         <section className="border-b border-[#edecea]">
           <div className="mx-auto grid max-w-[1180px] gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:px-7 md:py-24">
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
-                Detect · Design · Deliver
+                Shipping · PeptOdyssey
               </p>
               <h1
                 className="text-4xl leading-tight text-[#0d1117] md:text-5xl"
@@ -139,51 +157,75 @@ export default function CompanyHomePage() {
                 <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
-                We build the analytics and trackers behind precision peptide
-                therapy, with delivery science on a longer research horizon —
-                so a licensed clinician can match options more carefully, and
-                the system can learn from every measurement.
+                PeptOdyssey is what we ship: the PeptidIQ engine and a dossier a
+                licensed clinician can read, plus biomarker follow-up. Design
+                visualization is Stage A. Nanodisk delivery stays research.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href={"/peptodyssey"}
                   className="inline-flex items-center gap-2 rounded-full bg-[#1a6b4a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f4530]"
                 >
-                  Explore PeptOdyssey <span aria-hidden>→</span>
+                  Open PeptOdyssey <span aria-hidden>→</span>
                 </Link>
                 <a
                   href="#philosophy"
                   className="inline-flex items-center gap-2 rounded-full border border-[#dbd9d3] bg-white px-5 py-2.5 text-sm font-semibold text-[#0d1117] hover:border-[#1a6b4a]/40"
                 >
-                  Detect → Design → Deliver
-                </a>
-                <a
-                  href="#contact"
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#1a6b4a] hover:underline"
-                >
-                  Partner with us
+                  Detect, Design, Deliver
                 </a>
               </div>
               <p className="mt-5 max-w-lg text-xs leading-relaxed text-[#6b7280]">
-                Decision-support and research tooling with a licensed clinician in
-                the loop. Not a medical device; not a guarantee of clinical outcomes.
+                Decision-support software with a licensed clinician in the loop.
+                Not a medical device. Not a prescription. Not a guarantee of
+                clinical outcomes.
               </p>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-[#dbd9d3] bg-[#f5f4f0]">
-              <picture>
-                <source
-                  type="image/webp"
-                  srcSet="/assets/img/neurocreatine.webp"
-                />
-                <img
-                  src="/assets/img/neurocreatine.jpg"
-                  alt="Molecular illustration"
-                  width={1000}
-                  height={750}
-                  className="h-full w-full object-cover"
-                  fetchPriority="high"
-                />
-              </picture>
+            <div className="rounded-2xl border border-[#dbd9d3] bg-[#f5f4f0] p-6 md:p-8">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+                Status at a glance
+              </p>
+              <dl className="mt-5 space-y-4">
+                <div className="flex items-baseline justify-between gap-4 border-b border-[#dbd9d3] pb-3">
+                  <div>
+                    <dt className="text-sm font-semibold text-[#0d1117]">
+                      PeptOdyssey
+                    </dt>
+                    <dd className="mt-1 text-xs text-[#3a3f4a]">
+                      PeptidIQ + dossier + tracker
+                    </dd>
+                  </div>
+                  <dd className="shrink-0 rounded-full bg-[#e1f3eb] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#0f4530]">
+                    Shipping
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4 border-b border-[#dbd9d3] pb-3">
+                  <div>
+                    <dt className="text-sm font-semibold text-[#0d1117]">
+                      Next-gen drug design
+                    </dt>
+                    <dd className="mt-1 text-xs text-[#3a3f4a]">
+                      Protein visualization
+                    </dd>
+                  </div>
+                  <dd className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                    Stage A
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div>
+                    <dt className="text-sm font-semibold text-[#0d1117]">
+                      Vector nanodisk
+                    </dt>
+                    <dd className="mt-1 text-xs text-[#3a3f4a]">
+                      Delivery science · IP held out
+                    </dd>
+                  </div>
+                  <dd className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                    Research
+                  </dd>
+                </div>
+              </dl>
             </div>
           </div>
         </section>
@@ -201,13 +243,12 @@ export default function CompanyHomePage() {
               Detect → Design → Deliver
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-              Company vision from the working notes: detect predictors, design
-              therapies, deliver them where they are needed. Internally the
-              software loop is still{" "}
+              Company vision from the working notes. Internally the software
+              loop is still{" "}
               <strong className="font-medium text-[#0d1117]">
                 Read → Predict → Report → Track
               </strong>
-              ; delivery is a separate research program.
+              . Delivery is a separate research program, not part of that loop.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PHILOSOPHY.map((leg) => (
@@ -216,12 +257,23 @@ export default function CompanyHomePage() {
                   className="relative overflow-hidden rounded-xl border border-[#dbd9d3] bg-white p-6"
                 >
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1a6b4a] to-[#2dd4bf]" />
-                  <span
-                    className="bg-gradient-to-br from-[#1a6b4a] to-[#2d8f61] bg-clip-text text-3xl text-transparent"
-                    style={serif}
-                  >
-                    {leg.step}
-                  </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <span
+                      className="bg-gradient-to-br from-[#1a6b4a] to-[#2d8f61] bg-clip-text text-3xl text-transparent"
+                      style={serif}
+                    >
+                      {leg.step}
+                    </span>
+                    <span
+                      className={
+                        leg.status === "Shipping"
+                          ? "rounded-full bg-[#e1f3eb] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#0f4530]"
+                          : "rounded-full bg-[#f5f4f0] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]"
+                      }
+                    >
+                      {leg.status}
+                    </span>
+                  </div>
                   <h3 className="mt-3 text-xl" style={serif}>
                     {leg.title}
                   </h3>
@@ -237,18 +289,19 @@ export default function CompanyHomePage() {
           </div>
         </section>
 
-        {/* Platform */}
+        {/* Platform — PeptOdyssey loop only */}
         <section id="platform" className="scroll-mt-24 py-16 md:py-20">
           <div className="mx-auto max-w-[1180px] px-6 md:px-7">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
-              Platform
+              Shipping product
             </p>
             <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
-              One platform. A loop that learns.
+              PeptOdyssey: engine, dossier, tracker.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              PeptOdyssey is the product: engine, dossier, iOS research capture,
-              and tracker. Software ships first; delivery stays research-stage.
+              One product. PeptidIQ does the read. The dossier is what the
+              clinician sees. The tracker is how follow-up measurements come
+              back in. Software ships first; delivery stays research-stage.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PLATFORM.map((card) => (
@@ -272,35 +325,83 @@ export default function CompanyHomePage() {
                 </Link>
               ))}
             </div>
-            <div className="mt-8">
+          </div>
+        </section>
+
+        {/* Programs — wedge first, then later-stage work */}
+        <section
+          id="products"
+          className="scroll-mt-24 border-y border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] space-y-12 px-6 md:px-7">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
+                Programs
+              </p>
+              <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
+                What we ship, and what is still research.
+              </h2>
+              <p className="mt-3 max-w-2xl text-[#3a3f4a]">
+                PeptOdyssey is the shipping product. Design visualization is
+                Stage A. CytoGate is lab software for flow cytometry.
+                Nanodisk delivery is research, with institutional IP held out.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#dbd9d3] bg-white p-6 md:p-8">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1a6b4a]">
+                Shipping
+              </p>
+              <h3 className="mt-2 text-2xl md:text-3xl" style={serif}>
+                PeptOdyssey
+              </h3>
+              <p className="mt-3 max-w-2xl text-[#3a3f4a]">
+                Genome-aware peptide decision support for longevity, functional,
+                and concierge clinics. A licensed clinician reads the dossier
+                with the patient. Not a prescription, and not a guarantee of
+                response.
+              </p>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
+                <li>VCF / consumer-genome in → structured dossier out</li>
+                <li>Safety flags and investigational labels called out</li>
+                <li>Built for licensed clinicians; the prescriber stays in the loop</li>
+              </ul>
+              <Link
+                href="/peptodyssey"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1a6b4a] hover:underline"
+              >
+                Open PeptOdyssey <span aria-hidden>→</span>
+              </Link>
+            </div>
+
+            <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b7280]">
-                Product pages
+                Design, lab software, and research
               </p>
-              <p className="mt-2 max-w-2xl text-sm text-[#3a3f4a]">
-                PeptOdyssey first, then design and lab surfaces, then research
-                programs. Neurocreatine and nanodisk are early / research — not
-                the current wedge.
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {PORTFOLIO.map((card) => (
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                {SECONDARY_PROGRAMS.map((card) => (
                   <Link
-                    key={card.name}
-                    href={card.href}
-                    className="flex flex-col rounded-xl border border-dashed border-[#dbd9d3] bg-white p-5 transition hover:border-[#1a6b4a]/40"
+                    key={card.slug}
+                    href={productPath(card.slug)}
+                    className="flex flex-col rounded-xl border border-[#dbd9d3] bg-white p-5 transition hover:border-[#1a6b4a]/40"
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-start justify-between gap-3">
                       <h3 className="text-lg text-[#0d1117]" style={serif}>
                         {card.name}
                       </h3>
-                      <span className="rounded-full bg-[#f5f4f0] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                        {card.tag}
+                      <span className="shrink-0 rounded-full bg-[#f5f4f0] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                        {STATUS_BY_SLUG[card.slug] ?? card.tag}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-[#3a3f4a]">
-                      {card.body}
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-[#3a3f4a]">
+                      {card.slug === "cytogate"
+                        ? "Compensation and QC desktop (CytoCrunch) for FCS sessions. Lab software, not the company thesis."
+                        : card.slug === "vector-nanodisk"
+                          ? "MSP / vector nanodisk delivery science. Research only. Institutional IP stays held out until cleared."
+                          : card.cardBody}
                     </p>
                     <span className="mt-3 text-sm font-medium text-[#1a6b4a]">
-                      Open product page →
+                      Open page →
                     </span>
                   </Link>
                 ))}
@@ -309,24 +410,23 @@ export default function CompanyHomePage() {
           </div>
         </section>
 
-        {/* Verification / trust — after the product loop, not the hero */}
+        {/* Verification / trust — after the product, not the hero */}
         <section
           id="verification"
-          className="scroll-mt-24 border-t border-[#edecea] py-16 md:py-20"
+          className="scroll-mt-24 py-16 md:py-20"
         >
           <div className="mx-auto max-w-[1180px] px-6 md:px-7">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
               Trust
             </p>
             <h2 className="mt-2 max-w-3xl text-3xl md:text-4xl" style={serif}>
-              Independent peptide verification matters.
+              Decision support is not vial identity testing.
             </h2>
             <p className="mt-4 max-w-2xl text-[#3a3f4a]">
-              Without a third-party check, a clinic may not be injecting what
-              the label says. Independent analysis has shown only a fraction of
-              tested samples match the label. PeptOdyssey is decision-support
-              for licensed clinicians — not a substitute for identity testing
-              of the vial.
+              PeptOdyssey annotates, assembles evidence, and produces a dossier
+              a licensed clinician can read. It does not replace third-party
+              identity testing of what is in the vial, and it does not
+              prescribe.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -345,113 +445,8 @@ export default function CompanyHomePage() {
           </div>
         </section>
 
-        {/* Programs */}
-        <section
-          id="products"
-          className="scroll-mt-24 border-y border-[#edecea] bg-[#f5f4f0] py-16 md:py-20"
-        >
-          <div className="mx-auto max-w-[1180px] space-y-14 px-6 md:px-7">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#1a6b4a]">
-                Programs
-              </p>
-              <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
-                What we are building.
-              </h2>
-              <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-                The current wedge is clinic decision-support software. Design
-                visualization is Stage A. Delivery and CNS discovery are
-                research optionality — not marketed products.
-              </p>
-            </div>
-
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div className="overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white">
-                <picture>
-                  <source type="image/webp" srcSet="/assets/img/nanodisk.webp" />
-                  <img
-                    src="/assets/img/nanodisk.jpg"
-                    alt="Molecular illustration"
-                    width={1200}
-                    height={900}
-                    className="w-full object-cover"
-                    loading="lazy"
-                  />
-                </picture>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1a6b4a]">
-                  Shipping wedge
-                </p>
-                <h3 className="mt-2 text-2xl" style={serif}>
-                  PeptOdyssey
-                </h3>
-                <p className="mt-3 text-[#3a3f4a]">
-                  Genomics-guided peptide decision support for longevity,
-                  functional, and concierge clinics — a dossier a licensed
-                  clinician can read with the patient. Not a prescription, and
-                  not a guarantee of response.
-                </p>
-                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>VCF / consumer-genome in → structured options out</li>
-                  <li>Safety flags and investigational labels called out</li>
-                  <li>Clinic-first GTM; prescriber stays in the loop</li>
-                </ul>
-                <Link
-                  href="/peptodyssey"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1a6b4a] hover:underline"
-                >
-                  Open PeptOdyssey <span aria-hidden>→</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div className="order-2 md:order-1">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#5b3d8c]">
-                  Design
-                </p>
-                <h3 className="mt-2 text-2xl" style={serif}>
-                  Next-gen drug design
-                </h3>
-                <p className="mt-3 text-[#3a3f4a]">
-                  Structure-guided visualization and design loops for peptide
-                  and protein work — the Design leg. A software surface today,
-                  not a wet-lab or clinical product.
-                </p>
-                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                  <li>See the structure before committing the bench</li>
-                  <li>Stage A design / viz — no therapeutic claims</li>
-                </ul>
-                <Link
-                  href={productPath("next-gen-drug-development")}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1e4d8c] hover:underline"
-                >
-                  Design-lab page <span aria-hidden>→</span>
-                </Link>
-              </div>
-              <div className="order-1 overflow-hidden rounded-2xl border border-[#dbd9d3] bg-white md:order-2">
-                <picture>
-                  <source
-                    type="image/webp"
-                    srcSet="/assets/img/neurocreatine.webp"
-                  />
-                  <img
-                    src="/assets/img/neurocreatine.jpg"
-                    alt="Structure-guided molecular illustration"
-                    width={1000}
-                    height={750}
-                    className="w-full object-cover"
-                    loading="lazy"
-                  />
-                </picture>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Stats */}
-        <section className="py-12">
+        <section className="border-t border-[#edecea] py-12">
           <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-4 px-6 md:grid-cols-4 md:px-7">
             {[
               ["PeptOdyssey", "Shipping platform"],
@@ -521,11 +516,12 @@ export default function CompanyHomePage() {
               Get in touch
             </p>
             <h2 className="mt-2 text-3xl md:text-4xl" style={serif}>
-              Build a peptide program with us.
+              Clinics first. Research conversations welcome.
             </h2>
             <p className="mt-3 max-w-xl text-zinc-400">
-              Whether you are a clinician, investor, or scientist — we are open
-              to collaboration on every layer of the stack.
+              Start with PeptOdyssey if you run a clinic or care workflow.
+              Design-lab and nanodisk research talks are open; they are not the
+              shipping product.
             </p>
             <a
               href="mailto:hello@flmanbiosci.net"
@@ -556,30 +552,55 @@ export default function CompanyHomePage() {
           </div>
           <div>
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
-              Platform
+              Shipping
             </h4>
             <ul className="space-y-2">
-              <li>
-                <a href="#philosophy" className="hover:text-white">
-                  Detect → Design → Deliver
-                </a>
-              </li>
               <li>
                 <Link href="/peptodyssey" className="hover:text-white">
                   PeptOdyssey
                 </Link>
               </li>
               <li>
-                <Link href={productPath("cytogate")} className="hover:text-white">
-                  CytoGate
+                <Link href={"/peptodyssey/analyze"} className="hover:text-white">
+                  Genome analysis
+                </Link>
+              </li>
+              <li>
+                <Link href={"/tracking"} className="hover:text-white">
+                  Biomarker tracker
+                </Link>
+              </li>
+              <li>
+                <Link href={"/peptodyssey/privacy"} className="hover:text-white">
+                  iOS privacy policy
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
+              Stage A &amp; research
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href={productPath("next-gen-drug-development")}
+                  className="hover:text-white"
+                >
+                  Next-gen drug design
                 </Link>
               </li>
               <li>
                 <Link
-                  href={productPath("u4u-privacy")}
+                  href={productPath("discovery-informatics")}
                   className="hover:text-white"
                 >
-                  u4u-privacy
+                  Discovery Informatics
+                </Link>
+              </li>
+              <li>
+                <Link href={productPath("cytogate")} className="hover:text-white">
+                  CytoGate
                 </Link>
               </li>
               <li>
@@ -600,37 +621,10 @@ export default function CompanyHomePage() {
               </li>
               <li>
                 <Link
-                  href={productPath("next-gen-drug-development")}
+                  href={productPath("u4u-privacy")}
                   className="hover:text-white"
                 >
-                  Next-gen drug development
-                </Link>
-              </li>
-              <li>
-                <Link href={"/tracking"} className="hover:text-white">
-                  Biomarker tracker
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-300">
-              Product
-            </h4>
-            <ul className="space-y-2">
-              <li>
-                <Link href={"/peptodyssey/analyze"} className="hover:text-white">
-                  Genome analysis
-                </Link>
-              </li>
-              <li>
-                <Link href={"/peptodyssey/privacy"} className="hover:text-white">
-                  iOS privacy policy
-                </Link>
-              </li>
-              <li>
-                <Link href={"/study"} className="hover:text-white">
-                  Validation study
+                  u4u-privacy
                 </Link>
               </li>
             </ul>
@@ -641,8 +635,18 @@ export default function CompanyHomePage() {
             </h4>
             <ul className="space-y-2">
               <li>
+                <a href="#philosophy" className="hover:text-white">
+                  Detect → Design → Deliver
+                </a>
+              </li>
+              <li>
                 <Link href="/team" className="hover:text-white">
                   Team
+                </Link>
+              </li>
+              <li>
+                <Link href="/study" className="hover:text-white">
+                  Validation study
                 </Link>
               </li>
               <li>
