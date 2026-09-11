@@ -127,6 +127,9 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               <p className="mt-5 max-w-xl text-base leading-relaxed text-[#3a3f4a] md:text-lg">
                 {product.description}
               </p>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-[#3a3f4a]">
+                {product.whyItMatters}
+              </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
                   href={product.ctaPrimary.href}

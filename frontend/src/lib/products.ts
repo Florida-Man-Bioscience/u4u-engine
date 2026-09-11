@@ -36,6 +36,8 @@ export type ProductPage = {
   eyebrow: string;
   tagline: string;
   description: string;
+  /** Short, plain-language case — why this program exists. */
+  whyItMatters: string;
   metaDescription: string;
   /** One-line homepage card body */
   cardBody: string;
@@ -71,11 +73,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Flagship platform · Decision support",
     tagline: "Peptide options, matched to the genome.",
     description:
-      "PeptOdyssey is Florida Man Bioscience’s shipping platform — engine, clinician-readable dossier, iOS research capture, and tracker. It turns a genetic file into a structured options set. A licensed clinician stays in the loop. The dossier is not a prescription.",
+      "PeptOdyssey turns a genetic file into a structured set of peptide options a licensed clinician can review. It is research and decision-support software — not a prescription, not a diagnosis, and not a claim that any peptide will work. Evidence grades and citations travel with the dossier so unknowns stay visible.",
+    whyItMatters:
+      "People are using peptides faster than the facts. A DNA file is not a care plan. Ancestry companies hold genomes; peptide clinics ship vials; neither hands a clinician a graded options list. PeptOdyssey sits in that gap. Success is not that a peptide worked. Success is every statement having a grade, a clinician who can see why, and nobody confusing the dossier with a prescription.",
     metaDescription:
-      "PeptOdyssey — Florida Man Bioscience’s genome-aware peptide platform. Engine, clinician-readable dossier, iOS capture, and tracker. Not a prescription. Not a medical device.",
+      "PeptOdyssey — genome-informed peptide options a licensed clinician can review. Research software, not a prescription, not a medical device.",
     cardBody:
-      "Shipping platform: genome → structured dossier → follow-up, with a licensed clinician in the loop. A dossier, not a prescription.",
+      "Genome-informed peptide options for individuals and clinicians — research software, not a prescription.",
     tag: "Platform",
     accent: brandGreen,
     audience:
@@ -83,27 +87,28 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     pillarsHeading: "A dossier a clinician can read.",
     pillars: [
       {
-        title: "Genome-aware options",
-        body: "Turn a genetic file into peptide-relevant context — structured so a licensed clinician can actually read it.",
+        title: "Genome in, options out",
+        body: "Upload or ingest a genetic file. Get a clinician-readable packet: context, flags, and options tied to published evidence — not a shopping cart.",
       },
       {
-        title: "Dossier, not a prescription",
-        body: "Priorities, cautions, and open questions. Software does not prescribe. A clinician stays in the loop.",
+        title: "A licensed clinician stays in the loop",
+        body: "The dossier is built to be reviewed by a human with a license. It does not replace clinical judgment or genetic counseling.",
       },
       {
-        title: "A loop that learns",
-        body: "Pair the first read with follow-up signals so the picture can refine — still under clinical judgment.",
+        title: "Grades, not guarantees",
+        body: "Approved drugs, compounding caveats, and unapproved compounds are not the same thing. Where human evidence is thin, the product says so.",
       },
     ],
     promises: [
       "Clinician in the loop — dossier, not a prescription",
-      "Live path into PeptOdyssey analysis and tracking",
+      "Evidence grades and citations travel with the options",
+      "Live path into analysis and tracking",
       "Privacy toolkit lane when files should stay local",
     ],
     statusNote:
-      "Shipping product surface for analysis, dossier, tracking, and iOS research capture.",
+      "Shipping platform (Detect). Design is Stage A. Delivery stays research. Not a claim of clinical proof.",
     disclaimer:
-      "Research and decision-support software. Not a medical device. Not a prescription. Not intended to diagnose, treat, cure, or prevent disease. Does not replace clinical judgment or genetic counseling.",
+      "PeptOdyssey is research and decision-support software. It is not a medical device. It is not intended to diagnose, treat, cure, or prevent any disease. The dossier is not a prescription and does not replace clinical judgment or genetic counseling. A licensed clinician remains responsible for care. Florida Man Bioscience does not claim that peptide options listed in a dossier are safe or effective for any person.",
     ctaPrimary: {
       label: "Open PeptOdyssey",
       href: "/peptodyssey",
@@ -121,11 +126,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Lab software · Flow cytometry",
     tagline: "See the matrix. Gate with intent.",
     description:
-      "CytoGate is Florida Man Bioscience’s flow-cytometry product. CytoCrunch is the desktop bench — compensation and QC you can inspect, plus an optional Assistant that proposes gates and experiment-design checklists. You Apply. Auto-gate still works if the Assistant is off.",
+      "CytoGate is Florida Man Bioscience’s flow-cytometry product. CytoCrunch is the desktop bench: compensation and QC you can inspect, Time QC and clean-events, plus an optional Assistant that proposes gates and experiment-design checklists. A human Applies. Auto-gate still works if Assistant is off. Raw FCS stays on your machine.",
+    whyItMatters:
+      "The hard part of flow cytometry is no longer acquiring colors. It is not lying to yourself in software: dyes overlap, runs clog, and two labs can get different percentages from the same cells. CytoCrunch is a local bench that lets you see the compensation matrix, check run QC, and gate with intent.",
     metaDescription:
-      "CytoGate — flow cytometry desktop (CytoCrunch) from Florida Man Bioscience. Compensation, QC, auto-gate, and a propose-only Assistant. Research software. Not a medical device.",
+      "CytoGate — local flow-cytometry desktop (CytoCrunch). See the compensation matrix, check run QC, gate with intent. Research software. Not a medical device.",
     cardBody:
-      "Compensation, QC, and gating for real FCS sessions — with an optional propose-only Assistant.",
+      "Local desktop cytometry for cores and immunology labs. See compensation. Keep the file. Gate on purpose.",
     tag: "Lab software",
     accent: {
       label: "#0e5a8a",
@@ -154,20 +161,20 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     ],
     audience:
       "Core facilities, immunology labs, and research teams whose panels outgrew brittle stacks.",
-    pillarsHeading: "What the bench actually does.",
+    pillarsHeading: "See the matrix. Gate with intent.",
     screenshotsHeading: "The bench — synthetic FCS.",
     pillars: [
       {
-        title: "Compensation you can inspect",
-        body: "Matrix, spillover, and CompQC live on the inspector — nudge a coefficient and see the plot, instead of trusting a hidden unmix.",
+        title: "Inspect the matrix",
+        body: "Compensation and unmix you can see — spillover and residual CompQC on the inspector, not a hidden black box.",
       },
       {
-        title: "QC before the argument",
-        body: "Time QC, clean-events, auto-gate, and FMO are first-class. Argue about biology after the file has been through QC — not before.",
+        title: "QC before phenotype",
+        body: "Time QC, clean-events, FMO helpers. Argue about biology after the file has been through QC — not before.",
       },
       {
         title: "Propose, then Apply",
-        body: "Optional Assistant suggests gates and a panel/FMO checklist from summaries. No raw FCS to a vendor. Nothing applies until you do.",
+        body: "Optional Assistant suggests a gating tree and a panel checklist. You Apply or Reject. No silent writes. No raw FCS to a cloud model.",
       },
     ],
     promises: [
@@ -177,9 +184,9 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
       "Company-backed support path via hello@flmanbiosci.net",
     ],
     statusNote:
-      "Desktop bench under active development. Research software — not a clinical release.",
+      "Lab software in active build. Desktop CytoCrunch first. Research use. Assistant is optional and propose-only.",
     disclaimer:
-      "Research and laboratory software. Not a medical device. Not intended to diagnose, treat, cure, or prevent disease.",
+      "CytoGate / CytoCrunch is research analysis software. It is not a medical device, is not intended to diagnose, treat, cure, or prevent any disease, and is not a clinical or IVD release. Automated or proposed gates do not replace experimental controls or a cytometrist’s judgment. No raw list-mode FCS is sent to a vendor in the default desktop configuration.",
     portfolioOrigin: CYTOGATE_ORIGIN,
     ctaPrimary: { label: "Contact the team", href: "mailto:hello@flmanbiosci.net" },
     ctaSecondary: { label: "Back to company home", href: "/" },
@@ -192,11 +199,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Delivery research · Optionality",
     tagline: "A research option — not a marketed therapeutic.",
     description:
-      "Vector nanodisk (MSP) is a research-stage delivery concept for peptide and nucleic-acid payloads — the long-horizon Deliver leg of Detect → Design → Deliver. It is optionality on the books, not a product you can buy and not a drug we sell.",
+      "Vector nanodisk (MSP) is a research-stage delivery concept for peptide and nucleic-acid payloads — the long-horizon Deliver leg of Detect → Design → Deliver. It is optionality on the books, not a SKU, not a marketed therapeutic, and not an approved product. Contact is a scientific conversation, not a license pitch.",
+    whyItMatters:
+      "Many of the most specific molecules we can design never become treatments because the body destroys them, dumps them in the liver, or locks them inside the cell. Delivery is the bottleneck. Vector nanodisk is a research option on that problem — not a medicine we sell.",
     metaDescription:
-      "Vector nanodisk — research-stage delivery optionality at Florida Man Bioscience. Not a marketed therapeutic. Not an approved product.",
+      "Vector nanodisk — research-stage delivery optionality at Florida Man Bioscience. Not a marketed therapeutic. Not for sale.",
     cardBody:
-      "Research optionality for payload delivery — not a marketed therapeutic.",
+      "Research-stage delivery optionality for peptide and nucleic-acid payloads. Not a marketed therapeutic. Not for sale.",
     tag: "Delivery research",
     accent: {
       label: "#92550a",
@@ -208,16 +217,16 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     pillarsHeading: "Research optionality — labeled as such.",
     pillars: [
       {
-        title: "Not a product you buy",
-        body: "This page describes a research program. Not a drug, not a device, not a clinic offering.",
+        title: "The problem is delivery",
+        body: "Peptides and nucleic acids fail on stability, targeting, immunogenicity, and getting out of the cell’s trash compartment. That bottleneck is documented. It is not an FMB efficacy story.",
       },
       {
-        title: "Same platform, later leg",
-        body: "Detect is software. Design is Stage A visualization. Deliver sits further out on the clock.",
+        title: "A research platform, not a medicine",
+        body: "If this work is funded, the questions are measurements: cargo protection, uptake versus known particles, simple immune and serum readouts. Null results are in scope.",
       },
       {
-        title: "No assignment on this page",
-        body: "We do not preview owners, licensors, or university vehicles here. Scientific collaboration talk only.",
+        title: "No purchase path",
+        body: "There is no order form, no clinic offering, no dosing, no outcome guarantee. Institutional IP stays held out.",
       },
     ],
     promises: [
@@ -243,11 +252,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Parked · Early discovery",
     tagline: "An early CNS note — not a lead program.",
     description:
-      "Neurocreatine is a parked, early discovery track for CNS-oriented peptide ideas. It is on the roster so the portfolio is complete. It is not a consumer product, not a supplement, and not what Florida Man Bioscience leads with.",
+      "Neurocreatine is a parked, early discovery track. It is on the roster so the portfolio is complete. It is not a consumer product, not a supplement, and not what Florida Man Bioscience leads with. If it ever moves, it will earn the next measurement. It has not.",
+    whyItMatters:
+      "This page exists so the roster is honest. It is not a launch, not a nootropic, and not a treatment offer. FMB has no animal or human Neurocreatine data to show.",
     metaDescription:
-      "Neurocreatine — parked early CNS peptide discovery at Florida Man Bioscience. Not a lead program. Not a marketed product.",
+      "Neurocreatine — parked early CNS discovery at Florida Man Bioscience. Not a lead program. Not a marketed product. Not a supplement.",
     cardBody:
-      "Parked early discovery — CNS peptide ideas, not a lead product.",
+      "Parked early discovery — a CNS creatine question, not a lead product.",
     tag: "Parked discovery",
     accent: {
       label: "#1e4d8c",
@@ -296,11 +307,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Genomics toolkit · Local-first",
     tagline: "Work the file on hardware you control.",
     description:
-      "u4u-privacy is a local-first consumer genomics toolkit. Variant work and related utilities run on Windows, macOS, or Linux you own. The starting assumption is not “upload everything.”",
+      "U4U Privacy is a local-first toolkit for people who already have a consumer DNA file and do not want to upload it again. Variant work and utilities run on Windows, macOS, or Linux you own. The starting assumption is not upload-everything. Research and education software only.",
+    whyItMatters:
+      "If you already have a DNA file, almost every next product asks you to upload it. That is a custody choice, not a scientific one. U4U Privacy is the opposite offer: work the file on a computer you own. This software is not building another matching pool. It cannot make you invisible to relatives who upload elsewhere — and it does not pretend to.",
     metaDescription:
-      "u4u-privacy — local-first consumer genomics toolkit from Florida Man Bioscience. Process genetic files on hardware you control. Not a diagnostic service.",
+      "U4U Privacy — local-first consumer genomics toolkit. Work a DNA file on hardware you control. Not a diagnostic service. Not a medical device.",
     cardBody:
-      "Local-first genomics toolkit — process genetic files on hardware you control.",
+      "Local-first consumer genomics. Work a DNA file on hardware you control — not a clinic dossier (that is PeptOdyssey).",
     tag: "Privacy toolkit",
     accent: brandGreen,
     audience:
@@ -308,16 +321,16 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     pillarsHeading: "Local-first, on purpose.",
     pillars: [
       {
-        title: "Your machine first",
-        body: "Pipelines are designed to run locally. Network is an opt-in (for example a public reference), not the default hop.",
+        title: "Local-first, not local-washing",
+        body: "Analysis is meant to run on the user’s machine. Fetching a public reference is an explicit opt-in, not a silent cloud round-trip.",
       },
       {
-        title: "Files you already have",
-        body: "Consumer genotype exports and common genomic formats are in scope — without making a vendor the first stop.",
+        title: "Bring the file you already have",
+        body: "Consumer genotype exports and common genomic formats are first-class. You do not buy a new spit kit from FMB.",
       },
       {
-        title: "A different trust model",
-        body: "PeptOdyssey is the clinic-facing dossier. This toolkit is for when the file should stay put.",
+        title: "Research language on purpose",
+        body: "Reports are inspectable utilities, not diagnoses. PeptOdyssey is the clinic-facing packet. This toolkit is for when the file should stay put.",
       },
     ],
     promises: [
@@ -326,9 +339,9 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
       "Not a diagnostic service; not a substitute for genetic counseling",
     ],
     statusNote:
-      "Desktop app: Windows / macOS / Linux installers via the product host and GitHub Releases.",
+      "Active development. Desktop installers for Windows, macOS, and Linux via the product host and GitHub Releases. Not a diagnostic service.",
     disclaimer:
-      "Consumer and research utilities. Not a medical device. Not a diagnostic service. Does not replace clinical genetic counseling.",
+      "Research and education utilities only. Not a medical device. Not a diagnostic service. Does not replace clinical genetic counseling or clinical genetic testing. This software does not make you anonymous. FMB does not claim HIPAA certification for U4U Privacy.",
     portfolioOrigin: U4U_PRIVACY_ORIGIN,
     ctaPrimary: {
       label: "Buy / download Desktop",
@@ -344,11 +357,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     eyebrow: "Design platform · Stage A",
     tagline: "See the structure. Design in software — not a wet lab.",
     description:
-      "Next-gen drug design is Florida Man Bioscience’s Stage A surface: local structure visualization (desktop and VR) and a simulated design–build–test–learn loop for peptide and protein work. Software you can look at. Not a wet lab. Not a therapeutic.",
+      "Next-gen drug design is Florida Man Bioscience’s Stage A surface for structure-guided peptide and protein work. Load a structure on the desktop or in a VR prototype; run a simulated design–build–test–learn loop; keep the default install local. It is software you can look at — not a wet lab, not a therapeutic, not Stage B robotics.",
+    whyItMatters:
+      "A sequence on a screen does not show how a molecule sits in space. Seeing the structure — and costing a pretend design cycle before anyone orders synthesis — is how some bad peptides never get made. That is the whole case. This is software, not a wet lab.",
     metaDescription:
-      "Next-gen drug design from Florida Man Bioscience — Stage A structure visualization for peptide and protein work. Software, not a wet lab. No therapeutic claims.",
+      "Next-gen drug design — Stage A structure visualization and a simulated design loop. Software, not a wet lab. No therapeutic claims.",
     cardBody:
-      "Stage A design and visualization for peptide and protein work — software, not a wet lab.",
+      "Stage A. See the structure on desktop and in VR. Design in software before anyone orders synthesis. Not a wet lab. Not a drug.",
     tag: "Design lab",
     accent: {
       label: "#5b3d8c",
@@ -361,15 +376,15 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     pillars: [
       {
         title: "See the structure",
-        body: "Desktop and headset views of local structures so design talk stays on the molecule, not a slide deck.",
+        body: "Desktop plus a VR prototype so depth is not stuck on a flat screen. Sequence is not shape.",
       },
       {
-        title: "A simulated loop",
-        body: "Design, evaluate, and record a cycle with simulated build/test economics. Lab robots are a later stage — not this one.",
+        title: "Design in software",
+        body: "A simulated design–build–test–learn loop with a cost ledger. Build and Test are seams, not instruments.",
       },
       {
-        title: "Honest non-goals",
-        body: "No wet-lab claim. No therapeutic claim in the UI. No Stage B hardware.",
+        title: "Local-first",
+        body: "Default config has no PHI and does not require a cloud notebook. Not a wet lab. Not a drug.",
       },
     ],
     promises: [
@@ -397,11 +412,13 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     tagline:
       "A jailed science-agent OS: PI ask → routed evidence → versioned artifacts + METHODS + cannots.",
     description:
-      "Discovery Informatics is Florida Man Bioscience’s science-agent operating system. A PI ask is routed, identifiers are normalized, the smallest public-API skill set runs, and the desk gets versioned artifacts plus METHODS and cannots. Wave 0 productization — not a shipping SaaS login.",
+      "A PI ask is routed, identifiers are normalized, and the smallest public-API skill set runs on your desk. You get versioned artifacts plus METHODS and cannots — not a chat bubble that forgets what it could not find. Wave 0 productization; not a shipping SaaS login. Related: Protein Chemistry is the structure/VR design surface, a different product.",
+    whyItMatters:
+      "A fluent chat answer is not a methods section. Labs lose a week stitching three paragraphs that never say which database was queried or what could not be found. Discovery Informatics is a jailed loop on the desk: smallest tools, versioned files, and an explicit list of cannots. Missing is not a negative result. The OS is not the PI.",
     metaDescription:
-      "Discovery Informatics — a jailed science-agent OS from Florida Man Bioscience. PI ask to routed evidence, versioned artifacts, METHODS, and cannots. Wave 0 research software. Not a medical device.",
+      "Discovery Informatics — a jailed science-agent OS. PI ask to routed evidence, versioned artifacts, METHODS, and cannots. Wave 0 research software. Not a medical device. Not a grant writer.",
     cardBody:
-      "Jailed science-agent OS: PI ask → routed evidence → artifacts + METHODS + cannots. Wave 0, unpriced.",
+      "Jailed science-agent OS for lab PIs: PI ask → routed evidence → artifacts + METHODS + cannots. Wave 0. Not a gene finder. Not a grant writer.",
     tag: "Science-agent OS",
     accent: brandGreen,
     audience:
@@ -409,16 +426,16 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     pillarsHeading: "The loop, not a result.",
     pillars: [
       {
-        title: "Ask → route → artifacts",
-        body: "Normalize IDs, run the smallest skill set, write versioned files. Parallel only on independent lanes.",
+        title: "Routed, not rambling",
+        body: "Identifier normalization and the smallest public-API skill set — not every tool, not a fishing expedition.",
       },
       {
-        title: "METHODS and cannots",
-        body: "Every run records methods and what the public APIs or corpus could not support. Missing is not false.",
+        title: "METHODS + cannots",
+        body: "What ran is written down. What was missing is a cannot, not a negative result. Occupancy is not a requirement.",
       },
       {
         title: "Tenant jail",
-        body: "Exclusive worktrees, localhost RAG sidecar, customer desk. The factory ships empty of anyone else’s trees.",
+        body: "Exclusive worktrees, localhost RAG sidecar, customer desk. Unpublished asks stay on the desk. Strategy that commits the bench escalates to the PI.",
       },
     ],
     promises: [
@@ -429,7 +446,7 @@ export const PRODUCTS: Record<ProductSlug, ProductPage> = {
     statusNote:
       "Wave 0 productization. Research software — not a shipping SaaS login.",
     disclaimer:
-      "Research software. Not a medical device. Not grant submission. Not intended to diagnose, treat, cure, or prevent disease. Occupancy is not a requirement. Missing in a corpus is not a negative result. Strategy that commits the bench escalates to the PI.",
+      "Research software. Not a medical device. Not grant submission. Not intended to diagnose, treat, cure, or prevent disease. Occupancy is not a requirement. Missing in a corpus is not a negative result. Strategy that commits the bench escalates to the PI. Wave 0 — no customer counts or live SaaS claims.",
     ctaPrimary: {
       label: "Open a conversation",
       href: "mailto:hello@flmanbiosci.net?subject=Discovery%20Informatics",

@@ -6,9 +6,9 @@ import { COMPANY_ORIGIN, PRODUCT_ORIGIN } from "@/lib/site";
 import { TEAM_HOMEPAGE_PREVIEW } from "@/lib/team";
 
 export const metadata: Metadata = {
-  title: "Florida Man Bioscience — Peptide medicine, matched to the genome",
+  title: "Florida Man Bioscience — Peptide options, matched to the genome",
   description:
-    "Florida Man Bioscience ships PeptOdyssey: PeptidIQ plus a clinician-readable dossier and biomarker tracking. Design is Stage A. Nanodisk delivery stays research.",
+    "Florida Man Bioscience ships PeptOdyssey: genome-informed peptide options a licensed clinician can review. Design is Stage A. Delivery stays research.",
   alternates: { canonical: `${COMPANY_ORIGIN}/` },
   openGraph: {
     title: "Florida Man Bioscience",
@@ -28,44 +28,44 @@ const PHILOSOPHY = [
     step: "01",
     title: "Detect",
     status: "Shipping",
-    body: "PeptidIQ annotates genome files and measured signals. PeptOdyssey turns that into a clinician-readable dossier. Decision support, not a protocol.",
-    source: "PeptidIQ engine + PeptOdyssey dossier",
+    body: "People hold DNA files. People are asking about peptides. Detect is the shipping software that writes a graded options list a licensed clinician can actually review. Decision support, not a protocol.",
+    source: "PeptOdyssey — engine, dossier, tracker",
   },
   {
     step: "02",
     title: "Design",
     status: "Stage A",
-    body: "Next-gen drug design and protein visualization. See the molecule before the bench. A software surface today; not a wet-lab or therapeutic claim.",
+    body: "A sequence on a screen is not a shape. Stage A is seeing the structure in software — and costing a pretend design cycle — before anyone orders synthesis. Not a wet lab.",
     source: "Protein Chemistry / next-gen drug design",
   },
   {
     step: "03",
     title: "Deliver",
     status: "Research",
-    body: "MSP / vector nanodisk work on getting payloads where they are needed. Research only. Institutional IP stays held out until cleared.",
-    source: "Held-out research program",
+    body: "Many precise molecules never become treatments because the body destroys them or locks them in the cell. Delivery is the bottleneck — and it is research, not a product you can buy. Institutional IP stays held out.",
+    source: "Vector nanodisk — research optionality",
   },
 ] as const;
 
 const PLATFORM = [
   {
-    num: "01 / PeptidIQ",
-    title: "Genome → structured read",
-    body: "Variant annotation, pharmacogenomics, receptor and pathway context — scored so a licensed clinician can read it. This is the analysis core of PeptOdyssey.",
+    num: "01 / Engine",
+    title: "Genome in, options out",
+    body: "A genetic file becomes peptide-relevant context — variants, pharmacogenes, pathways — scored so a licensed clinician can read it. Not a shopping cart.",
     tag: "Engine",
     href: "/peptodyssey/analyze",
   },
   {
     num: "02 / Dossier",
-    title: "The clinician-facing report",
-    body: "Decision-support report: safety flags, goal-to-peptide options, citations, and FDA vs investigational labels. Not a prescription.",
+    title: "Grades, not guarantees",
+    body: "Safety flags, options, citations, and FDA vs investigational labels. Approved drugs and unapproved compounds are not the same thing. Not a prescription.",
     tag: "Dossier",
     href: "/peptodyssey",
   },
   {
     num: "03 / Tracker",
-    title: "Longitudinal biomarker tracking",
-    body: "A Bayesian tracker that fuses the genetic prior with measured biomarkers so the picture can refine over time. Research / decision-support tooling.",
+    title: "Follow-up under clinical judgment",
+    body: "A Bayesian tracker that can fuse the genetic prior with measured biomarkers so the picture can refine. Still research / decision-support. Still not a prescription.",
     tag: "Feedback loop",
     href: PRODUCT_ORIGIN + "/tracking",
   },
@@ -153,13 +153,14 @@ export default function CompanyHomePage() {
                 className="text-4xl leading-tight text-[#0d1117] md:text-5xl"
                 style={serif}
               >
-                Peptide medicine,{" "}
+                Peptide options,{" "}
                 <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
-                PeptOdyssey is what we ship: the PeptidIQ engine and a dossier a
-                licensed clinician can read, plus biomarker follow-up. Design
-                visualization is Stage A. Nanodisk delivery stays research.
+                People are using peptides faster than the facts. A DNA file is
+                not a care plan. PeptOdyssey turns a genetic file into a graded
+                options list a licensed clinician can review. Design is Stage A.
+                Delivery stays research.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -192,7 +193,7 @@ export default function CompanyHomePage() {
                       PeptOdyssey
                     </dt>
                     <dd className="mt-1 text-xs text-[#3a3f4a]">
-                      PeptidIQ + dossier + tracker
+                      Engine + dossier + tracker
                     </dd>
                   </div>
                   <dd className="shrink-0 rounded-full bg-[#e1f3eb] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#0f4530]">
@@ -205,7 +206,7 @@ export default function CompanyHomePage() {
                       Next-gen drug design
                     </dt>
                     <dd className="mt-1 text-xs text-[#3a3f4a]">
-                      Protein visualization
+                      See the structure — software, not a wet lab
                     </dd>
                   </div>
                   <dd className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
@@ -243,12 +244,9 @@ export default function CompanyHomePage() {
               Detect → Design → Deliver
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-              Company vision from the working notes. Internally the software
-              loop is still{" "}
-              <strong className="font-medium text-[#0d1117]">
-                Read → Predict → Report → Track
-              </strong>
-              . Delivery is a separate research program, not part of that loop.
+              Three jobs, three clocks. Detect is what we ship. Design is a
+              software surface. Deliver is a research question about getting
+              payloads where they are needed — not a SKU.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PHILOSOPHY.map((leg) => (
@@ -299,9 +297,10 @@ export default function CompanyHomePage() {
               PeptOdyssey: engine, dossier, tracker.
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-              One product. PeptidIQ does the read. The dossier is what the
-              clinician sees. The tracker is how follow-up measurements come
-              back in. Software ships first; delivery stays research-stage.
+              One product. The engine does the read. The dossier is what the
+              clinician sees — grades, not guarantees. The tracker is how
+              follow-up measurements come back in. Software ships first;
+              delivery stays research.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PLATFORM.map((card) => (
@@ -342,9 +341,11 @@ export default function CompanyHomePage() {
                 What we ship, and what is still research.
               </h2>
               <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-                PeptOdyssey is the shipping product. Design visualization is
-                Stage A. CytoGate is lab software for flow cytometry.
-                Nanodisk delivery is research, with institutional IP held out.
+                PeptOdyssey is the shipping product because the information
+                problem is real today. Design visualization is Stage A.
+                CytoGate is lab software for cores whose panels outgrew
+                brittle stacks. Nanodisk delivery is research, with
+                institutional IP held out.
               </p>
             </div>
 
@@ -356,15 +357,15 @@ export default function CompanyHomePage() {
                 PeptOdyssey
               </h3>
               <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-                Genome-aware peptide decision support for longevity, functional,
-                and concierge clinics. A licensed clinician reads the dossier
-                with the patient. Not a prescription, and not a guarantee of
-                response.
+                The genome is not a vending machine for peptides. The peptide
+                market is not a library. PeptOdyssey sits in the gap with a
+                graded options list and a licensed clinician. Not a
+                prescription, and not a guarantee of response.
               </p>
               <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
-                <li>VCF / consumer-genome in → structured dossier out</li>
-                <li>Safety flags and investigational labels called out</li>
-                <li>Built for licensed clinicians; the prescriber stays in the loop</li>
+                <li>Genetic file in → structured, cited dossier out</li>
+                <li>Evidence grades: approved, compounded, and unapproved are not the same</li>
+                <li>A licensed clinician stays in the loop — software does not write the order</li>
               </ul>
               <Link
                 href="/peptodyssey"
@@ -394,11 +395,7 @@ export default function CompanyHomePage() {
                       </span>
                     </div>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-[#3a3f4a]">
-                      {card.slug === "cytogate"
-                        ? "Compensation and QC desktop (CytoCrunch) for FCS sessions. Lab software, not the company thesis."
-                        : card.slug === "vector-nanodisk"
-                          ? "MSP / vector nanodisk delivery science. Research only. Institutional IP stays held out until cleared."
-                          : card.cardBody}
+                      {card.cardBody}
                     </p>
                     <span className="mt-3 text-sm font-medium text-[#1a6b4a]">
                       Open page →
@@ -425,8 +422,8 @@ export default function CompanyHomePage() {
             <p className="mt-4 max-w-2xl text-[#3a3f4a]">
               PeptOdyssey annotates, assembles evidence, and produces a dossier
               a licensed clinician can read. It does not replace third-party
-              identity testing of what is in the vial, and it does not
-              prescribe.
+              identity testing of what is in the vial. It does not prescribe.
+              Predictor validity is not therapy efficacy.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -450,9 +447,9 @@ export default function CompanyHomePage() {
           <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-4 px-6 md:grid-cols-4 md:px-7">
             {[
               ["PeptOdyssey", "Shipping platform"],
-              ["7", "Annotation sources"],
-              ["CDS", "Clinician in the loop"],
-              ["Research", "Delivery program"],
+              ["Clinician", "Stays in the loop"],
+              ["Local-first", "Privacy toolkit"],
+              ["Research", "Delivery stays research"],
             ].map(([n, l]) => (
               <div
                 key={l}
@@ -546,8 +543,7 @@ export default function CompanyHomePage() {
               <span style={serif}>Florida Man Bioscience</span>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-              Peptide-led precision medicine. Built in Florida, opened to the
-              world.
+              Peptide options, matched to the genome. Built in Florida.
             </p>
           </div>
           <div>

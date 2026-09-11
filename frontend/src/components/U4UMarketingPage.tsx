@@ -18,19 +18,19 @@ type Props = { product: ProductPage };
 /** Editorial “insight tiles” — qualitative, not invented lab values. */
 const INSIGHT_TILES = [
   {
-    label: "Genome context",
-    title: "What your file can say",
-    body: "Variants mapped onto pathways and receptors that matter for peptide and hormone response — plain language first.",
+    label: "The gap",
+    title: "Two facts that almost never meet",
+    body: "People hold DNA files. People are asking about peptides. Almost nobody hands a licensed clinician a single graded packet.",
   },
   {
     label: "Options set",
     title: "A dossier, not a prescription",
-    body: "Priorities, cautions, and open questions a licensed clinician can read. Software does not write the order.",
+    body: "Priorities, cautions, evidence grades, and open questions. Software does not write the order.",
   },
   {
     label: "Safety posture",
-    title: "Flags before hype",
-    body: "Contraindication-minded framing and honest confidence language — no miracle claims on a marketing page.",
+    title: "Grades before hype",
+    body: "Approved drugs, compounding caveats, and unapproved compounds are not the same thing. Where human evidence is thin, the product says so.",
   },
   {
     label: "Follow-up",
@@ -39,13 +39,13 @@ const INSIGHT_TILES = [
   },
   {
     label: "Privacy lane",
-    title: "Trust models that fit",
-    body: "Product surfaces when you choose them — and a local-first toolkit when you want files to stay put.",
+    title: "When the file should stay put",
+    body: "PeptOdyssey is the clinic-facing dossier. U4U Privacy is the local-first toolkit when you refuse upload-everything.",
   },
   {
     label: "Research path",
     title: "Built to mature",
-    body: "Software ships first. Delivery science and parked discovery sit alongside — labeled as research when they are.",
+    body: "Software ships first. Design is Stage A. Delivery science stays research — labeled as such.",
   },
 ] as const;
 
@@ -143,6 +143,9 @@ export function U4UMarketingPage({ product }: Props) {
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#3a3f4a] md:text-xl">
               {product.description}
             </p>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
+              {product.whyItMatters}
+            </p>
 
             <div className="mt-8 flex flex-wrap gap-2">
               {product.pillars.map((h) => (
@@ -188,10 +191,9 @@ export function U4UMarketingPage({ product }: Props) {
               <span className="text-[#1a6b4a]"> Software first.</span>
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
-              PeptOdyssey is Florida Man Bioscience’s genome-aware peptide
-              platform. Detect is the software wedge — a dossier for a licensed
-              clinician, not a prescription. Design and Deliver are later legs,
-              labeled as such.
+              Detect is the software we ship — a graded options list for a
+              licensed clinician. Design is Stage A visualization. Deliver is
+              research. The genome is not a vending machine for peptides.
             </p>
           </div>
         </section>
