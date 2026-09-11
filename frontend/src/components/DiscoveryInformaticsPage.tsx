@@ -9,17 +9,17 @@ const LOOP = [
   {
     n: "01",
     title: "Ask",
-    body: "A PI question lands in the OS. The product is the loop that follows — not a gene, not a notebook dump.",
+    body: "A PI question lands in the OS. The product is the loop that follows.",
   },
   {
     n: "02",
     title: "Route",
-    body: "Send the ask to the smallest matching skill. A grab-bag run is a failure mode.",
+    body: "Send the ask to the smallest matching skill.",
   },
   {
     n: "03",
     title: "Normalize IDs",
-    body: "Resolve entities to public identifiers before any lookup. Occupancy is not a requirement.",
+    body: "Resolve entities to public identifiers before any lookup. The PI decides occupancy.",
   },
   {
     n: "04",
@@ -47,17 +47,17 @@ const LANES = [
   {
     kicker: "Lanes",
     title: "Parallel only when independent",
-    body: "Delegate separate work only if the lanes do not share files or conclusions. Serial is the default.",
+    body: "Delegate separate work when the lanes are independent. Serial is the default.",
   },
   {
     kicker: "Worktrees",
     title: "Exclusive trees, exclusive paths",
-    body: "Each lane gets its own worktree. Two agents on the same path is out of contract.",
+    body: "Each lane gets its own worktree.",
   },
   {
     kicker: "Public APIs",
     title: "Skills that hit public endpoints",
-    body: "Official scripts, versioned APIs. Paywalled publishers are not curled. Missing in a corpus is not a negative result.",
+    body: "Official scripts, versioned APIs. Cannots are first-class output.",
   },
   {
     kicker: "Honesty bar",
@@ -71,25 +71,21 @@ const SKUS = [
     code: "DI-OS Core",
     includes:
       "Science-agent workbench profile, research router, artifact / METHODS / cannots contract, exclusive worktrees.",
-    excludes: "Vendor workbench licenses. GPU model training.",
   },
   {
     code: "DI-RAG Sidecar",
     includes:
       "One-corpus RAG sidecar: ingest inbox, critic, local embeddings, localhost MCP.",
-    excludes: "A second corpus in the same bot. Host-published ports.",
   },
   {
     code: "DI-Jail",
     includes:
-      "Tenant factory: isolated cwd, pairing allow-list, no multiplex, empty of anyone else’s trees.",
-    excludes: "Sticky profile switching. Cloning another lab’s desk.",
+      "Tenant factory: isolated cwd, pairing allow-list, exclusive worktrees.",
   },
   {
     code: "DI-ELN Logistics",
     includes:
       "Campaign folders, procedure skeleton, week PDF, calendar lock as a proposal.",
-    excludes: "Invented SOPs. Auto-sent lab events. Wet-lab strategy.",
   },
 ] as const;
 
@@ -176,7 +172,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               Discovery Informatics is a jailed science-agent operating system.
               The payload is the method — routed public evidence, versioned
-              files, METHODS, and cannots — not a result we found for you.
+              files, METHODS, and cannots.
             </p>
             <ol className="mt-12 grid gap-0 md:grid-cols-2">
               {LOOP.map((step, i) => (
@@ -222,8 +218,8 @@ export function DiscoveryInformaticsPage({ product }: Props) {
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               What we actually run is generic: independent lanes, tenant jail,
-              localhost RAG sidecar, public-API skills. No lab’s genes ship in
-              the factory. The customer rsyncs their own desk.
+              localhost RAG sidecar, public-API skills. The customer rsyncs
+              their own desk.
             </p>
 
             <WorktreeLanes />
@@ -268,8 +264,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                 </h2>
               </div>
               <p className="max-w-sm text-sm leading-relaxed text-[#6b7280]">
-                Names for the productization wave. No list prices. No login.
-                Not a catalog you can check out.
+                Names for the productization wave. Unpriced SKUs.
               </p>
             </div>
             <div className="mt-10 overflow-x-auto">
@@ -284,9 +279,6 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                     </th>
                     <th scope="col" className="py-3 pr-4 font-bold">
                       Includes
-                    </th>
-                    <th scope="col" className="py-3 pr-4 font-bold">
-                      Excludes
                     </th>
                     <th scope="col" className="py-3 text-right font-bold">
                       Price
@@ -304,9 +296,6 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                       </th>
                       <td className="py-4 pr-4 align-top leading-relaxed text-[#3a3f4a]">
                         {sku.includes}
-                      </td>
-                      <td className="py-4 pr-4 align-top leading-relaxed text-[#3a3f4a]">
-                        {sku.excludes}
                       </td>
                       <td className="py-4 text-right align-top font-mono text-xs uppercase tracking-wide text-[#6b7280]">
                         Unpriced
@@ -333,10 +322,9 @@ export function DiscoveryInformaticsPage({ product }: Props) {
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               <code className="font-mono text-sm">yue-lab</code> is one tenant
-              of this class — not the image we ship. The FMB demo is an empty
-              Hermes lab jail (bioinformatics skills, no partner trees) on the
-              hwcopeland cluster. POST requires a shared token. This is not a
-              public unauthenticated agent.
+              of this class. The FMB demo is an empty Hermes lab jail
+              (bioinformatics skills) on the hwcopeland cluster. POST requires
+              a shared token.
             </p>
             <ul className="mt-6 max-w-2xl list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
               <li>
@@ -352,8 +340,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                 <code className="font-mono text-xs">GET /health</code>
               </li>
               <li>
-                Isolation: pod is the jail. No Docker socket, no host home, no
-                Yue/ARMH3 trees, no grant submit.
+                Isolation: pod is the jail.
               </li>
               <li>
                 Token via{" "}
@@ -385,8 +372,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-[#d7ebe1]">
                 Structure visualization and a simulated design–build–test–learn
-                loop live on a different page. Discovery Informatics does not
-                become VR. The two products stay separate.
+                loop live on a different page. The two products stay separate.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -411,8 +397,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                 {product.disclaimer}
               </p>
               <p className="mt-4 text-xs leading-relaxed text-[#a8d5c2]">
-                Contact is a mailto to hello@flmanbiosci.net — the public
-                address, not a claim that mail routing is fully live.
+                Contact is a mailto to hello@flmanbiosci.net.
               </p>
             </aside>
           </div>
@@ -501,7 +486,7 @@ function WorktreeLanes() {
         ))}
       </ul>
       <p className="mt-4 border-t border-[#edecea] pt-3 font-mono text-xs text-[#3a3f4a]">
-        merge ← METHODS + cannots · never two agents on one path
+        merge ← METHODS + cannots · exclusive worktrees
       </p>
     </div>
   );

@@ -28,21 +28,21 @@ const PHILOSOPHY = [
     step: "01",
     title: "Detect",
     status: "Shipping",
-    body: "People hold DNA files. People are asking about peptides. Detect is the shipping software that writes a graded options list a licensed clinician can actually review. Decision support, not a protocol.",
+    body: "People hold DNA files. People are asking about peptides. Detect is the shipping software that writes a graded options list a licensed clinician can review.",
     source: "PeptOdyssey — engine, dossier, tracker",
   },
   {
     step: "02",
     title: "Design",
     status: "Stage A",
-    body: "A sequence on a screen is not a shape. Stage A is seeing the structure in software — and costing a pretend design cycle — before anyone orders synthesis. Not a wet lab.",
+    body: "Stage A is seeing the structure in software — and costing a pretend design cycle — before anyone orders synthesis.",
     source: "Protein Chemistry / next-gen drug design",
   },
   {
     step: "03",
     title: "Deliver",
     status: "Research",
-    body: "Many precise molecules never become treatments because the body destroys them or locks them in the cell. Delivery is the bottleneck — and it is research, not a product you can buy. Institutional IP stays held out.",
+    body: "Many precise molecules fail on the way in: the body destroys them or locks them in the cell. Delivery is the bottleneck, and it is a research program. Institutional IP stays held out.",
     source: "Vector nanodisk — research optionality",
   },
 ] as const;
@@ -51,21 +51,21 @@ const PLATFORM = [
   {
     num: "01 / Engine",
     title: "Genome in, options out",
-    body: "A genetic file becomes peptide-relevant context — variants, pharmacogenes, pathways — scored so a licensed clinician can read it. Not a shopping cart.",
+    body: "A genetic file becomes peptide-relevant context — variants, pharmacogenes, pathways — scored so a licensed clinician can read it.",
     tag: "Engine",
     href: "/peptodyssey/analyze",
   },
   {
     num: "02 / Dossier",
-    title: "Grades, not guarantees",
-    body: "Safety flags, options, citations, and FDA vs investigational labels. Approved drugs and unapproved compounds are not the same thing. Not a prescription.",
+    title: "Evidence grades",
+    body: "Safety flags, options, citations, and FDA vs investigational labels. Approved drugs, compounding caveats, and unapproved compounds are labeled.",
     tag: "Dossier",
     href: "/peptodyssey",
   },
   {
     num: "03 / Tracker",
     title: "Follow-up under clinical judgment",
-    body: "A Bayesian tracker that can fuse the genetic prior with measured biomarkers so the picture can refine. Still research / decision-support. Still not a prescription.",
+    body: "A Bayesian tracker that can fuse the genetic prior with measured biomarkers so the picture can refine. Research and decision-support tooling.",
     tag: "Feedback loop",
     href: PRODUCT_ORIGIN + "/tracking",
   },
@@ -157,10 +157,10 @@ export default function CompanyHomePage() {
                 <em className="not-italic text-[#1a6b4a]">matched to the genome.</em>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#3a3f4a]">
-                People are using peptides faster than the facts. A DNA file is
-                not a care plan. PeptOdyssey turns a genetic file into a graded
-                options list a licensed clinician can review. Design is Stage A.
-                Delivery stays research.
+                People are using peptides faster than the facts. PeptOdyssey
+                turns a genetic file into a graded options list a licensed
+                clinician can review. Design is Stage A. Delivery stays
+                research.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -178,8 +178,6 @@ export default function CompanyHomePage() {
               </div>
               <p className="mt-5 max-w-lg text-xs leading-relaxed text-[#6b7280]">
                 Decision-support software with a licensed clinician in the loop.
-                Not a medical device. Not a prescription. Not a guarantee of
-                clinical outcomes.
               </p>
             </div>
             <div className="rounded-2xl border border-[#dbd9d3] bg-[#f5f4f0] p-6 md:p-8">
@@ -206,7 +204,7 @@ export default function CompanyHomePage() {
                       Next-gen drug design
                     </dt>
                     <dd className="mt-1 text-xs text-[#3a3f4a]">
-                      See the structure — software, not a wet lab
+                      See the structure in software
                     </dd>
                   </div>
                   <dd className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
@@ -246,7 +244,7 @@ export default function CompanyHomePage() {
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
               Three jobs, three clocks. Detect is what we ship. Design is a
               software surface. Deliver is a research question about getting
-              payloads where they are needed — not a SKU.
+              payloads where they are needed.
             </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {PHILOSOPHY.map((leg) => (
@@ -298,7 +296,7 @@ export default function CompanyHomePage() {
             </h2>
             <p className="mt-3 max-w-2xl text-[#3a3f4a]">
               One product. The engine does the read. The dossier is what the
-              clinician sees — grades, not guarantees. The tracker is how
+              clinician sees — evidence grades included. The tracker is how
               follow-up measurements come back in. Software ships first;
               delivery stays research.
             </p>
@@ -357,15 +355,13 @@ export default function CompanyHomePage() {
                 PeptOdyssey
               </h3>
               <p className="mt-3 max-w-2xl text-[#3a3f4a]">
-                The genome is not a vending machine for peptides. The peptide
-                market is not a library. PeptOdyssey sits in the gap with a
-                graded options list and a licensed clinician. Not a
-                prescription, and not a guarantee of response.
+                PeptOdyssey sits in the gap with a graded options list and a
+                licensed clinician.
               </p>
               <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
                 <li>Genetic file in → structured, cited dossier out</li>
-                <li>Evidence grades: approved, compounded, and unapproved are not the same</li>
-                <li>A licensed clinician stays in the loop — software does not write the order</li>
+                <li>Evidence grades: approved, compounded, and unapproved are labeled</li>
+                <li>A licensed clinician stays in the loop</li>
               </ul>
               <Link
                 href="/peptodyssey"
@@ -417,13 +413,11 @@ export default function CompanyHomePage() {
               Trust
             </p>
             <h2 className="mt-2 max-w-3xl text-3xl md:text-4xl" style={serif}>
-              Decision support is not vial identity testing.
+              A dossier a licensed clinician can read.
             </h2>
             <p className="mt-4 max-w-2xl text-[#3a3f4a]">
               PeptOdyssey annotates, assembles evidence, and produces a dossier
-              a licensed clinician can read. It does not replace third-party
-              identity testing of what is in the vial. It does not prescribe.
-              Predictor validity is not therapy efficacy.
+              a licensed clinician can read.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -496,8 +490,7 @@ export default function CompanyHomePage() {
                 <span aria-hidden>→</span>
               </Link>
               <p className="text-xs text-[#6b7280]">
-                Public marketing roles only. Formal titles and equity are
-                internal governance — not restated here.
+                Public marketing roles only.
               </p>
             </div>
           </div>
@@ -517,8 +510,7 @@ export default function CompanyHomePage() {
             </h2>
             <p className="mt-3 max-w-xl text-zinc-400">
               Start with PeptOdyssey if you run a clinic or care workflow.
-              Design-lab and nanodisk research talks are open; they are not the
-              shipping product.
+              Design-lab and nanodisk research talks are open.
             </p>
             <a
               href="mailto:hello@flmanbiosci.net"

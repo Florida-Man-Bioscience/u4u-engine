@@ -227,7 +227,7 @@ export function ProductMarketingPage({ product }: Props) {
                 className="mt-2 text-3xl text-[#0d1117] md:text-4xl"
                 style={companySerif}
               >
-                Clear commitments. No theater.
+                Clear commitments.
               </h2>
               <ul className="mt-8 space-y-3">
                 {product.promises.map((item) => (

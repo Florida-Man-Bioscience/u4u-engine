@@ -19,18 +19,18 @@ type Props = { product: ProductPage };
 const INSIGHT_TILES = [
   {
     label: "The gap",
-    title: "Two facts that almost never meet",
+    title: "Two facts that belong together",
     body: "People hold DNA files. People are asking about peptides. Almost nobody hands a licensed clinician a single graded packet.",
   },
   {
     label: "Options set",
-    title: "A dossier, not a prescription",
-    body: "Priorities, cautions, evidence grades, and open questions. Software does not write the order.",
+    title: "A dossier a clinician can read",
+    body: "Priorities, cautions, evidence grades, and open questions. A licensed clinician reviews the packet.",
   },
   {
     label: "Safety posture",
     title: "Grades before hype",
-    body: "Approved drugs, compounding caveats, and unapproved compounds are not the same thing. Where human evidence is thin, the product says so.",
+    body: "Approved drugs, compounding caveats, and unapproved compounds are labeled. Where human evidence is thin, the product says so.",
   },
   {
     label: "Follow-up",
@@ -55,17 +55,17 @@ const AUDIENCES = [
     title: "Understand your starting point.",
     points: [
       "Bring a genome file you already have (or plan to obtain).",
-      "See peptide-relevant context without wading through raw VCF noise.",
-      "Leave with a dossier you can take to a licensed clinician — not a self-prescription.",
+      "See peptide-relevant context in plain language.",
+      "Leave with a dossier you can take to a licensed clinician.",
     ],
   },
   {
     who: "For clinicians & partners",
-    title: "A dossier, not a prescription.",
+    title: "A dossier a clinician can read.",
     points: [
-      "Structured outputs meant to be reviewed, not rubber-stamped by software.",
-      "Clear non-goals: not a diagnostic device, not autonomous prescribing.",
+      "Structured outputs meant to be reviewed by a licensed clinician.",
       "A path into longitudinal tracking and the broader FMB platform.",
+      "Research and decision-support software from Florida Man Bioscience.",
     ],
   },
 ] as const;
@@ -74,28 +74,28 @@ const JOURNEY = [
   {
     step: "01",
     title: "Detect",
-    body: "PeptOdyssey: genome-aware decision support a licensed clinician can read — not a one-size protocol.",
+    body: "PeptOdyssey: genome-aware decision support a licensed clinician can read.",
   },
   {
     step: "02",
     title: "Design",
-    body: "Structure-guided visualization for peptide and protein work. Stage A software — not a wet-lab or therapeutic claim.",
+    body: "Structure-guided visualization for peptide and protein work. Stage A software.",
   },
   {
     step: "03",
     title: "Deliver",
-    body: "MSP / vector nanodisk research on a longer horizon. Optionality — not a marketed therapeutic.",
+    body: "MSP / vector nanodisk research on a longer horizon. Optionality.",
   },
 ] as const;
 
 const QUICK = [
   {
-    q: "Is PeptOdyssey a medical device?",
-    a: "No. PeptOdyssey is research and decision-support software from Florida Man Bioscience. It does not diagnose, treat, cure, or prevent disease.",
+    q: "What is PeptOdyssey?",
+    a: "Research and decision-support software from Florida Man Bioscience. A licensed clinician reviews the dossier.",
   },
   {
-    q: "Does it prescribe peptides?",
-    a: "No. It produces a structured dossier. A licensed clinician stays in the loop. It is decision support, not a prescription.",
+    q: "Who writes the order?",
+    a: "A licensed clinician. PeptOdyssey produces a structured dossier for that review.",
   },
   {
     q: "What happened to PeptidIQ / U4U?",
@@ -193,7 +193,7 @@ export function U4UMarketingPage({ product }: Props) {
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
               Detect is the software we ship — a graded options list for a
               licensed clinician. Design is Stage A visualization. Deliver is
-              research. The genome is not a vending machine for peptides.
+              research.
             </p>
           </div>
         </section>
@@ -215,7 +215,7 @@ export function U4UMarketingPage({ product }: Props) {
               </div>
               <p className="max-w-sm text-sm leading-relaxed text-[#6b7280]">
                 Luxury-clinic calm. Fast to load. Two to three colors on purpose
-                — so the message, not the chrome, does the work.
+                — so the message does the work.
               </p>
             </div>
 
