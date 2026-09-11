@@ -22,8 +22,26 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify(payload),
     });
-    const body = await r.json().catch(() => ({}));
-    return NextResponse.json(body, { status: r.status });
+    const raw = await r.text();
+    let body: unknown;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      body = {
+        ok: false,
+        error: "upstream_not_json",
+        detail: raw.slice(0, 240),
+      };
+    }
+    const status =
+      typeof body === "object" &&
+      body !== null &&
+      "ok" in body &&
+      (body as { ok?: boolean }).ok === false &&
+      r.status >= 500
+        ? 200
+        : r.status;
+    return NextResponse.json(body, { status });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json(

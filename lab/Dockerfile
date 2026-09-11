@@ -17,7 +17,7 @@ RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash \
     && ln -sf /root/.local/bin/hermes /usr/local/bin/hermes || true
 
 WORKDIR /app
-COPY server.py /app/server.py
+COPY server.py providers.py /app/
 COPY profile/ /opt/lab-profile/
 
 RUN mkdir -p /data/profile /data/workspace \

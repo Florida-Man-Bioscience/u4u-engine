@@ -9,6 +9,14 @@ docker run --rm -p 8080:8080 -e LAB_SHARED_TOKEN=dev di-lab
 curl -sS localhost:8080/health
 ```
 
+`GET /health` lists providers + `key_configured` (never the secret). `POST /api/v1/turn` body:
+
+```json
+{"message":"…","provider":"openai","model":"gpt-4o"}
+```
+
+Allowlist: `neuralwatt`, `openai`, `openrouter`, `navigator`, `anthropic`, `xai`. Keys from env / `di-lab-keys` (`NEURALWATT_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `NAVIGATOR_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`). Do not put keys in git or the browser.
+
 Never `--clone` yue-lab. Never bind host `$HOME`.
 
 ## theswamp (no iac)

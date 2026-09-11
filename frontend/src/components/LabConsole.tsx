@@ -1,12 +1,28 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-type Health = { ok?: boolean; error?: string; profile?: string };
+type Provider = {
+  id: string;
+  label: string;
+  models: string[];
+  default_model: string;
+  key_configured: boolean;
+};
+
+type Health = {
+  ok?: boolean;
+  error?: string;
+  profile?: string;
+  providers?: Provider[];
+  default_provider?: string;
+};
 
 export function LabConsole() {
   const [health, setHealth] = useState<Health | null>(null);
   const [token, setToken] = useState("");
+  const [provider, setProvider] = useState("neuralwatt");
+  const [model, setModel] = useState("");
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
@@ -14,9 +30,21 @@ export function LabConsole() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/lab/health", { cache: "no-store" })
-      .then((r) => r.json())
+      .then(async (r) => {
+        const raw = await r.text();
+        try {
+          return JSON.parse(raw) as Health;
+        } catch {
+          throw new Error(raw.slice(0, 180) || `HTTP ${r.status}`);
+        }
+      })
       .then((j) => {
-        if (!cancelled) setHealth(j);
+        if (cancelled) return;
+        setHealth(j);
+        const pid = j.default_provider || j.providers?.[0]?.id || "neuralwatt";
+        setProvider(pid);
+        const spec = (j.providers || []).find((p) => p.id === pid);
+        setModel(spec?.default_model || spec?.models[0] || "");
       })
       .catch((e: unknown) => {
         if (!cancelled) {
@@ -31,6 +59,18 @@ export function LabConsole() {
     };
   }, []);
 
+  const providers = health?.providers || [];
+  const current = useMemo(
+    () => providers.find((p) => p.id === provider),
+    [providers, provider],
+  );
+
+  function onProviderChange(id: string) {
+    setProvider(id);
+    const spec = providers.find((p) => p.id === id);
+    setModel(spec?.default_model || spec?.models[0] || "");
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -42,10 +82,28 @@ export function LabConsole() {
           "content-type": "application/json",
           authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, provider, model }),
       });
-      const j = (await r.json()) as { reply?: string; error?: string };
-      setReply(j.reply || j.error || JSON.stringify(j));
+      const raw = await r.text();
+      let j: {
+        text?: string;
+        reply?: string;
+        error?: string;
+        stderr_tail?: string;
+        ok?: boolean;
+      };
+      try {
+        j = JSON.parse(raw) as typeof j;
+      } catch {
+        setReply(raw.slice(0, 2000) || `HTTP ${r.status}`);
+        return;
+      }
+      const main = j.text || j.reply || j.error || JSON.stringify(j);
+      setReply(
+        j.ok === false && j.stderr_tail
+          ? `${main}\n\n${j.stderr_tail}`
+          : main,
+      );
     } catch (err) {
       setReply(err instanceof Error ? err.message : "request_failed");
     } finally {
@@ -81,6 +139,41 @@ export function LabConsole() {
             required
           />
         </label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            Provider
+            <select
+              value={provider}
+              onChange={(e) => onProviderChange(e.target.value)}
+              className="min-h-11 rounded-lg border border-[#d4c4a8] px-3"
+            >
+              {providers.length === 0 ? (
+                <option value={provider}>{provider}</option>
+              ) : (
+                providers.map((p) => (
+                  <option key={p.id} value={p.id} disabled={!p.key_configured}>
+                    {p.label}
+                    {p.key_configured ? "" : " (no key)"}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            Model
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="min-h-11 rounded-lg border border-[#d4c4a8] px-3"
+            >
+              {(current?.models || (model ? [model] : [])).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <label className="grid gap-1 text-sm">
           Message
           <textarea
@@ -93,7 +186,7 @@ export function LabConsole() {
         </label>
         <button
           type="submit"
-          disabled={busy || !live}
+          disabled={busy || !live || (current ? !current.key_configured : false)}
           className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
         >
           {busy ? "Running…" : "Send turn"}

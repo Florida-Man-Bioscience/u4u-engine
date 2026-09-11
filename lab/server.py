@@ -13,6 +13,8 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from providers import public_catalog, resolve_turn
+
 PORT = int(os.environ.get("PORT", "8080"))
 PROFILE = os.environ.get("HERMES_PROFILE", "lab")
 TOKEN = os.environ.get("LAB_SHARED_TOKEN", "")
@@ -20,7 +22,7 @@ TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "120"))
 
 
 def health() -> dict:
-    return {
+    body = {
         "ok": True,
         "profile": PROFILE,
         "product": "discovery-informatics",
@@ -28,11 +30,13 @@ def health() -> dict:
         "token_configured": bool(TOKEN),
         "workspace": os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
     }
+    body.update(public_catalog())
+    return body
 
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:
-        sys.stderr.write(f"{self.address_string()} - {format % args}\n")
+        sys.stderr.write("%s - %s\n" % (self.address_string(), format % args))
 
     def _json(self, code: int, body: dict) -> None:
         raw = json.dumps(body).encode()
@@ -77,15 +81,38 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._json(400, {"ok": False, "error": "bad_json"})
             return
+        if not isinstance(payload, dict):
+            self._json(400, {"ok": False, "error": "bad_json"})
+            return
         message = str(payload.get("message") or "").strip()
         if not message:
             self._json(400, {"ok": False, "error": "empty_message"})
             return
+        resolved, err = resolve_turn(payload)
+        if err is not None:
+            code = 400 if err.get("error") != "key_not_configured" else 503
+            self._json(code, err)
+            return
+        assert resolved is not None
         hermes = os.environ.get("HERMES_BIN", "hermes")
         cmd = [hermes]
         if PROFILE and PROFILE not in ("default", "-"):
             cmd += ["-p", PROFILE]
-        cmd += ["chat", "-q", message, "-Q"]
+        cmd += [
+            "chat",
+            "-q",
+            message,
+            "-Q",
+            "--provider",
+            resolved["hermes_provider"],
+            "-m",
+            resolved["model"],
+        ]
+        env = {
+            **os.environ,
+            "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile"),
+            "HERMES_YOLO_MODE": "1",
+        }
         try:
             proc = subprocess.run(
                 cmd,
@@ -93,7 +120,7 @@ class Handler(BaseHTTPRequestHandler):
                 text=True,
                 timeout=TURN_TIMEOUT,
                 cwd=os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
-                env={**os.environ, "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile")},
+                env=env,
             )
         except FileNotFoundError:
             self._json(503, {"ok": False, "error": "hermes_missing"})
@@ -101,10 +128,14 @@ class Handler(BaseHTTPRequestHandler):
         except subprocess.TimeoutExpired:
             self._json(504, {"ok": False, "error": "timeout"})
             return
+        # HTTP 200 even on hermes non-zero so Cloudflare does not replace the
+        # JSON body with "error code: 502".
         self._json(
-            200 if proc.returncode == 0 else 502,
+            200,
             {
                 "ok": proc.returncode == 0,
+                "provider": resolved["provider_id"],
+                "model": resolved["model"],
                 "text": (proc.stdout or "")[-12000:],
                 "stderr_tail": (proc.stderr or "")[-2000:],
                 "returncode": proc.returncode,
@@ -122,7 +153,7 @@ body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:v
 main { max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
 h1 { font-size: 1.6rem; }
 p, label { color: var(--muted); line-height: 1.55; }
-textarea, input { width:100%; box-sizing:border-box; margin:.35rem 0 1rem; padding:.6rem; }
+textarea, input, select { width:100%; box-sizing:border-box; margin:.35rem 0 1rem; padding:.6rem; }
 button { background:var(--brand); color:#fff; border:0; padding:.55rem 1rem; border-radius:999px; font-weight:600; }
 pre { white-space:pre-wrap; background:#fff; padding:1rem; border:1px solid #dbd9d3; }
 a { color: var(--brand); }
@@ -132,20 +163,53 @@ a { color: var(--brand); }
 <p>Generic Hermes lab profile (the class <code>yue-lab</code> belongs to). Empty desk. Bearer token required. Not a public unauthenticated agent.</p>
 <p><a href="https://flmanbiosci.net/products/discovery-informatics">← Discovery Informatics</a></p>
 <label>Token <input id="tok" type="password" autocomplete="off"/></label>
+<label>Provider <select id="prov"></select></label>
+<label>Model <select id="mod"></select></label>
 <label>Ask <textarea id="msg" rows="4" placeholder="Normalize this public gene ID, then say cannots."></textarea></label>
 <button type="button" id="go">Run turn</button>
 <pre id="out"></pre>
 <script>
-document.getElementById('go').onclick = async () => {
-  const out = document.getElementById('out');
-  out.textContent = '…';
-  const r = await fetch('/api/v1/turn', {
-    method: 'POST',
+const catalog = {};
+fetch("/health").then(r => r.json()).then(h => {
+  const sel = document.getElementById("prov");
+  (h.providers || []).forEach(p => {
+    catalog[p.id] = p;
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.label + (p.key_configured ? "" : " (no key)");
+    o.disabled = !p.key_configured;
+    sel.appendChild(o);
+  });
+  if (h.default_provider) sel.value = h.default_provider;
+  fillModels();
+});
+function fillModels() {
+  const p = catalog[document.getElementById("prov").value];
+  const sel = document.getElementById("mod");
+  sel.innerHTML = "";
+  if (!p) return;
+  p.models.forEach(m => {
+    const o = document.createElement("option");
+    o.value = m; o.textContent = m;
+    if (m === p.default_model) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+document.getElementById("prov").onchange = fillModels;
+document.getElementById("go").onclick = async () => {
+  const out = document.getElementById("out");
+  out.textContent = "…";
+  const r = await fetch("/api/v1/turn", {
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      'authorization': 'Bearer ' + document.getElementById('tok').value
+      "content-type": "application/json",
+      "authorization": "Bearer " + document.getElementById("tok").value
     },
-    body: JSON.stringify({ message: document.getElementById('msg').value })
+    body: JSON.stringify({
+      message: document.getElementById("msg").value,
+      provider: document.getElementById("prov").value,
+      model: document.getElementById("mod").value
+    })
   });
   out.textContent = await r.text();
 };

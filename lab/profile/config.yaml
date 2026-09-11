@@ -1,6 +1,42 @@
 model:
   default: grok-4.6
-  provider: xai-oauth
+  provider: xai
+providers:
+  openai:
+    name: OpenAI
+    api: https://api.openai.com/v1
+    key_env: OPENAI_API_KEY
+    transport: chat_completions
+    default_model: gpt-4o
+    models:
+      - gpt-4o
+      - gpt-4.1
+      - gpt-4.1-mini
+      - o4-mini
+  neuralwatt:
+    name: Neuralwatt
+    api: https://api.neuralwatt.com/v1
+    key_env: NEURALWATT_API_KEY
+    transport: chat_completions
+    default_model: glm-5.2-short-fast
+    models:
+      - glm-5.2-short-fast
+      - glm-5.2-fast
+      - glm-5.2-short
+      - kimi-k2.6-fast
+      - qwen3.6-35b-fast
+  navigator:
+    name: UF NaviGator Toolkit
+    api: https://api.ai.it.ufl.edu/v1
+    key_env: NAVIGATOR_API_KEY
+    transport: chat_completions
+    default_model: gemma-4-31b-it
+    models:
+      - gemma-4-31b-it
+      - gemma-3-27b-it
+      - medgemma-27b-it
+      - llama-3.1-8b-instruct
+      - gpt-oss-20b
 toolsets:
   - web
   - terminal
