@@ -49,9 +49,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "curtis",
     name: "Curtis Dearing",
-    role: "Chief Vision Officer · CPO, PeptOdyssey",
+    role: "Co-founder · PeptOdyssey",
     blurb:
-      "Chief Vision Officer and CPO of PeptOdyssey. Core builder of the engine and the clinician-facing product surface.",
+      "Builds the PeptOdyssey engine and the clinician-facing product surface.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("curtis"),
@@ -60,9 +60,9 @@ export const FOUNDERS: TeamMember[] = [
   {
     id: "garrett",
     name: "Garrett Knotts",
-    role: "Founder",
+    role: "Co-founder · Omics",
     blurb:
-      "Core founder. Structural biology of calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
+      "Calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("garrett"),
@@ -73,7 +73,7 @@ export const FOUNDERS: TeamMember[] = [
     name: "Michael MacNair",
     role: "Co-founder · Structural biology",
     blurb:
-      "Core founder. Structural biochemistry and VR structural-biochemistry platform leadership.",
+      "Structural biochemistry and the VR structural-biochemistry platform.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("michael"),
@@ -83,8 +83,7 @@ export const FOUNDERS: TeamMember[] = [
     id: "jacob",
     name: "Jacob Davis",
     role: "Founder · Bioinformatics",
-    blurb:
-      "Founder. Bioinformatics and immunology.",
+    blurb: "Bioinformatics and immunology.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("jacob"),
@@ -94,8 +93,7 @@ export const FOUNDERS: TeamMember[] = [
     id: "tyler",
     name: "Tyler Kopf",
     role: "Founder · Clinical & operations",
-    blurb:
-      "Founder. Clinical and operations; skunkworks and program execution.",
+    blurb: "Clinical and operations; skunkworks and program execution.",
     tier: "founder",
     nucleateActivator: true,
     ...photo("tyler"),
@@ -162,8 +160,7 @@ export const CONTRIBUTORS: TeamMember[] = [
     id: "christopher",
     name: "Christopher Marais",
     role: "Activator contributor",
-    blurb:
-      "2026 Nucleate Activator teammate (joined mid-program). Public marketing role only.",
+    blurb: "Joined the 2026 Nucleate Activator cohort mid-program.",
     tier: "contributor",
     nucleateActivator: true,
     initials: "CM",

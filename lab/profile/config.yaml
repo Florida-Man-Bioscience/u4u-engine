@@ -1,0 +1,43 @@
+model:
+  default: grok-4.6
+  provider: xai-oauth
+toolsets:
+  - web
+  - terminal
+  - file
+  - skills
+  - todo
+  - session_search
+agent:
+  max_turns: 40
+  disabled_toolsets:
+    - computer_use
+    - discord
+    - discord_admin
+    - image_gen
+    - video
+    - homeassistant
+    - kanban
+    - delegation
+terminal:
+  backend: local
+  cwd: /data/workspace
+approvals:
+  mode: smart
+memory:
+  memory_enabled: true
+  user_profile_enabled: false
+platforms:
+  telegram:
+    enabled: false
+  discord:
+    enabled: false
+  whatsapp:
+    enabled: false
+  webhook:
+    enabled: false
+multiplex_profiles: false
+gateway:
+  multiplex_profiles: false
+plugins:
+  enabled: []

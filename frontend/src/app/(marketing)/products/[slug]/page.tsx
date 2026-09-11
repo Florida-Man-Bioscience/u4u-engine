@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DiscoveryInformaticsPage } from "@/components/DiscoveryInformaticsPage";
 import { ProductMarketingPage } from "@/components/ProductMarketingPage";
 import { U4UMarketingPage } from "@/components/U4UMarketingPage";
 import {
@@ -54,6 +55,9 @@ export default async function ProductSlugPage({
   const product = PRODUCTS[slug as ProductSlug];
   if (slug === "u4u") {
     return <U4UMarketingPage product={product} />;
+  }
+  if (slug === "discovery-informatics") {
+    return <DiscoveryInformaticsPage product={product} />;
   }
   return <ProductMarketingPage product={product} />;
 }
