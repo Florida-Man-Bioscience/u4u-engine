@@ -315,6 +315,60 @@ export function DiscoveryInformaticsPage({ product }: Props) {
           </div>
         </section>
 
+        {/* Lab jail (Wave 0.5) */}
+        <section
+          id="lab"
+          className="scroll-mt-24 border-b border-[#dbd9d3] bg-[#f5f4f0] py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-[1180px] px-6 md:px-7">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#1a6b4a]">
+              Wave 0.5 · Lab jail
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl" style={companySerif}>
+              A containerized generic lab profile.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
+              <code className="font-mono text-sm">yue-lab</code> is one tenant
+              of this class — not the image we ship. The FMB demo is an empty
+              Hermes lab jail (bioinformatics skills, no partner trees) on the
+              hwcopeland cluster. POST requires a shared token. This is not a
+              public unauthenticated agent.
+            </p>
+            <ul className="mt-6 max-w-2xl list-disc space-y-2 pl-5 text-sm text-[#3a3f4a]">
+              <li>
+                Host:{" "}
+                <a
+                  className="font-medium text-[#1a6b4a] hover:underline"
+                  href="https://lab.flmanbiosci.net/"
+                  rel="noopener noreferrer"
+                >
+                  lab.flmanbiosci.net
+                </a>{" "}
+                (HTTPRoute on theswamp — live after Flux + image). Health:{" "}
+                <code className="font-mono text-xs">GET /health</code>
+              </li>
+              <li>
+                Isolation: pod is the jail. No Docker socket, no host home, no
+                Yue/ARMH3 trees, no grant submit.
+              </li>
+              <li>
+                Token via{" "}
+                <a className="text-[#1a6b4a] hover:underline" href="mailto:hello@flmanbiosci.net">
+                  hello@flmanbiosci.net
+                </a>
+                . Empty token → POST 401.
+              </li>
+            </ul>
+            <a
+              href="https://lab.flmanbiosci.net/"
+              className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
+              rel="noopener noreferrer"
+            >
+              Open lab jail →
+            </a>
+          </div>
+        </section>
+
         {/* Related + disclaimer */}
         <section className="border-b border-[#dbd9d3] bg-[#0f4530] py-16 text-[#f5f4f0] md:py-20">
           <div className="mx-auto grid max-w-[1180px] gap-10 px-6 md:grid-cols-[1.1fr_0.9fr] md:px-7">
