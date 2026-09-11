@@ -82,9 +82,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"ok": False, "error": "empty_message"})
             return
         hermes = os.environ.get("HERMES_BIN", "hermes")
+        cmd = [hermes]
+        if PROFILE and PROFILE not in ("default", "-"):
+            cmd += ["-p", PROFILE]
+        cmd += ["chat", "-q", message, "-Q"]
         try:
             proc = subprocess.run(
-                [hermes, "-p", PROFILE, "chat", "-q", message, "-Q"],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=TURN_TIMEOUT,

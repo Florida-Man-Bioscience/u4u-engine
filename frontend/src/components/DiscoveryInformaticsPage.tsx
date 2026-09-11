@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CompanyChrome, companySerif } from "@/components/CompanyChrome";
+import { LabConsole } from "@/components/LabConsole";
 import { type ProductPage } from "@/lib/products";
 
 type Props = { product: ProductPage };
@@ -360,12 +361,12 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               </li>
             </ul>
             <a
-              href="https://lab.flmanbiosci.net/"
+              href="#lab-console"
               className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
-              rel="noopener noreferrer"
             >
-              Open lab jail →
+              Open lab console on this page →
             </a>
+            <LabConsole />
           </div>
         </section>
 

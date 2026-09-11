@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: di-lab-data
+  namespace: theswamp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: di-lab
+  namespace: theswamp
+spec:
+  selector:
+    app: di-lab
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: di-lab
+  namespace: theswamp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: di-lab
+  template:
+    metadata:
+      labels:
+        app: di-lab
+    spec:
+      imagePullSecrets:
+        - name: zot-pull-secret
+      containers:
+        - name: di-lab
+          image: zot.hwcopeland.net/florida-man-bioscience/di-lab:main@sha256:9371f156324cb379809b69b544bc99f1899a02f843205592a36c2dfe537271a5
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HERMES_PROFILE
+              value: "-"
+            - name: HERMES_BIN
+              value: /usr/local/lib/hermes-agent/venv/bin/hermes
+            - name: HERMES_HOME
+              value: /opt/lab-profile
+            - name: HERMES_WORKSPACE
+              value: /data/workspace
+            - name: LAB_SHARED_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: di-lab-keys
+                  key: LAB_SHARED_TOKEN
+          volumeMounts:
+            - name: data
+              mountPath: /data/workspace
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: di-lab-data
