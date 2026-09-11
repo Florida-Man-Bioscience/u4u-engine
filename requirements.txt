@@ -31,7 +31,7 @@ pydantic>=2.6
 
 # OIDC access-token validation (end-user auth)
 pyjwt[crypto]>=2.13.0
-cryptography>=49.0.0
+cryptography>=50.0.0
 
 # Testing
 pytest>=9.1.1
