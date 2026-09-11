@@ -95,7 +95,7 @@ export default function PeptodysseyHubPage() {
         <p className="max-w-2xl text-[#3a3f4a]">
           Florida Man Bioscience’s peptide platform for licensed clinicians:
           genome analysis, a readable dossier, and biomarker follow-up. Research
-          decision-support — not a prescription, not a diagnosis.
+          decision-support.
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
@@ -147,10 +147,9 @@ export default function PeptodysseyHubPage() {
           Independent peptide verification matters.
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-          Without a third-party check, you may not be injecting what the label
-          says. Independent analysis has shown only a fraction of tested samples
-          match the label. This platform does not replace identity testing of
-          the vial.
+          Independent analysis has shown only a fraction of tested samples
+          match the label. Pair the dossier with third-party identity testing
+          of the vial.
         </p>
       </section>
 

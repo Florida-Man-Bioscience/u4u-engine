@@ -105,7 +105,7 @@ export default function TeamPage() {
           <Section
             eyebrow="Founding team"
             title="Six founders."
-            intro="Public roles describe the work. Skills, not equity — no invented C-suite titles and no unit counts on this page."
+            intro="Public roles describe the work."
           >
             {FOUNDERS.map((m) => (
               <TeamMemberCard key={m.id} member={m} />

@@ -142,6 +142,9 @@ export function ProductMarketingPage({ product }: Props) {
             >
               {product.pillarsHeading ?? "What this program is."}
             </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3a3f4a]">
+              {product.whyItMatters}
+            </p>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {product.pillars.map((pillar) => (
                 <article
@@ -224,7 +227,7 @@ export function ProductMarketingPage({ product }: Props) {
                 className="mt-2 text-3xl text-[#0d1117] md:text-4xl"
                 style={companySerif}
               >
-                Clear commitments. No theater.
+                Clear commitments.
               </h2>
               <ul className="mt-8 space-y-3">
                 {product.promises.map((item) => (
