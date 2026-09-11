@@ -19,7 +19,7 @@ pysam>=0.24.0
 # pyliftover>=0.4
 
 # PDF Generation
-reportlab>=5.0.0
+reportlab>=5.0.1
 
 # HTTP / API clients
 httpx>=0.28.1
