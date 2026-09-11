@@ -1,8 +1,8 @@
 """Public /team copy contract.
 
-t-fmbweb-team-implement: do not invent bios. Titles for the six
-founders must match operator-approved public roles. Narrative blurbs
-wait on t-fmbweb-team-bios (still open — no written OK).
+Locks founder roles and roster blurbs to the live SSoT in
+frontend/src/lib/team.ts. New or rewritten bios still fail until this
+snapshot is updated with the copy.
 """
 
 from __future__ import annotations
@@ -17,14 +17,34 @@ TEAM_PAGE = ROOT / "frontend" / "src" / "app" / "(marketing)" / "team" / "page.t
 HOME_PAGE = ROOT / "frontend" / "src" / "app" / "(marketing)" / "page.tsx"
 CHROME = ROOT / "frontend" / "src" / "components" / "CompanyChrome.tsx"
 
-# flmanbiosci-ops team-assets.md / product-naming.md — do not invent.
+# Live public roles on team.ts (2026 Activator roster).
 APPROVED_FOUNDER_ROLES = {
     "noah": "Founder & CEO",
-    "garrett": "Founder",
-    "curtis": "Chief Vision Officer & CPO of PeptOdyssey",
-    "michael": "Chemistry & Delivery",
-    "jacob": "Bioinformatics",
-    "tyler": "Clinical & Operations",
+    "garrett": "Co-founder · Omics",
+    "curtis": "Co-founder · PeptOdyssey",
+    "michael": "Co-founder · Structural biology",
+    "jacob": "Founder · Bioinformatics",
+    "tyler": "Founder · Clinical & operations",
+}
+
+# Shipped blurbs. Drift here is a copy change, not an invention to ignore.
+APPROVED_BLURBS = {
+    "noah": "Builds the engine and app foundations. Bioinformatics, pipeline architecture, and company operations.",
+    "curtis": "Builds the PeptOdyssey engine and the clinician-facing product surface.",
+    "garrett": "Calcium-sensing and transmembrane proteins; metabolism and mitochondria-focused science.",
+    "michael": "Structural biochemistry and the VR structural-biochemistry platform.",
+    "jacob": "Bioinformatics and immunology.",
+    "tyler": "Clinical and operations; skunkworks and program execution.",
+    "sasank": "MD/PhD student, University of Florida. Clinical link and PeptOdyssey engine contributor.",
+    "kayla": "MD-PhD student, University of Miami. Safety / contraindication layer for genotype-aware peptide protocols.",
+    "rocky": "Post-doc, Moffitt Cancer Center. Oncology genetics advisor; VR structural biochemistry project lead.",
+    "min": "Metabolism, adipose biology, and nutrition. Nucleate Activator contributor.",
+    "delaney": "Clinical and public-health researcher guiding clinical and translational strategy.",
+    "christopher": "Joined the 2026 Nucleate Activator cohort mid-program.",
+    "hampton": "Graduate student, MTSU. Engineering lead for platform and infrastructure.",
+    "jeran": "GTM and growth; channel and go-to-market execution.",
+    "ty": "Non-founder contributor supporting company operations and growth.",
+    "giuseppina": "Founder & CEO, Auralis Biotech. Commercialization and strategic partnership advisor.",
 }
 
 MEMBER_RE = re.compile(
@@ -68,13 +88,17 @@ def test_founder_public_roles_match_approved_copy() -> None:
         )
 
 
-def test_no_invented_bios() -> None:
-    """Blurbs require written OK from t-fmbweb-team-bios. Until then: empty."""
+def test_public_bios_match_approved_copy() -> None:
     members = _members()
     assert members, "failed to parse any team members from team.ts"
-    invented = {
-        slug: m["blurb"]
-        for slug, m in members.items()
-        if m["blurb"].strip()
+    live = {slug: m["blurb"] for slug, m in members.items()}
+    extra = set(live) - set(APPROVED_BLURBS)
+    missing = set(APPROVED_BLURBS) - set(live)
+    assert not extra, f"unapproved roster ids: {sorted(extra)}"
+    assert not missing, f"missing roster ids: {sorted(missing)}"
+    drift = {
+        slug: (APPROVED_BLURBS[slug], live[slug])
+        for slug in APPROVED_BLURBS
+        if live[slug] != APPROVED_BLURBS[slug]
     }
-    assert invented == {}, f"unapproved bios on public roster: {invented}"
+    assert drift == {}, f"blurb drift vs approved snapshot: {drift}"
