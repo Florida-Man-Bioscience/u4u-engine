@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 
@@ -98,6 +99,43 @@ class ResolveTurnTests(unittest.TestCase):
         assert got is not None
         self.assertEqual(got["model"], "gemma-4-31b-it")
         self.assertEqual(got["hermes_provider"], "custom:navigator")
+
+
+class OpenAICompatTests(unittest.TestCase):
+    def test_parse_provider_slash_model(self):
+        self.assertEqual(
+            providers.parse_openai_model("openrouter/openai/gpt-4o"),
+            ("openrouter", "openai/gpt-4o"),
+        )
+
+    def test_parse_bare_unique_model(self):
+        self.assertEqual(providers.parse_openai_model("grok-4.6"), ("xai", "grok-4.6"))
+
+    def test_messages_to_prompt(self):
+        prompt = providers.messages_to_prompt(
+            [
+                {"role": "system", "content": "Be brief."},
+                {"role": "user", "content": "Ping"},
+            ]
+        )
+        self.assertEqual(prompt, "system: Be brief.\nuser: Ping")
+
+    def test_openai_models_ids(self):
+        ids = [row["id"] for row in providers.openai_models()["data"]]
+        self.assertIn("xai/grok-4.6", ids)
+        self.assertIn("openrouter/openai/gpt-4o", ids)
+
+    def test_completion_json_not_stream(self):
+        ctype, body = server.openai_completion("xai/grok-4.6", "PONG", False)
+        self.assertEqual(ctype, "application/json")
+        payload = json.loads(body)
+        self.assertEqual(payload["choices"][0]["message"]["content"], "PONG")
+
+    def test_completion_sse(self):
+        ctype, body = server.openai_completion("xai/grok-4.6", "PONG", True)
+        self.assertEqual(ctype, "text/event-stream")
+        self.assertIn("data: [DONE]", body)
+        self.assertIn("PONG", body)
 
 
 class TurnAuthTests(unittest.TestCase):

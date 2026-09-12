@@ -1,8 +1,10 @@
 """Thin HTTP front for the generic Hermes lab profile.
 
-GET  /health          — probes (no secrets)
-GET  /                — gated chat HTML
-POST /api/v1/turn     — Bearer LAB_SHARED_TOKEN required
+GET  /health                 — probes (no secrets)
+GET  /                       — gated chat HTML
+POST /api/v1/turn            — Bearer LAB_SHARED_TOKEN required
+GET  /v1/models              — OpenAI list (same Bearer)
+POST /v1/chat/completions    — OpenAI chat (same Bearer); used by Open WebUI
 """
 from __future__ import annotations
 
@@ -10,10 +12,17 @@ import json
 import os
 import subprocess
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from providers import public_catalog, resolve_turn
+from providers import (
+    messages_to_prompt,
+    openai_models,
+    parse_openai_model,
+    public_catalog,
+    resolve_turn,
+)
 
 PORT = int(os.environ.get("PORT", "8080"))
 PROFILE = os.environ.get("HERMES_PROFILE", "lab")
@@ -43,6 +52,95 @@ def health() -> dict:
     return body
 
 
+def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
+    hermes = os.environ.get("HERMES_BIN", "hermes")
+    cmd = [hermes]
+    if PROFILE and PROFILE not in ("default", "-"):
+        cmd += ["-p", PROFILE]
+    cmd += [
+        "chat",
+        "-q",
+        message,
+        "-Q",
+        "--provider",
+        resolved["hermes_provider"],
+        "-m",
+        resolved["model"],
+    ]
+    env = {
+        **os.environ,
+        "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile"),
+        "HERMES_YOLO_MODE": "1",
+    }
+    guest = resolved.get("guest_key") or ""
+    if guest:
+        env[resolved["key_env"]] = guest
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=TURN_TIMEOUT,
+            cwd=os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
+            env=env,
+        )
+    except FileNotFoundError:
+        return {"error": "hermes_missing"}
+    except subprocess.TimeoutExpired:
+        return {"error": "timeout"}
+
+    def _redact(s: str) -> str:
+        if guest and s:
+            return s.replace(guest, "***")
+        return s
+
+    return {
+        "returncode": proc.returncode,
+        "text": _redact(proc.stdout or "")[-12000:],
+        "stderr_tail": _redact(proc.stderr or "")[-2000:],
+        "byok": bool(guest),
+        "provider": resolved["provider_id"],
+        "model": resolved["model"],
+    }
+
+
+def openai_completion(model_id: str, text: str, stream: bool) -> tuple[str, str]:
+    """Return (content_type, body)."""
+    cid = f"chatcmpl-lab-{int(time.time())}"
+    if stream:
+        chunk = {
+            "id": cid,
+            "object": "chat.completion.chunk",
+            "choices": [
+                {"index": 0, "delta": {"role": "assistant", "content": text}, "finish_reason": None}
+            ],
+        }
+        done = {
+            "id": cid,
+            "object": "chat.completion.chunk",
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
+        body = (
+            f"data: {json.dumps(chunk)}\n\n"
+            f"data: {json.dumps(done)}\n\n"
+            "data: [DONE]\n\n"
+        )
+        return "text/event-stream", body
+    payload = {
+        "id": cid,
+        "object": "chat.completion",
+        "model": model_id,
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": text},
+                "finish_reason": "stop",
+            }
+        ],
+    }
+    return "application/json", json.dumps(payload)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), format % args))
@@ -63,35 +161,70 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    def do_GET(self) -> None:  # noqa: N802
-        if self.path.split("?", 1)[0] == "/health":
-            self._json(200, health())
-            return
-        if self.path.split("?", 1)[0] in ("/", "/index.html"):
-            self._html(200, INDEX_HTML)
-            return
-        self._json(404, {"ok": False, "error": "not_found"})
+    def _bytes(self, code: int, content_type: str, body: str) -> None:
+        raw = body.encode()
+        self.send_response(code)
+        self.send_header("content-type", content_type)
+        self.send_header("content-length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
 
-    def do_POST(self) -> None:  # noqa: N802
-        if self.path.split("?", 1)[0] != "/api/v1/turn":
-            self._json(404, {"ok": False, "error": "not_found"})
-            return
+    def _route(self) -> str:
+        return self.path.split("?", 1)[0].rstrip("/") or "/"
+
+    def _auth_ok(self) -> bool:
         if not TOKEN:
             self._json(503, {"ok": False, "error": "token_not_configured"})
-            return
+            return False
         auth = self.headers.get("Authorization", "")
         got = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
         if got != TOKEN:
             self._json(401, {"ok": False, "error": "unauthorized"})
+            return False
+        return True
+
+    def do_GET(self) -> None:  # noqa: N802
+        path = self._route()
+        if path == "/health":
+            self._json(200, health())
             return
+        if path in ("/", "/index.html"):
+            self._html(200, INDEX_HTML)
+            return
+        if path == "/v1/models":
+            if not self._auth_ok():
+                return
+            self._json(200, openai_models())
+            return
+        self._json(404, {"ok": False, "error": "not_found"})
+
+    def do_POST(self) -> None:  # noqa: N802
+        path = self._route()
+        if path == "/api/v1/turn":
+            self._turn()
+            return
+        if path == "/v1/chat/completions":
+            self._chat_completions()
+            return
+        self._json(404, {"ok": False, "error": "not_found"})
+
+    def _read_json(self) -> dict | None:
         n = int(self.headers.get("content-length") or "0")
         try:
             payload = json.loads(self.rfile.read(n) or b"{}")
         except json.JSONDecodeError:
             self._json(400, {"ok": False, "error": "bad_json"})
-            return
+            return None
         if not isinstance(payload, dict):
             self._json(400, {"ok": False, "error": "bad_json"})
+            return None
+        return payload
+
+    def _turn(self) -> None:
+        if not self._auth_ok():
+            return
+        payload = self._read_json()
+        if payload is None:
             return
         message = str(payload.get("message") or "").strip()
         if not message:
@@ -103,63 +236,58 @@ class Handler(BaseHTTPRequestHandler):
             self._json(code, err)
             return
         assert resolved is not None
-        hermes = os.environ.get("HERMES_BIN", "hermes")
-        cmd = [hermes]
-        if PROFILE and PROFILE not in ("default", "-"):
-            cmd += ["-p", PROFILE]
-        cmd += [
-            "chat",
-            "-q",
-            message,
-            "-Q",
-            "--provider",
-            resolved["hermes_provider"],
-            "-m",
-            resolved["model"],
-        ]
-        env = {
-            **os.environ,
-            "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile"),
-            "HERMES_YOLO_MODE": "1",
-        }
-        guest = resolved.get("guest_key") or ""
-        if guest:
-            env[resolved["key_env"]] = guest
-        try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=TURN_TIMEOUT,
-                cwd=os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
-                env=env,
-            )
-        except FileNotFoundError:
+        result = run_hermes(message, resolved)
+        if result.get("error") == "hermes_missing":
             self._json(503, {"ok": False, "error": "hermes_missing"})
             return
-        except subprocess.TimeoutExpired:
+        if result.get("error") == "timeout":
             self._json(504, {"ok": False, "error": "timeout"})
             return
-
-        def _redact(s: str) -> str:
-            if guest and s:
-                return s.replace(guest, "***")
-            return s
-
-        # HTTP 200 even on hermes non-zero so Cloudflare does not replace the
-        # JSON body with "error code: 502".
         self._json(
             200,
             {
-                "ok": proc.returncode == 0,
-                "provider": resolved["provider_id"],
-                "model": resolved["model"],
-                "byok": bool(guest),
-                "text": _redact(proc.stdout or "")[-12000:],
-                "stderr_tail": _redact(proc.stderr or "")[-2000:],
-                "returncode": proc.returncode,
+                "ok": result["returncode"] == 0,
+                "provider": result["provider"],
+                "model": result["model"],
+                "byok": result["byok"],
+                "text": result["text"],
+                "stderr_tail": result["stderr_tail"],
+                "returncode": result["returncode"],
             },
         )
+
+    def _chat_completions(self) -> None:
+        if not self._auth_ok():
+            return
+        payload = self._read_json()
+        if payload is None:
+            return
+        model_id = str(payload.get("model") or "").strip()
+        pid, model = parse_openai_model(model_id)
+        resolved, err = resolve_turn({"provider": pid, "model": model})
+        if err is not None:
+            code = 400 if err.get("error") != "key_not_configured" else 503
+            self._json(code, {"error": {"message": err.get("error"), "type": "invalid_request_error"}})
+            return
+        assert resolved is not None
+        prompt = messages_to_prompt(payload.get("messages"))
+        if not prompt:
+            self._json(400, {"error": {"message": "empty_message", "type": "invalid_request_error"}})
+            return
+        result = run_hermes(prompt, resolved)
+        if result.get("error"):
+            code = 504 if result["error"] == "timeout" else 503
+            self._json(code, {"error": {"message": result["error"], "type": "server_error"}})
+            return
+        text = str(result.get("text") or "")
+        if result.get("returncode") != 0:
+            text = text or str(result.get("stderr_tail") or "hermes_failed")
+        ctype, body = openai_completion(
+            model_id or f"{pid}/{model}",
+            text,
+            bool(payload.get("stream")),
+        )
+        self._bytes(200, ctype, body)
 
 
 INDEX_HTML = """<!DOCTYPE html>

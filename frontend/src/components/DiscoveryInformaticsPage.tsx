@@ -351,10 +351,17 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               </li>
             </ul>
             <a
-              href="#lab-console"
-              className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
+              href="https://lab-chat.flmanbiosci.net/"
+              rel="noopener noreferrer"
+              className="mt-8 mr-3 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
             >
-              Open lab console on this page →
+              Open lab chat →
+            </a>
+            <a
+              href="#lab-console"
+              className="mt-8 inline-flex min-h-11 items-center rounded-full border border-[#1a6b4a] px-6 py-3 text-sm font-semibold text-[#1a6b4a] hover:bg-[#e8f3ee]"
+            >
+              One-shot console on this page
             </a>
             <LabConsole />
           </div>

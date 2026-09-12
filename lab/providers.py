@@ -133,3 +133,52 @@ def resolve_turn(payload: dict[str, Any]) -> tuple[dict[str, str] | None, dict[s
     if guest:
         out["guest_key"] = guest
     return out, None
+
+
+def parse_openai_model(model_id: str) -> tuple[str, str]:
+    """Map OpenAI `model` (provider/name) onto jail provider + model."""
+    raw = (model_id or "").strip()
+    if not raw:
+        spec = PROVIDERS[DEFAULT_PROVIDER]
+        return DEFAULT_PROVIDER, str(spec["default_model"])
+    if "/" in raw:
+        head, rest = raw.split("/", 1)
+        if head in PROVIDERS:
+            return head, rest
+    hits = [pid for pid, spec in PROVIDERS.items() if raw in spec["models"]]
+    if len(hits) == 1:
+        return hits[0], raw
+    if raw in PROVIDERS:
+        return raw, str(PROVIDERS[raw]["default_model"])
+    return DEFAULT_PROVIDER, raw
+
+
+def openai_models() -> dict[str, Any]:
+    data = []
+    for pid, spec in PROVIDERS.items():
+        for m in spec["models"]:
+            data.append({"id": f"{pid}/{m}", "object": "model", "owned_by": pid})
+    return {"object": "list", "data": data}
+
+
+def messages_to_prompt(messages: Any) -> str:
+    if not isinstance(messages, list):
+        return ""
+    parts: list[str] = []
+    for item in messages:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "user").strip() or "user"
+        content = item.get("content")
+        if isinstance(content, list):
+            bits = []
+            for block in content:
+                if isinstance(block, dict) and block.get("type") in (None, "text"):
+                    bits.append(str(block.get("text") or ""))
+                elif isinstance(block, str):
+                    bits.append(block)
+            content = " ".join(bits)
+        text = str(content or "").strip()
+        if text:
+            parts.append(f"{role}: {text}")
+    return "\n".join(parts)
