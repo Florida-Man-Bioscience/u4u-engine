@@ -1,8 +1,5 @@
 import { NextRequest } from "next/server";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 const UPSTREAM =
   process.env.OWUI_UPSTREAM ?? "http://lab-chat.theswamp.svc:8080";
 
@@ -20,8 +17,6 @@ function publicLocation(raw: string): string {
     const lu = new URL(raw, "https://flmanbiosci.net");
     let path = lu.pathname;
     if (
-      path === "/auth" ||
-      path.startsWith("/auth/") ||
       path.startsWith("/static/") ||
       path.startsWith("/_app/") ||
       path.startsWith("/api/") ||
@@ -34,22 +29,28 @@ function publicLocation(raw: string): string {
     if (lu.hostname.includes("lab-chat") || lu.hostname.includes("theswamp")) {
       return `${path}${lu.search}`;
     }
-    if (path.startsWith("/owui") || path !== lu.pathname) {
-      return `${path}${lu.search}`;
-    }
+    if (path !== lu.pathname) return `${path}${lu.search}`;
   } catch {
     /* keep */
   }
   return raw;
 }
 
-function rewriteBody(text: string, contentType: string): string {
+function rewriteBody(
+  text: string,
+  contentType: string,
+  kitBase: string,
+): string {
   let t = text.replaceAll(
     'const _="Open WebUI",a=""',
     'const _="Open WebUI",a="/owui"',
   );
-  t = t.replaceAll('base: ""', 'base: "/owui"');
-  t = t.replaceAll("base: ''", "base: '/owui'");
+  if (kitBase) {
+    t = t.replaceAll('base: ""', `base: "${kitBase}"`);
+    t = t.replaceAll("base: ''", `base: '${kitBase}'`);
+  } else {
+    t = t.replaceAll('base: "/owui"', 'base: ""');
+  }
   t = t.replaceAll('fetch("/api/', 'fetch("/owui/api/');
   t = t.replaceAll("fetch('/api/", "fetch('/owui/api/");
   t = t.replaceAll('"/openai/', '"/owui/openai/');
@@ -75,8 +76,11 @@ function isText(ct: string): boolean {
   );
 }
 
-/** suffix is path on the nginx sidecar, e.g. /owui/ or /owui/auth */
-export async function proxyOwui(req: NextRequest, suffix: string) {
+export async function proxyOwui(
+  req: NextRequest,
+  suffix: string,
+  kitBase = "/owui",
+) {
   const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("connection");
@@ -109,7 +113,7 @@ export async function proxyOwui(req: NextRequest, suffix: string) {
   out.set("cdn-cache-control", "no-store");
 
   if (req.method !== "HEAD" && isText(ct)) {
-    const text = rewriteBody(await r.text(), ct);
+    const text = rewriteBody(await r.text(), ct, kitBase);
     return new Response(text, { status: r.status, headers: out });
   }
   return new Response(r.body, { status: r.status, headers: out });
