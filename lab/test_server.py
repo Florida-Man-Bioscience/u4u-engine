@@ -20,6 +20,8 @@ class HealthTests(unittest.TestCase):
         self.assertEqual(h["profile"], "lab")
         self.assertEqual(h["class"], "lab-jail")
         self.assertTrue(h["token_configured"])
+        self.assertIn("bioskills_count", h)
+        self.assertGreaterEqual(h["bioskills_count"], 0)
         ids = [p["id"] for p in h["providers"]]
         self.assertEqual(
             ids,

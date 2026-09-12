@@ -21,6 +21,13 @@ TOKEN = os.environ.get("LAB_SHARED_TOKEN", "")
 TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "120"))
 
 
+def _skill_count(root: str) -> int:
+    p = Path(root)
+    if not p.is_dir():
+        return 0
+    return sum(1 for _ in p.rglob("SKILL.md"))
+
+
 def health() -> dict:
     body = {
         "ok": True,
@@ -29,6 +36,8 @@ def health() -> dict:
         "class": "lab-jail",
         "token_configured": bool(TOKEN),
         "workspace": os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
+        "bioskills_count": _skill_count("/opt/bioskills"),
+        "science_skills_count": _skill_count("/opt/lab-science-skills"),
     }
     body.update(public_catalog())
     return body

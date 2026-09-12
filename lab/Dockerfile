@@ -16,9 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash \
     && ln -sf /root/.local/bin/hermes /usr/local/bin/hermes || true
 
+# Public bioinformatics pack (GPTomics/bioSkills 3.0). Not Yue/ARMH3 trees.
+RUN git clone --depth 1 --branch 3.0 https://github.com/GPTomics/bioSkills.git /opt/bioskills \
+    && test "$(git -C /opt/bioskills rev-parse HEAD)" = "fae219d8cacb7be84b96b3a99122556c1a42a47b" \
+    && test "$(find /opt/bioskills -name SKILL.md | wc -l)" -ge 300 \
+    && rm -rf /opt/bioskills/.git
+
 WORKDIR /app
 COPY server.py providers.py /app/
 COPY profile/ /opt/lab-profile/
+COPY science-skills/ /opt/lab-science-skills/
 
 RUN mkdir -p /data/profile /data/workspace \
     && cp -a /opt/lab-profile/. /data/profile/ \
