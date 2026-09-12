@@ -1,0 +1,41 @@
+# COPY into hwcopeland/iac (you open that PR — do not apply from here):
+#   rke2/tooling/flux/theswamp/httproute-lab-chat.yaml
+# Then add one line to that dir's kustomization.yaml resources:
+#   - httproute-lab-chat.yaml
+#
+# Backend Service `lab-chat` is NOT in IAC. Apply
+#   u4u-engine/lab/k8s/open-webui.yaml
+# in theswamp first (or the route has nowhere to send traffic).
+---
+# Discovery Informatics Open WebUI chat.
+# Attaches to *.flmanbiosci.net wildcard. No Authentik.
+# Open WebUI talks cluster-local to Service di-lab:8080 /v1.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lab-chat
+  namespace: theswamp
+spec:
+  parentRefs:
+    - name: hwcopeland-gateway
+      namespace: kube-system
+      sectionName: flmanbiosci-https
+  hostnames:
+    - "lab-chat.flmanbiosci.net"
+  rules:
+    - backendRefs:
+        - name: lab-chat
+          port: 8080
+---
+apiVersion: cloudflare-operator.io/v1
+kind: DNSRecord
+metadata:
+  name: lab-chat.flmanbiosci.net
+  namespace: theswamp
+spec:
+  name: lab-chat.flmanbiosci.net
+  type: CNAME
+  content: flmanbiosci.net
+  proxied: true
+  ttl: 1
+  interval: 5m

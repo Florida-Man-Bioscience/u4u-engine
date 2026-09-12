@@ -1,0 +1,93 @@
+# Open WebUI for Discovery Informatics. Apply in theswamp (not IAC).
+# Needs HTTPRoute+DNS from lab/k8s/iac-httproute-lab-chat.yaml (you PR that).
+# Jail token stays in secret di-lab-keys — never in this file.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lab-chat-data
+  namespace: theswamp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab-chat
+  namespace: theswamp
+spec:
+  selector:
+    app: lab-chat
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-chat
+  namespace: theswamp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lab-chat
+  template:
+    metadata:
+      labels:
+        app: lab-chat
+    spec:
+      containers:
+        - name: open-webui
+          image: ghcr.io/open-webui/open-webui:v0.6.36
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: WEBUI_NAME
+              value: Discovery Informatics
+            - name: WEBUI_URL
+              value: https://lab-chat.flmanbiosci.net
+            - name: WEBUI_AUTH
+              value: "false"
+            - name: ENABLE_SIGNUP
+              value: "false"
+            - name: OPENAI_API_BASE_URL
+              value: http://di-lab:8080/v1
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: di-lab-keys
+                  key: LAB_SHARED_TOKEN
+          volumeMounts:
+            - name: data
+              mountPath: /app/backend/data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lab-chat-data
