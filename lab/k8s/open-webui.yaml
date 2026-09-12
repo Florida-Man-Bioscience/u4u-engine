@@ -41,7 +41,6 @@ data:
           sub_filter 'const _="Open WebUI",a=""' 'const _="Open WebUI",a="/owui"';
           sub_filter 'base: ""' 'base: "/owui"';
           sub_filter '/static/splash' '/owui/static/splash';
-          sub_filter '"/auth' '"/owui/auth';
           sub_filter_once off;
         }
         location = /health {
