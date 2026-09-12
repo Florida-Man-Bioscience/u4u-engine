@@ -350,16 +350,16 @@ export function DiscoveryInformaticsPage({ product }: Props) {
                 . Empty token → POST 401.
               </li>
             </ul>
-            <a
-              href="/owui/"
-              rel="noopener noreferrer"
-              className="mt-8 mr-3 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
-            >
-              Open lab chat →
-            </a>
+            <p className="mt-6 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
+              Public UI is the one-shot console on this page. A NaviGator-style
+              Open WebUI host (
+              <code className="font-mono text-xs">lab-chat.flmanbiosci.net</code>
+              ) waits on an IAC HTTPRoute — not{" "}
+              <code className="font-mono text-xs">/owui</code>.
+            </p>
             <a
               href="#lab-console"
-              className="mt-8 inline-flex min-h-11 items-center rounded-full border border-[#1a6b4a] px-6 py-3 text-sm font-semibold text-[#1a6b4a] hover:bg-[#e8f3ee]"
+              className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
             >
               One-shot console on this page
             </a>

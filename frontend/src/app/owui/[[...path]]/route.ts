@@ -1,20 +1,19 @@
-import { NextRequest } from "next/server";
-import { owuiSuffix, proxyOwui } from "@/lib/owui-proxy";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
-type Ctx = { params: Promise<{ path?: string[] }> };
+const CONSOLE =
+  "https://flmanbiosci.net/products/discovery-informatics#lab-console";
 
-async function handle(req: NextRequest, ctx: Ctx) {
-  const { path } = await ctx.params;
-  return proxyOwui(req, owuiSuffix(path));
+/** /owui is retired. Dedicated host is IAC. Public UI is the one-shot console. */
+function redirect(_req: NextRequest) {
+  return NextResponse.redirect(CONSOLE, 302);
 }
 
-export const GET = handle;
-export const POST = handle;
-export const PUT = handle;
-export const PATCH = handle;
-export const DELETE = handle;
-export const HEAD = handle;
-export const OPTIONS = handle;
+export const GET = redirect;
+export const POST = redirect;
+export const PUT = redirect;
+export const PATCH = redirect;
+export const DELETE = redirect;
+export const HEAD = redirect;
+export const OPTIONS = redirect;

@@ -1,54 +1,7 @@
-# Open WebUI behind https://flmanbiosci.net/owui (no new DNS).
-# nginx on :8080 rewrites /owui/ → Open WebUI on :8081.
+# Open WebUI for Discovery Informatics. Apply in theswamp (not IAC).
+# Serves at / on Service lab-chat:8080. Public hostname needs
+# lab/k8s/iac-httproute-lab-chat.yaml (Noah opens that PR — do not apply here).
 # Jail token stays in secret di-lab-keys — never in this file.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: lab-chat-nginx
-  namespace: theswamp
-data:
-  nginx.conf: |
-    worker_processes 1;
-    error_log /dev/stderr warn;
-    pid /tmp/nginx.pid;
-    events { worker_connections 1024; }
-    http {
-      access_log /dev/stdout;
-      map $http_upgrade $connection_upgrade {
-        default upgrade;
-        '' close;
-      }
-      server {
-        listen 8080;
-        server_name _;
-        location = /owui { return 301 /owui/; }
-        location /owui/ {
-          proxy_pass http://127.0.0.1:8081/;
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection $connection_upgrade;
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-Proto https;
-          proxy_set_header X-Forwarded-Prefix /owui;
-          proxy_set_header Accept-Encoding "";
-          proxy_read_timeout 600s;
-          sub_filter_types text/html application/javascript text/javascript text/css;
-          sub_filter 'href="/' 'href="/owui/';
-          sub_filter 'src="/' 'src="/owui/';
-          sub_filter 'action="/' 'action="/owui/';
-          sub_filter '"/_app' '"/owui/_app';
-          sub_filter "'/_app" "'/owui/_app";
-          sub_filter 'const _="Open WebUI",a=""' 'const _="Open WebUI",a="/owui"';
-          sub_filter 'base: ""' 'base: "/owui"';
-          sub_filter '/static/splash' '/owui/static/splash';
-          sub_filter_once off;
-        }
-        location = /health {
-          proxy_pass http://127.0.0.1:8081/health;
-        }
-      }
-    }
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -94,20 +47,20 @@ spec:
         - name: open-webui
           image: ghcr.io/open-webui/open-webui:v0.6.36
           ports:
-            - containerPort: 8081
+            - containerPort: 8080
           env:
             - name: PORT
-              value: "8081"
+              value: "8080"
             - name: WEBUI_NAME
               value: Discovery Informatics
             - name: WEBUI_URL
-              value: https://flmanbiosci.net/owui
+              value: https://lab-chat.flmanbiosci.net
             - name: WEBUI_AUTH
               value: "false"
             - name: ENABLE_SIGNUP
               value: "false"
             - name: CORS_ALLOW_ORIGIN
-              value: "https://flmanbiosci.net"
+              value: "https://lab-chat.flmanbiosci.net"
             - name: OPENAI_API_BASE_URL
               value: http://di-lab:8080/v1
             - name: OPENAI_API_KEY
@@ -121,13 +74,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8081
+              port: 8080
             initialDelaySeconds: 20
             periodSeconds: 15
           livenessProbe:
             httpGet:
               path: /health
-              port: 8081
+              port: 8080
             initialDelaySeconds: 50
             periodSeconds: 30
           resources:
@@ -137,32 +90,7 @@ spec:
             limits:
               cpu: "2"
               memory: 2Gi
-        - name: prefix
-          image: nginx:1.27-alpine
-          ports:
-            - containerPort: 8080
-          volumeMounts:
-            - name: nginx
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: 25m
-              memory: 32Mi
-            limits:
-              cpu: 200m
-              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: lab-chat-data
-        - name: nginx
-          configMap:
-            name: lab-chat-nginx
-
