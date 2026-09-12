@@ -77,3 +77,7 @@ gateway:
   multiplex_profiles: false
 plugins:
   enabled: []
+skills:
+  external_dirs:
+    - /opt/bioskills
+    - /opt/lab-science-skills
