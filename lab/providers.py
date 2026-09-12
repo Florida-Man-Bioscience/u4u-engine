@@ -96,11 +96,16 @@ def public_catalog() -> dict[str, Any]:
         (p["id"] for p in rows if p["key_configured"]),
         DEFAULT_PROVIDER,
     )
-    return {"providers": rows, "default_provider": chosen}
+    return {"providers": rows, "default_provider": chosen, "byok": True}
+
+
+def guest_api_key(payload: dict[str, Any]) -> str:
+    raw = payload.get("api_key") or payload.get("key") or ""
+    return str(raw).strip()
 
 
 def resolve_turn(payload: dict[str, Any]) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
-    """Return ({provider_id, hermes_provider, model}, None) or (None, error_body)."""
+    """Return ({provider_id, hermes_provider, model, key_env, guest_key?}, None) or error."""
     pid = str(payload.get("provider") or DEFAULT_PROVIDER).strip()
     spec = PROVIDERS.get(pid)
     if spec is None:
@@ -114,10 +119,17 @@ def resolve_turn(payload: dict[str, Any]) -> tuple[dict[str, str] | None, dict[s
             "provider": pid,
             "model": model,
         }
-    if not key_configured(pid):
+    guest = guest_api_key(payload)
+    if guest and len(guest) > 512:
+        return None, {"ok": False, "error": "key_too_long"}
+    if not guest and not key_configured(pid):
         return None, {"ok": False, "error": "key_not_configured", "provider": pid}
-    return {
+    out = {
         "provider_id": pid,
         "hermes_provider": str(spec["hermes_provider"]),
         "model": model,
-    }, None
+        "key_env": str(spec["key_env"]),
+    }
+    if guest:
+        out["guest_key"] = guest
+    return out, None

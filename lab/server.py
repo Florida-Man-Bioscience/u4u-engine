@@ -122,6 +122,9 @@ class Handler(BaseHTTPRequestHandler):
             "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile"),
             "HERMES_YOLO_MODE": "1",
         }
+        guest = resolved.get("guest_key") or ""
+        if guest:
+            env[resolved["key_env"]] = guest
         try:
             proc = subprocess.run(
                 cmd,
@@ -137,6 +140,12 @@ class Handler(BaseHTTPRequestHandler):
         except subprocess.TimeoutExpired:
             self._json(504, {"ok": False, "error": "timeout"})
             return
+
+        def _redact(s: str) -> str:
+            if guest and s:
+                return s.replace(guest, "***")
+            return s
+
         # HTTP 200 even on hermes non-zero so Cloudflare does not replace the
         # JSON body with "error code: 502".
         self._json(
@@ -145,8 +154,9 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": proc.returncode == 0,
                 "provider": resolved["provider_id"],
                 "model": resolved["model"],
-                "text": (proc.stdout or "")[-12000:],
-                "stderr_tail": (proc.stderr or "")[-2000:],
+                "byok": bool(guest),
+                "text": _redact(proc.stdout or "")[-12000:],
+                "stderr_tail": _redact(proc.stderr or "")[-2000:],
                 "returncode": proc.returncode,
             },
         )
@@ -171,7 +181,8 @@ a { color: var(--brand); }
 <h1>Lab jail</h1>
 <p>Generic Hermes lab profile (the class <code>yue-lab</code> belongs to). Empty desk. Bearer token required. Not a public unauthenticated agent.</p>
 <p><a href="https://flmanbiosci.net/products/discovery-informatics">← Discovery Informatics</a></p>
-<label>Token <input id="tok" type="password" autocomplete="off"/></label>
+<label>Shared token <input id="tok" type="password" autocomplete="off"/></label>
+<label>Provider API key (optional — this turn only) <input id="apikey" type="password" autocomplete="off"/></label>
 <label>Provider <select id="prov"></select></label>
 <label>Model <select id="mod"></select></label>
 <label>Ask <textarea id="msg" rows="4" placeholder="Normalize this public gene ID, then say cannots."></textarea></label>
@@ -185,8 +196,7 @@ fetch("/health").then(r => r.json()).then(h => {
     catalog[p.id] = p;
     const o = document.createElement("option");
     o.value = p.id;
-    o.textContent = p.label + (p.key_configured ? "" : " (no key)");
-    o.disabled = !p.key_configured;
+    o.textContent = p.label + (p.key_configured ? "" : " (bring your key)");
     sel.appendChild(o);
   });
   if (h.default_provider) sel.value = h.default_provider;
@@ -208,17 +218,20 @@ document.getElementById("prov").onchange = fillModels;
 document.getElementById("go").onclick = async () => {
   const out = document.getElementById("out");
   out.textContent = "…";
+  const body = {
+    message: document.getElementById("msg").value,
+    provider: document.getElementById("prov").value,
+    model: document.getElementById("mod").value
+  };
+  const k = document.getElementById("apikey").value.trim();
+  if (k) body.api_key = k;
   const r = await fetch("/api/v1/turn", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "authorization": "Bearer " + document.getElementById("tok").value
     },
-    body: JSON.stringify({
-      message: document.getElementById("msg").value,
-      provider: document.getElementById("prov").value,
-      model: document.getElementById("mod").value
-    })
+    body: JSON.stringify(body)
   });
   out.textContent = await r.text();
 };
