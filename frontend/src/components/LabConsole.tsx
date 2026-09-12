@@ -23,6 +23,7 @@ export function LabConsole() {
   const [token, setToken] = useState("");
   const [provider, setProvider] = useState("neuralwatt");
   const [model, setModel] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
@@ -82,7 +83,12 @@ export function LabConsole() {
           "content-type": "application/json",
           authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message, provider, model }),
+        body: JSON.stringify({
+          message,
+          provider,
+          model,
+          ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
+        }),
       });
       const raw = await r.text();
       let j: {
@@ -151,9 +157,9 @@ export function LabConsole() {
                 <option value={provider}>{provider}</option>
               ) : (
                 providers.map((p) => (
-                  <option key={p.id} value={p.id} disabled={!p.key_configured}>
+                  <option key={p.id} value={p.id}>
                     {p.label}
-                    {p.key_configured ? "" : " (no key)"}
+                    {p.key_configured ? "" : " (bring your key)"}
                   </option>
                 ))
               )}
@@ -175,6 +181,17 @@ export function LabConsole() {
           </label>
         </div>
         <label className="grid gap-1 text-sm">
+          Provider API key (optional)
+          <input
+            type="password"
+            autoComplete="off"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Uses yours for this turn only. Leave blank to use the jail key."
+            className="min-h-11 rounded-lg border border-[#d4c4a8] px-3"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
           Message
           <textarea
             value={message}
@@ -186,7 +203,11 @@ export function LabConsole() {
         </label>
         <button
           type="submit"
-          disabled={busy || !live || (current ? !current.key_configured : false)}
+          disabled={
+            busy ||
+            !live ||
+            (current ? !current.key_configured && !apiKey.trim() : false)
+          }
           className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
         >
           {busy ? "Running…" : "Send turn"}

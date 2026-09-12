@@ -65,6 +65,28 @@ class ResolveTurnTests(unittest.TestCase):
         assert got is not None
         self.assertEqual(got["hermes_provider"], "custom:openai")
         self.assertEqual(got["model"], "gpt-4o")
+        self.assertNotIn("guest_key", got)
+
+    def test_guest_key_without_jail_key(self):
+        got, err = providers.resolve_turn(
+            {
+                "provider": "openai",
+                "model": "gpt-4o",
+                "api_key": "sk-user-secret",
+            }
+        )
+        self.assertIsNone(err)
+        assert got is not None
+        self.assertEqual(got["guest_key"], "sk-user-secret")
+        self.assertEqual(got["key_env"], "OPENAI_API_KEY")
+
+    def test_guest_key_too_long(self):
+        got, err = providers.resolve_turn(
+            {"provider": "openai", "model": "gpt-4o", "api_key": "x" * 513}
+        )
+        self.assertIsNone(got)
+        assert err is not None
+        self.assertEqual(err["error"], "key_too_long")
 
     def test_default_model(self):
         os.environ["NAVIGATOR_API_KEY"] = "sk-g"

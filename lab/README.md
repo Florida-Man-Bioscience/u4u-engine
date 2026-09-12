@@ -12,10 +12,10 @@ curl -sS localhost:8080/health
 `GET /health` lists providers + `key_configured` (never the secret). `POST /api/v1/turn` body:
 
 ```json
-{"message":"…","provider":"openai","model":"gpt-4o"}
+{"message":"…","provider":"openai","model":"gpt-4o","api_key":"(optional BYOK)"}
 ```
 
-Allowlist: `neuralwatt`, `openai`, `openrouter`, `navigator`, `anthropic`, `xai`. Keys from env / `di-lab-keys` (`NEURALWATT_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `NAVIGATOR_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`). Do not put keys in git or the browser.
+Allowlist: `neuralwatt`, `openai`, `openrouter`, `navigator`, `anthropic`, `xai`. Jail keys from env / `di-lab-keys`. Optional per-turn `api_key` uses the visitor's key for that request only (not stored). Shared token is still required. Do not put keys in git.
 
 Never `--clone` yue-lab. Never bind host `$HOME`.
 
