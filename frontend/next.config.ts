@@ -44,6 +44,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    const owui =
+      process.env.OWUI_UPSTREAM ?? "http://lab-chat.theswamp.svc:8080";
+    return [
+      { source: "/owui", destination: `${owui}/owui` },
+      { source: "/owui/:path*", destination: `${owui}/owui/:path*` },
+    ];
+  },
 };
 
 export default nextConfig;

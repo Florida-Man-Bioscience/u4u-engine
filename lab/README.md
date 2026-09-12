@@ -29,14 +29,10 @@ kubectl -n theswamp apply -f lab/k8s/theswamp.yaml
 
 Public chat is **same-origin** on `/products/discovery-informatics#lab-console` via `/api/lab/*` → Service `di-lab:8080`.
 
-Open WebUI (NaviGator-like) is a **separate pod**. You PR IAC; apply the app here:
+Open WebUI is at **https://flmanbiosci.net/owui** (Next.js rewrite → Service `lab-chat`, no new DNS). Apply the pod:
 
 ```bash
-# 1. You: copy lab/k8s/iac-httproute-lab-chat.yaml →
-#    iac/rke2/tooling/flux/theswamp/httproute-lab-chat.yaml
-#    and add `- httproute-lab-chat.yaml` to that kustomization.yaml.
-# 2. After di-lab image with /v1/chat/completions is live:
 kubectl -n theswamp apply -f lab/k8s/open-webui.yaml
 ```
 
-Open WebUI uses `OPENAI_API_BASE_URL=http://di-lab:8080/v1` and `OPENAI_API_KEY` = `LAB_SHARED_TOKEN` from `di-lab-keys` (not in git). `WEBUI_AUTH=false`.
+`WEBUI_AUTH=false`. Token stays in `di-lab-keys`. HTTPRoute is forbidden in this ns — do not add one.

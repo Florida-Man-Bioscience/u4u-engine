@@ -1,6 +1,51 @@
-# Open WebUI for Discovery Informatics. Apply in theswamp (not IAC).
-# Needs HTTPRoute+DNS from lab/k8s/iac-httproute-lab-chat.yaml (you PR that).
+# Open WebUI behind https://flmanbiosci.net/owui (no new DNS).
+# nginx on :8080 rewrites /owui/ → Open WebUI on :8081.
 # Jail token stays in secret di-lab-keys — never in this file.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lab-chat-nginx
+  namespace: theswamp
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+    events { worker_connections 1024; }
+    http {
+      access_log /dev/stdout;
+      map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+      }
+      server {
+        listen 8080;
+        server_name _;
+        location = /owui { return 301 /owui/; }
+        location /owui/ {
+          proxy_pass http://127.0.0.1:8081/;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Prefix /owui;
+          proxy_set_header Accept-Encoding "";
+          proxy_read_timeout 600s;
+          sub_filter_types text/html application/javascript text/css;
+          sub_filter 'href="/' 'href="/owui/';
+          sub_filter 'src="/' 'src="/owui/';
+          sub_filter 'action="/' 'action="/owui/';
+          sub_filter '"/_app' '"/owui/_app';
+          sub_filter "'/_app" "'/owui/_app";
+          sub_filter_once off;
+        }
+        location = /health {
+          proxy_pass http://127.0.0.1:8081/health;
+        }
+      }
+    }
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -46,14 +91,14 @@ spec:
         - name: open-webui
           image: ghcr.io/open-webui/open-webui:v0.6.36
           ports:
-            - containerPort: 8080
+            - containerPort: 8081
           env:
             - name: PORT
-              value: "8080"
+              value: "8081"
             - name: WEBUI_NAME
               value: Discovery Informatics
             - name: WEBUI_URL
-              value: https://lab-chat.flmanbiosci.net
+              value: https://flmanbiosci.net/owui
             - name: WEBUI_AUTH
               value: "false"
             - name: ENABLE_SIGNUP
@@ -71,14 +116,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
-            initialDelaySeconds: 15
+              port: 8081
+            initialDelaySeconds: 20
             periodSeconds: 15
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
-            initialDelaySeconds: 40
+              port: 8081
+            initialDelaySeconds: 50
             periodSeconds: 30
           resources:
             requests:
@@ -87,7 +132,32 @@ spec:
             limits:
               cpu: "2"
               memory: 2Gi
+        - name: prefix
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: lab-chat-data
+        - name: nginx
+          configMap:
+            name: lab-chat-nginx
+
