@@ -56,8 +56,6 @@ function rewriteBody(text: string, contentType: string): string {
   t = t.replaceAll("'/openai/", "'/owui/openai/");
   t = t.replaceAll('"/ollama/', '"/owui/ollama/');
   t = t.replaceAll("'/ollama/", "'/owui/ollama/");
-  t = t.replaceAll('"/auth', '"/owui/auth');
-  t = t.replaceAll("'/auth", "'/owui/auth");
   t = t.replaceAll('"/static/splash', '"/owui/static/splash');
   t = t.replaceAll("'/static/splash", "'/owui/static/splash");
   t = t.replaceAll("/owui/owui/", "/owui/");
