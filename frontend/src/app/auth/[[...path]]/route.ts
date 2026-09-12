@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { owuiSuffix, proxyOwui } from "@/lib/owui-proxy";
+import { authSuffix, proxyOwui } from "@/lib/owui-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ type Ctx = { params: Promise<{ path?: string[] }> };
 
 async function handle(req: NextRequest, ctx: Ctx) {
   const { path } = await ctx.params;
-  return proxyOwui(req, owuiSuffix(path));
+  return proxyOwui(req, authSuffix(path));
 }
 
 export const GET = handle;

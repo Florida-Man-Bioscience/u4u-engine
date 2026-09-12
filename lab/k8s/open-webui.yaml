@@ -32,12 +32,16 @@ data:
           proxy_set_header X-Forwarded-Prefix /owui;
           proxy_set_header Accept-Encoding "";
           proxy_read_timeout 600s;
-          sub_filter_types text/html application/javascript text/css;
+          sub_filter_types text/html application/javascript text/javascript text/css;
           sub_filter 'href="/' 'href="/owui/';
           sub_filter 'src="/' 'src="/owui/';
           sub_filter 'action="/' 'action="/owui/';
           sub_filter '"/_app' '"/owui/_app';
           sub_filter "'/_app" "'/owui/_app";
+          sub_filter 'const _="Open WebUI",a=""' 'const _="Open WebUI",a="/owui"';
+          sub_filter 'base: ""' 'base: "/owui"';
+          sub_filter '/static/splash' '/owui/static/splash';
+          sub_filter '"/auth' '"/owui/auth';
           sub_filter_once off;
         }
         location = /health {
@@ -103,6 +107,8 @@ spec:
               value: "false"
             - name: ENABLE_SIGNUP
               value: "false"
+            - name: CORS_ALLOW_ORIGIN
+              value: "https://flmanbiosci.net"
             - name: OPENAI_API_BASE_URL
               value: http://di-lab:8080/v1
             - name: OPENAI_API_KEY
