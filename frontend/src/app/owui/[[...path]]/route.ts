@@ -42,11 +42,9 @@ function rewriteBody(text: string, contentType: string): string {
   t = t.replaceAll('"/ollama/', '"/owui/ollama/');
   t = t.replaceAll("'/ollama/", "'/owui/ollama/");
   t = t.replaceAll("/owui/owui/", "/owui/");
-  if (contentType.includes("html")) {
-    t = t.replace(
-      /(\/owui\/_app\/immutable\/[^"' ]+\.js)/g,
-      "$1?v=owui2",
-    );
+  if (contentType.includes("html") || contentType.includes("javascript")) {
+    t = t.replace(/\.js\?v=owui2/g, ".js");
+    t = t.replace(/\.js(["'])/g, ".js?v=owui2$1");
   }
   return t;
 }
