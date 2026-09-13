@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HERMES_HOME=/data/profile \
     HERMES_WORKSPACE=/data/workspace \
     HERMES_PROFILE=lab \
+    PYTHONPATH=/opt/litreview/src \
     PORT=8080
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,9 +24,10 @@ RUN git clone --depth 1 --branch 3.0 https://github.com/GPTomics/bioSkills.git /
     && rm -rf /opt/bioskills/.git
 
 WORKDIR /app
-COPY server.py providers.py /app/
+COPY server.py providers.py paper_decomp_api.py /app/
 COPY profile/ /opt/lab-profile/
 COPY science-skills/ /opt/lab-science-skills/
+COPY litreview-engine/ /opt/litreview/
 
 RUN mkdir -p /data/profile /data/workspace \
     && cp -a /opt/lab-profile/. /data/profile/ \
