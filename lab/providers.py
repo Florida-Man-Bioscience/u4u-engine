@@ -182,3 +182,20 @@ def messages_to_prompt(messages: Any) -> str:
         if text:
             parts.append(f"{role}: {text}")
     return "\n".join(parts)
+
+
+MAX_TURN_PROMPT = 24000
+MAX_TURN_MESSAGES = 32
+
+
+def turn_prompt(payload: dict[str, Any]) -> str:
+    """Multi-shot: prefer messages[] (chat thread). Fall back to one-shot `message`."""
+    messages = payload.get("messages")
+    prompt = ""
+    if isinstance(messages, list) and messages:
+        prompt = messages_to_prompt(messages[-MAX_TURN_MESSAGES:])
+    if not prompt:
+        prompt = str(payload.get("message") or "").strip()
+    if len(prompt) > MAX_TURN_PROMPT:
+        prompt = prompt[-MAX_TURN_PROMPT:]
+    return prompt

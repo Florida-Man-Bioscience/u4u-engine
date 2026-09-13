@@ -3,6 +3,8 @@
 GET  /health                 — probes (no secrets)
 GET  /                       — gated chat HTML
 POST /api/v1/turn            — Bearer LAB_SHARED_TOKEN required
+                                 body: {message} or {messages:[{role,content},...]}
+                                 Preloads skill lit-review (LAB_PRELOAD_SKILLS).
 GET  /v1/models              — OpenAI list (same Bearer)
 POST /v1/chat/completions    — OpenAI chat (same Bearer); used by Open WebUI
 """
@@ -23,12 +25,18 @@ from providers import (
     parse_openai_model,
     public_catalog,
     resolve_turn,
+    turn_prompt,
 )
 
 PORT = int(os.environ.get("PORT", "8080"))
 PROFILE = os.environ.get("HERMES_PROFILE", "lab")
 TOKEN = os.environ.get("LAB_SHARED_TOKEN", "")
 TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "120"))
+PRELOAD_SKILLS = tuple(
+    s.strip()
+    for s in os.environ.get("LAB_PRELOAD_SKILLS", "lit-review").split(",")
+    if s.strip()
+)
 
 
 def _skill_count(root: str) -> int:
@@ -54,11 +62,13 @@ def health() -> dict:
     return body
 
 
-def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
+def hermes_cmd(message: str, resolved: dict[str, str]) -> list[str]:
     hermes = os.environ.get("HERMES_BIN", "hermes")
     cmd = [hermes]
     if PROFILE and PROFILE not in ("default", "-"):
         cmd += ["-p", PROFILE]
+    for skill in PRELOAD_SKILLS:
+        cmd += ["-s", skill]
     cmd += [
         "chat",
         "-q",
@@ -69,6 +79,11 @@ def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
         "-m",
         resolved["model"],
     ]
+    return cmd
+
+
+def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
+    cmd = hermes_cmd(message, resolved)
     env = {
         **os.environ,
         "HERMES_HOME": os.environ.get("HERMES_HOME", "/data/profile"),
@@ -240,7 +255,7 @@ class Handler(BaseHTTPRequestHandler):
         payload = self._read_json()
         if payload is None:
             return
-        message = str(payload.get("message") or "").strip()
+        message = turn_prompt(payload)
         if not message:
             self._json(400, {"ok": False, "error": "empty_message"})
             return
@@ -284,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(code, {"error": {"message": err.get("error"), "type": "invalid_request_error"}})
             return
         assert resolved is not None
-        prompt = messages_to_prompt(payload.get("messages"))
+        prompt = turn_prompt(payload) or messages_to_prompt(payload.get("messages"))
         if not prompt:
             self._json(400, {"error": {"message": "empty_message", "type": "invalid_request_error"}})
             return
@@ -321,17 +336,23 @@ a { color: var(--brand); }
 </style></head><body><main>
 <p style="font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)">Florida Man Bioscience</p>
 <h1>Lab jail</h1>
-<p>Generic Hermes lab profile (the class <code>yue-lab</code> belongs to). Empty desk. Bearer token required. Not a public unauthenticated agent.</p>
+<p>Generic Hermes lab profile (the class <code>yue-lab</code> belongs to). Empty desk. Multi-shot thread. Bearer token required. Lit-review engine is preloaded.</p>
 <p><a href="https://flmanbiosci.net/products/discovery-informatics">← Discovery Informatics</a></p>
+<p id="tools" style="font-family:ui-monospace,monospace;font-size:.8rem"></p>
 <label>Shared token <input id="tok" type="password" autocomplete="off"/></label>
 <label>Provider API key (optional — this turn only) <input id="apikey" type="password" autocomplete="off"/></label>
 <label>Provider <select id="prov"></select></label>
 <label>Model <select id="mod"></select></label>
-<label>Ask <textarea id="msg" rows="4" placeholder="Normalize this public gene ID, then say cannots."></textarea></label>
-<button type="button" id="go">Run turn</button>
+<label>Ask <textarea id="msg" rows="4" placeholder="Follow-ups stay in this thread. Try: init a lit-review instance, then admit JSONL."></textarea></label>
+<button type="button" id="go">Send</button>
+<button type="button" id="reset" style="background:transparent;color:var(--brand);border:1px solid var(--brand);margin-left:.5rem">New thread</button>
 <pre id="out"></pre>
 <script>
 const catalog = {};
+const thread = [];
+function render() {
+  document.getElementById("out").textContent = thread.map(t => t.role + ": " + t.content).join("\\n\\n---\\n\\n");
+}
 fetch("/health").then(r => r.json()).then(h => {
   const sel = document.getElementById("prov");
   (h.providers || []).forEach(p => {
@@ -343,6 +364,8 @@ fetch("/health").then(r => r.json()).then(h => {
   });
   if (h.default_provider) sel.value = h.default_provider;
   fillModels();
+  const tools = (h.tools || []).map(t => t.id + (t.engine_version ? " v" + t.engine_version : "")).join(" · ");
+  document.getElementById("tools").textContent = tools ? ("tools: " + tools) : "";
 });
 function fillModels() {
   const p = catalog[document.getElementById("prov").value];
@@ -357,11 +380,16 @@ function fillModels() {
   });
 }
 document.getElementById("prov").onchange = fillModels;
+document.getElementById("reset").onclick = () => { thread.length = 0; render(); };
 document.getElementById("go").onclick = async () => {
-  const out = document.getElementById("out");
-  out.textContent = "…";
+  const msg = document.getElementById("msg").value.trim();
+  if (!msg) return;
+  thread.push({role: "user", content: msg});
+  document.getElementById("msg").value = "";
+  render();
   const body = {
-    message: document.getElementById("msg").value,
+    message: msg,
+    messages: thread.slice(),
     provider: document.getElementById("prov").value,
     model: document.getElementById("mod").value
   };
@@ -375,7 +403,15 @@ document.getElementById("go").onclick = async () => {
     },
     body: JSON.stringify(body)
   });
-  out.textContent = await r.text();
+  const raw = await r.text();
+  let text = raw;
+  try {
+    const j = JSON.parse(raw);
+    text = j.text || j.reply || j.error || raw;
+    if (j.ok === false && j.stderr_tail) text += "\\n\\n" + j.stderr_tail;
+  } catch (e) {}
+  thread.push({role: "assistant", content: text});
+  render();
 };
 </script>
 </main></body></html>

@@ -122,6 +122,25 @@ class OpenAICompatTests(unittest.TestCase):
         )
         self.assertEqual(prompt, "system: Be brief.\nuser: Ping")
 
+    def test_turn_prompt_one_shot(self):
+        self.assertEqual(providers.turn_prompt({"message": " Ping "}), "Ping")
+
+    def test_turn_prompt_messages_win(self):
+        prompt = providers.turn_prompt(
+            {
+                "message": "ignored",
+                "messages": [
+                    {"role": "user", "content": "A"},
+                    {"role": "assistant", "content": "B"},
+                    {"role": "user", "content": "C"},
+                ],
+            }
+        )
+        self.assertEqual(prompt, "user: A\nassistant: B\nuser: C")
+
+    def test_turn_prompt_empty(self):
+        self.assertEqual(providers.turn_prompt({}), "")
+
     def test_openai_models_ids(self):
         ids = [row["id"] for row in providers.openai_models()["data"]]
         self.assertIn("xai/grok-4.6", ids)
@@ -143,6 +162,25 @@ class OpenAICompatTests(unittest.TestCase):
 class TurnAuthTests(unittest.TestCase):
     def test_missing_bearer(self):
         self.assertEqual(server.TOKEN, "test-token")
+
+
+class HermesCmdTests(unittest.TestCase):
+    def test_preloads_lit_review(self):
+        cmd = server.hermes_cmd(
+            "hi",
+            {"hermes_provider": "custom:openai", "model": "gpt-4o"},
+        )
+        self.assertIn("-s", cmd)
+        self.assertEqual(cmd[cmd.index("-s") + 1], "lit-review")
+        self.assertIn("chat", cmd)
+        self.assertIn("-q", cmd)
+        self.assertIn("hi", cmd)
+
+    def test_index_is_multishot(self):
+        html = server.INDEX_HTML
+        self.assertIn("messages: thread.slice()", html)
+        self.assertIn("New thread", html)
+        self.assertIn("lit-review", html)
 
 
 class PaperDecompositionToolTests(unittest.TestCase):

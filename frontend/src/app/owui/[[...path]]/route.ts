@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 const CONSOLE =
   "https://flmanbiosci.net/products/discovery-informatics#lab-console";
 
-/** /owui is retired. Dedicated host is IAC. Public UI is the one-shot console. */
+/** /owui is retired. Dedicated host is IAC. Public UI is the multi-shot console. */
 function redirect(_req: NextRequest) {
   return NextResponse.redirect(CONSOLE, 302);
 }
