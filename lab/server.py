@@ -16,6 +16,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import paper_decomp_api
 from providers import (
     messages_to_prompt,
     openai_models,
@@ -47,6 +48,7 @@ def health() -> dict:
         "workspace": os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
         "bioskills_count": _skill_count("/opt/bioskills"),
         "science_skills_count": _skill_count("/opt/lab-science-skills"),
+        "tools": [paper_decomp_api.engine_info()],
     }
     body.update(public_catalog())
     return body
@@ -203,6 +205,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/v1/turn":
             self._turn()
             return
+        if path == "/api/v1/tools/paper-decomposition/admit":
+            self._paper_decomp_admit()
+            return
         if path == "/v1/chat/completions":
             self._chat_completions()
             return
@@ -219,6 +224,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"ok": False, "error": "bad_json"})
             return None
         return payload
+
+    def _paper_decomp_admit(self) -> None:
+        if not self._auth_ok():
+            return
+        payload = self._read_json()
+        if payload is None:
+            return
+        code, body = paper_decomp_api.admit(payload)
+        self._json(code, body)
 
     def _turn(self) -> None:
         if not self._auth_ok():

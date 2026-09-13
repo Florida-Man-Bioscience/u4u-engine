@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+from pathlib import Path
 
 os.environ["LAB_SHARED_TOKEN"] = "test-token"
 os.environ.pop("NEURALWATT_API_KEY", None)
@@ -12,6 +13,7 @@ os.environ.pop("XAI_API_KEY", None)
 
 import providers  # noqa: E402
 import server  # noqa: E402
+import paper_decomp_api  # noqa: E402
 
 
 class HealthTests(unittest.TestCase):
@@ -141,6 +143,27 @@ class OpenAICompatTests(unittest.TestCase):
 class TurnAuthTests(unittest.TestCase):
     def test_missing_bearer(self):
         self.assertEqual(server.TOKEN, "test-token")
+
+
+class PaperDecompositionToolTests(unittest.TestCase):
+    def test_health_lists_tool(self):
+        h = server.health()
+        ids = [t["id"] for t in h["tools"]]
+        self.assertIn("paper-decomposition", ids)
+        self.assertEqual(h["tools"][0]["engine_version"], "0.4.0")
+
+    def test_admit_fixture(self):
+        fixture = Path(__file__).resolve().parent / "litreview-engine" / "fixtures" / "syn-logic.jsonl"
+        code, body = paper_decomp_api.admit({"jsonl": fixture.read_text()})
+        self.assertEqual(code, 200)
+        self.assertTrue(body["ok"])
+        self.assertGreaterEqual(body["admitted"], 1)
+        self.assertIn("figure_panel", body["sorts"])
+
+    def test_admit_needs_payload(self):
+        code, body = paper_decomp_api.admit({})
+        self.assertEqual(code, 400)
+        self.assertEqual(body["error"], "need_records_or_jsonl")
 
 
 if __name__ == "__main__":

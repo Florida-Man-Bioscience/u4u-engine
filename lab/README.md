@@ -27,6 +27,15 @@ Inventory lives here, not in `hwcopeland/iac`. Apply from this tree:
 kubectl -n theswamp apply -f lab/k8s/theswamp.yaml
 ```
 
+Paper-decomposition engine is `/opt/litreview` (`ENGINE_VERSION` on `GET /health` → `tools[]`). Admit JSONL:
+
+```bash
+curl -sS -H "Authorization: Bearer $LAB_SHARED_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"jsonl":"..."}' \
+  http://di-lab:8080/api/v1/tools/paper-decomposition/admit
+```
+
 Public UI is **same-origin** on `/products/discovery-informatics#lab-console` via `/api/lab/*` → Service `di-lab:8080`.
 
 Open WebUI Deployment `lab-chat` serves at **`/`** on ClusterIP `:8080` (unmodified image, no `/owui` rewrite). Public hostname `lab-chat.flmanbiosci.net` needs the IAC HTTPRoute+DNSRecord in `lab/k8s/iac-httproute-lab-chat.yaml` — Noah opens that PR; do not kubectl-apply HTTPRoutes from this identity.
