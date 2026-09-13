@@ -11,9 +11,9 @@ os.environ.pop("NAVIGATOR_API_KEY", None)
 os.environ.pop("ANTHROPIC_API_KEY", None)
 os.environ.pop("XAI_API_KEY", None)
 
+import paper_decomp_api  # noqa: E402
 import providers  # noqa: E402
 import server  # noqa: E402
-import paper_decomp_api  # noqa: E402
 
 
 class HealthTests(unittest.TestCase):
