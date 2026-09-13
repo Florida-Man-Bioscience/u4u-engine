@@ -351,8 +351,9 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               </li>
             </ul>
             <p className="mt-6 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-              Public UI is the one-shot console on this page. A NaviGator-style
-              Open WebUI host (
+              Public UI is the multi-shot console on this page. Each turn
+              preloads the lit-review engine. A NaviGator-style Open WebUI host
+              (
               <code className="font-mono text-xs">lab-chat.flmanbiosci.net</code>
               ) waits on an IAC HTTPRoute — not{" "}
               <code className="font-mono text-xs">/owui</code>.
@@ -361,7 +362,7 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               href="#lab-console"
               className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
             >
-              One-shot console on this page
+              Multi-shot console on this page
             </a>
             <LabConsole />
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Provider = {
   id: string;
@@ -10,13 +10,22 @@ type Provider = {
   key_configured: boolean;
 };
 
+type LabTool = {
+  id: string;
+  engine_version?: string;
+  cli?: string;
+};
+
 type Health = {
   ok?: boolean;
   error?: string;
   profile?: string;
   providers?: Provider[];
   default_provider?: string;
+  tools?: LabTool[];
 };
+
+type Turn = { role: "user" | "assistant"; content: string };
 
 export function LabConsole() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -25,8 +34,9 @@ export function LabConsole() {
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState("");
-  const [reply, setReply] = useState("");
+  const [thread, setThread] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,11 +70,20 @@ export function LabConsole() {
     };
   }, []);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "nearest" });
+  }, [thread, busy]);
+
   const providers = health?.providers || [];
   const current = useMemo(
     () => providers.find((p) => p.id === provider),
     [providers, provider],
   );
+  const toolsLine = (health?.tools || [])
+    .map((t) =>
+      t.engine_version ? `${t.id} v${t.engine_version}` : t.id,
+    )
+    .join(" · ");
 
   function onProviderChange(id: string) {
     setProvider(id);
@@ -74,8 +93,12 @@ export function LabConsole() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const text = message.trim();
+    if (!text || busy) return;
+    const nextThread: Turn[] = [...thread, { role: "user", content: text }];
+    setThread(nextThread);
+    setMessage("");
     setBusy(true);
-    setReply("");
     try {
       const r = await fetch("/api/lab/turn", {
         method: "POST",
@@ -84,7 +107,8 @@ export function LabConsole() {
           authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          message,
+          message: text,
+          messages: nextThread,
           provider,
           model,
           ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
@@ -101,17 +125,24 @@ export function LabConsole() {
       try {
         j = JSON.parse(raw) as typeof j;
       } catch {
-        setReply(raw.slice(0, 2000) || `HTTP ${r.status}`);
+        setThread([
+          ...nextThread,
+          { role: "assistant", content: raw.slice(0, 2000) || `HTTP ${r.status}` },
+        ]);
         return;
       }
       const main = j.text || j.reply || j.error || JSON.stringify(j);
-      setReply(
-        j.ok === false && j.stderr_tail
-          ? `${main}\n\n${j.stderr_tail}`
-          : main,
-      );
+      const content =
+        j.ok === false && j.stderr_tail ? `${main}\n\n${j.stderr_tail}` : main;
+      setThread([...nextThread, { role: "assistant", content }]);
     } catch (err) {
-      setReply(err instanceof Error ? err.message : "request_failed");
+      setThread([
+        ...nextThread,
+        {
+          role: "assistant",
+          content: err instanceof Error ? err.message : "request_failed",
+        },
+      ]);
     } finally {
       setBusy(false);
     }
@@ -125,14 +156,43 @@ export function LabConsole() {
       className="mt-10 rounded-2xl border border-[#d4c4a8] bg-white p-6 text-[#1a1612]"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b5d4d]">
-        Lab console · same origin
+        Lab console · multi-shot
       </p>
       <p className="mt-2 text-sm text-[#4a4036]">
         Status:{" "}
         <span className={live ? "text-[#1a6b4a]" : "text-[#8a3b2a]"}>
           {live ? "reachable" : health?.error || "checking…"}
         </span>
+        {toolsLine ? (
+          <>
+            {" "}
+            · <span className="font-mono text-xs">{toolsLine}</span>
+          </>
+        ) : null}
       </p>
+      <p className="mt-1 text-xs text-[#6b5d4d]">
+        Follow-ups stay in this thread. Each turn preloads{" "}
+        <code className="font-mono">lit-review</code> against{" "}
+        <code className="font-mono">/opt/litreview</code>.
+      </p>
+      {thread.length > 0 ? (
+        <div className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto rounded-lg border border-[#edecea] bg-[#f4efe6] p-3">
+          {thread.map((t, i) => (
+            <div key={`${t.role}-${i}`}>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#1a6b4a]">
+                {t.role}
+              </p>
+              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-sm">
+                {t.content}
+              </pre>
+            </div>
+          ))}
+          {busy ? (
+            <p className="font-mono text-[11px] text-[#6b5d4d]">Running…</p>
+          ) : null}
+          <div ref={bottomRef} />
+        </div>
+      ) : null}
       <form onSubmit={onSubmit} className="mt-4 grid gap-3">
         <label className="grid gap-1 text-sm">
           Shared token
@@ -201,23 +261,28 @@ export function LabConsole() {
             required
           />
         </label>
-        <button
-          type="submit"
-          disabled={
-            busy ||
-            !live ||
-            (current ? !current.key_configured && !apiKey.trim() : false)
-          }
-          className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {busy ? "Running…" : "Send turn"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={
+              busy ||
+              !live ||
+              (current ? !current.key_configured && !apiKey.trim() : false)
+            }
+            className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "Running…" : thread.length ? "Send follow-up" : "Send"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setThread([])}
+            disabled={busy || thread.length === 0}
+            className="min-h-11 rounded-full border border-[#d4c4a8] px-6 text-sm font-semibold text-[#1a1612] disabled:opacity-50"
+          >
+            New thread
+          </button>
+        </div>
       </form>
-      {reply ? (
-        <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-lg bg-[#f4efe6] p-4 text-sm">
-          {reply}
-        </pre>
-      ) : null}
     </div>
   );
 }
