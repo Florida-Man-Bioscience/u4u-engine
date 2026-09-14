@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const CONSOLE =
-  "https://flmanbiosci.net/products/discovery-informatics#lab-console";
+  "https://flmanbiosci.net/products/discovery-informatics/chat";
 
 /** /owui is retired. Dedicated host is IAC. Public UI is the multi-shot console. */
 function redirect(_req: NextRequest) {
