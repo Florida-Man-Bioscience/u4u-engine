@@ -1,0 +1,8 @@
+# PGS Catalog manifest for PeptOdyssey trait-context inputs.
+#
+# This file is intentionally empty until each score has an explicit PGS ID,
+# trait mapping, release URL, and SHA-256 checksum verified from the PGS
+# Catalog. Trait-context PGS are not GLP-1-response predictors.
+schema_version: 1
+status: pending_verified_score_ids
+scores: []
