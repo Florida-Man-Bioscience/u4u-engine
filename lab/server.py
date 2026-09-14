@@ -17,7 +17,9 @@ import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, quote, urlparse
 
+import file_io
 import paper_decomp_api
 from providers import (
     messages_to_prompt,
@@ -32,6 +34,7 @@ PORT = int(os.environ.get("PORT", "8080"))
 PROFILE = os.environ.get("HERMES_PROFILE", "lab")
 TOKEN = os.environ.get("LAB_SHARED_TOKEN", "")
 TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "120"))
+MAX_JSON_BYTES = 512 * 1024
 PRELOAD_SKILLS = tuple(
     s.strip()
     for s in os.environ.get("LAB_PRELOAD_SKILLS", "lit-review").split(",")
@@ -179,12 +182,115 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def _bytes(self, code: int, content_type: str, body: str) -> None:
-        raw = body.encode()
+        self._raw(code, content_type, body.encode())
+
+    def _raw(
+        self,
+        code: int,
+        content_type: str,
+        body: bytes,
+        *,
+        disposition: str | None = None,
+    ) -> None:
         self.send_response(code)
         self.send_header("content-type", content_type)
-        self.send_header("content-length", str(len(raw)))
+        self.send_header("content-length", str(len(body)))
+        self.send_header("cache-control", "no-store")
+        self.send_header("x-content-type-options", "nosniff")
+        if disposition:
+            self.send_header("content-disposition", disposition)
         self.end_headers()
-        self.wfile.write(raw)
+        self.wfile.write(body)
+
+    def _send_file(self, code: int, fd: int, record: dict[str, object], disposition: str) -> None:
+        try:
+            self.send_response(code)
+            self.send_header("content-type", str(record["content_type"]))
+            self.send_header("content-length", str(record["size"]))
+            self.send_header("cache-control", "no-store")
+            self.send_header("x-content-type-options", "nosniff")
+            self.send_header("content-disposition", disposition)
+            self.end_headers()
+            with os.fdopen(fd, "rb") as handle:
+                while chunk := handle.read(1024 * 1024):
+                    self.wfile.write(chunk)
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+    def _workspace(self) -> Path:
+        return Path(os.environ.get("HERMES_WORKSPACE", "/data/workspace"))
+
+    def _read_limited_body(self, limit: int) -> bytes | None:
+        raw_length = self.headers.get("content-length")
+        if not raw_length:
+            self._json(411, {"ok": False, "error": "content_length_required"})
+            return None
+        try:
+            length = int(raw_length)
+        except ValueError:
+            self._json(400, {"ok": False, "error": "bad_content_length"})
+            return None
+        if length < 0 or length > limit:
+            self._json(413, {"ok": False, "error": "request_too_large"})
+            return None
+        body = self.rfile.read(length)
+        if len(body) != length:
+            self._json(400, {"ok": False, "error": "truncated_body"})
+            return None
+        return body
+
+    def _files(self) -> None:
+        if not self._auth_ok():
+            return
+        workspace = self._workspace()
+        query = parse_qs(urlparse(self.path).query)
+        relative = query.get("path", [""])[0]
+        if self.command == "GET":
+            if not relative:
+                try:
+                    files = file_io.list_workspace_files(workspace)
+                except file_io.FileIoError as exc:
+                    status = 413 if exc.code in {"listing_too_large", "listing_too_deep"} else 500
+                    self._json(status, {"ok": False, "error": exc.code})
+                    return
+                except (OSError, ValueError):
+                    self._json(500, {"ok": False, "error": "file_storage_error"})
+                    return
+                self._json(200, {"ok": True, "files": files})
+                return
+            try:
+                fd, record = file_io.open_workspace_file(workspace, relative)
+            except file_io.FileIoError as exc:
+                status = 413 if exc.code == "file_too_large" else 404
+                error = "file_too_large" if status == 413 else "file_not_found"
+                self._json(status, {"ok": False, "error": error})
+                return
+            disposition = f"attachment; filename*=UTF-8''{quote(str(record['name']))}"
+            self._send_file(200, fd, record, disposition)
+            return
+
+        body = self._read_limited_body(file_io.DEFAULT_MAX_REQUEST_BYTES)
+        if body is None:
+            return
+        try:
+            records = file_io.save_uploads(
+                body,
+                self.headers.get("content-type", ""),
+                workspace,
+                max_request_bytes=file_io.DEFAULT_MAX_REQUEST_BYTES,
+                max_file_bytes=file_io.DEFAULT_MAX_FILE_BYTES,
+            )
+        except file_io.FileIoError as exc:
+            status = 413 if exc.code in {"request_too_large", "file_too_large", "too_many_files"} else 400
+            self._json(status, {"ok": False, "error": exc.code})
+            return
+        except (OSError, ValueError):
+            self._json(500, {"ok": False, "error": "file_storage_error"})
+            return
+        self._json(201, {"ok": True, "files": records})
 
     def _route(self) -> str:
         return self.path.split("?", 1)[0].rstrip("/") or "/"
@@ -213,6 +319,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, openai_models())
             return
+        if path == "/api/v1/files":
+            self._files()
+            return
         self._json(404, {"ok": False, "error": "not_found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -226,12 +335,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/v1/chat/completions":
             self._chat_completions()
             return
+        if path == "/api/v1/files":
+            self._files()
+            return
         self._json(404, {"ok": False, "error": "not_found"})
 
     def _read_json(self) -> dict | None:
-        n = int(self.headers.get("content-length") or "0")
+        raw = self._read_limited_body(MAX_JSON_BYTES)
+        if raw is None:
+            return None
         try:
-            payload = json.loads(self.rfile.read(n) or b"{}")
+            payload = json.loads(raw or b"{}")
         except json.JSONDecodeError:
             self._json(400, {"ok": False, "error": "bad_json"})
             return None

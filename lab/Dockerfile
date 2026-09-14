@@ -24,7 +24,7 @@ RUN git clone --depth 1 --branch 3.0 https://github.com/GPTomics/bioSkills.git /
     && rm -rf /opt/bioskills/.git
 
 WORKDIR /app
-COPY server.py providers.py paper_decomp_api.py /app/
+COPY server.py providers.py file_io.py paper_decomp_api.py /app/
 COPY profile/ /opt/lab-profile/
 COPY science-skills/ /opt/lab-science-skills/
 COPY litreview-engine/ /opt/litreview/
