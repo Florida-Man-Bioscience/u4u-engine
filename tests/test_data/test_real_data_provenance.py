@@ -22,6 +22,17 @@ def test_landed_nhanes_artifacts_match_manifest() -> None:
     assert digest == "10253a32092809529ed73646000ac303550dfcdb5be9843263104d3c87679912"
 
 
+def test_landed_dawed_freeze_has_verified_source_and_rows() -> None:
+    source = (ROOT / "data/g2p/sources.yaml").read_text(encoding="utf-8")
+    assert "status: landed_published_table" in source
+    pdf = ROOT / "data/g2p/dawed_2023_glp1_response_supplement.pdf"
+    freeze = ROOT / "data/g2p/glp1_response_gwas_freeze.tsv"
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == (
+        "5abb27b0ae5d13a6d443e2232b0fbb64d00013acc1fca4e7ac96483b7e32970b"
+    )
+    assert sum(1 for _ in freeze.open(encoding="utf-8")) - 1 == 16
+
+
 def test_pgs_manifest_stays_closed_until_ids_are_verified() -> None:
     manifest = load_manifest(ROOT / "data/pgs/manifest.yaml")
     assert manifest["status"] == "pending_verified_score_ids"

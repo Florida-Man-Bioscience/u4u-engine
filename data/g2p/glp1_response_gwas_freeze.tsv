@@ -1,0 +1,17 @@
+rsid	gene	chromosome	position	effect_allele	other_allele	eaf	beta	se	p	n	trait	unit	pmid	doi	cohort	notes
+rs61800555	LMX1A	1	165220705	A	G	0.195	-0.142	0.025	2.5e-7	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5; negative beta means reduced response for the effective allele.
+rs2268640	GLP1R	6	39050384	A	G	0.608	0.100	0.020	2.5e-7	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5; suggestive locus, not a clinical predictor.
+rs7687008	LINC00499	4	139268507	C	T	0.404	0.104	0.020	1.6e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs10224036	PTPN12	7	77106630	G	A	0.190	0.133	0.026	2.0e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs1969320	MTND1P29	2	131027031	G	C	0.612	0.104	0.021	3.5e-6	4150	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs11072298	THSD4	15	71854982	C	A	0.688	-0.106	0.021	5.2e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs4986076	METRNL	17	81027889	A	G	0.086	0.171	0.035	5.3e-6	4463	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs2048020	LOC105371191	16	32375625	T	G	0.062	0.321	0.065	5.9e-6	2406	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs2298192	TCERG1L	10	132915050	A	G	0.148	-0.137	0.028	6.6e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs10561032	CATSPERD	19	5742326	G	T	0.153	0.143	0.029	7.2e-6	4150	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs56354900	ADAMTS18	16	77451045	T	A	0.604	-0.100	0.020	7.5e-6	4150	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs11746176	CMYA5	5	78987399	G	C	0.208	0.119	0.024	7.5e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs40182	CLPTM1L	5	1350397	A	G	0.382	-0.099	0.020	7.8e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs5767119	LOC105373081	22	48758497	T	C	0.133	0.139	0.029	9.0e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs2286414	PTPRN2	7	157475020	T	C	0.053	0.202	0.042	9.2e-6	4463	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.
+rs75941546	LPP	3	187866416	A	G	0.082	0.171	0.036	9.6e-6	4462	hba1c	DCCT_percent_reduction	36528349	10.1016/S2213-8587(22)00340-0	GLP1RA_meta_GWAS	Published Supplementary Table 5.

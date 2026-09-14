@@ -38,13 +38,18 @@ sources:
   - id: dawed-2023-glp1-response
     name: GLP-1 receptor agonist HbA1c pharmacogenomic meta-analysis
     role: response_gwas_evidence
-    status: candidate_source
-    access: publication_and_supplement_required
-    source_url: https://doi.org/10.1016/S2213-8587(22)00340-0
+    status: landed_published_table
+    access: public
+    source_url: https://ars.els-cdn.com/content/image/1-s2.0-S2213858722003400-mmc1.pdf
+    publication_url: https://doi.org/10.1016/S2213-8587(22)00340-0
+    raw_path: data/g2p/dawed_2023_glp1_response_supplement.pdf
+    freeze_path: data/g2p/glp1_response_gwas_freeze.tsv
+    rows: 16
+    sha256: 5abb27b0ae5d13a6d443e2232b0fbb64d00013acc1fca4e7ac96483b7e32970b
     notes: >-
-      Published evidence from DIRECT, PRIBA, PROMASTER, GoDARTS, HARMONY,
-      and AWARD. Summary-statistic landing is pending verification of the
-      publisher supplement or author deposit; no coefficients are activated.
+      Published Supplementary Table 5 transcription of suggestive loci only;
+      this is not the full genome-wide summary-statistics matrix and is not
+      activated as production scoring.
 
   - id: glp1-response-2026
     name: 2026 GLP-1 response GWAS

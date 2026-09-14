@@ -23,6 +23,14 @@ distribution dataset, not a peptide-response cohort.
 Checksums and source status are recorded in `sources.yaml`. Do not replace
 these files without updating the checksums and source URL.
 
+## Landed public evidence
+
+`glp1_response_gwas_freeze.tsv` is a 16-row transcription of the published
+Dawed et al. Supplementary Table 5. It contains suggestive GLP-1-response
+loci for HbA1c reduction, with the source PDF and checksum recorded in
+`sources.yaml`. It is a literature evidence freeze, not a full summary-stats
+matrix, patient-level data, or activated production scoring.
+
 ## Status vocabulary
 
 - `candidate_source`: identified in the literature; file not landed
