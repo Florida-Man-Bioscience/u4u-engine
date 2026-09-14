@@ -41,7 +41,7 @@ curl -sS -H "Authorization: Bearer $LAB_SHARED_TOKEN" \
 
 Same-origin from the apex console: `POST /api/lab/tools/paper-decomposition/admit`.
 
-Public UI is **same-origin** on `/products/discovery-informatics#lab-console` via `/api/lab/*` → Service `di-lab:8080`. The console is **multi-shot** (thread in the page; POST `messages[]`). Open WebUI on a dedicated host still waits on IAC.
+The public multi-shot console is now a dedicated page at `/products/discovery-informatics/chat`. The product page links to it; the same-origin `/api/lab/*` routes and `lit-review` preload remain unchanged.
 
 Open WebUI Deployment `lab-chat` serves at **`/`** on ClusterIP `:8080` (unmodified image, no `/owui` rewrite). Public hostname `lab-chat.flmanbiosci.net` needs the IAC HTTPRoute+DNSRecord in `lab/k8s/iac-httproute-lab-chat.yaml` — Noah opens that PR; do not kubectl-apply HTTPRoutes from this identity.
 

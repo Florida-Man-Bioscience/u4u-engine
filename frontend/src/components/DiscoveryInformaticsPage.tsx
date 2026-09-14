@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CompanyChrome, companySerif } from "@/components/CompanyChrome";
-import { LabConsole } from "@/components/LabConsole";
 import { type ProductPage } from "@/lib/products";
 
 type Props = { product: ProductPage };
@@ -351,20 +350,19 @@ export function DiscoveryInformaticsPage({ product }: Props) {
               </li>
             </ul>
             <p className="mt-6 max-w-2xl text-sm leading-relaxed text-[#3a3f4a]">
-              Public UI is the multi-shot console on this page. Each turn
+              The multi-shot console now lives on its own page. Each turn
               preloads the lit-review engine. A NaviGator-style Open WebUI host
               (
               <code className="font-mono text-xs">lab-chat.flmanbiosci.net</code>
               ) waits on an IAC HTTPRoute — not{" "}
               <code className="font-mono text-xs">/owui</code>.
             </p>
-            <a
-              href="#lab-console"
+            <Link
+              href="/products/discovery-informatics/chat"
               className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[#1a6b4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f4530]"
             >
-              Multi-shot console on this page
-            </a>
-            <LabConsole />
+              Open multi-shot lab
+            </Link>
           </div>
         </section>
 
