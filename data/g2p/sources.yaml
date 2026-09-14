@@ -1,0 +1,85 @@
+schema_version: 1
+updated: 2026-09-14
+venture: peptodyssey
+entity: fmb
+purpose: >-
+  Provenance registry for real-data inputs used for biomarker reference
+  distributions and GLP-1 response evidence. This registry separates source
+  discovery, access, landed data, integration, and validation.
+sources:
+  - id: nhanes-iii-igf-axis
+    name: NHANES III serum IGF-I and IGFBP-3 fasting subsample
+    role: reference_distribution
+    status: landed
+    access: public
+    source_url: https://wwwn.cdc.gov/Nchs/Data/Nhanes3/23A/SSIGF.XPT
+    publication_url: https://pubmed.ncbi.nlm.nih.gov/18812263/
+    raw_path: data/g2p/nhanes_iii_ssigf.xpt
+    normalized_path: data/g2p/nhanes_iii_igf_axis.csv
+    rows: 6061
+    columns: [SEQN, IGP_I, IGP_BP3]
+    notes: >-
+      Biomarker file only. Joining against both the household-adult and
+      examination fixed-width files matched 4879 of 6061 SEQN values; the
+      partial joins were discarded rather than shipped. A complete
+      age/sex/race-stratified panel therefore remains pending. Not peptide-
+      response data.
+    demographics_join:
+      status: incomplete
+      matched_seqn: 4879
+      requested_seqn: 6061
+      household_adult_dat_sha256: 32a93a474cbd3bd0dd2ddc82153c47cf0b9f81eda025e255dd251bb5620a3adf
+      examination_dat_sha256: b2eba81d3c4f921a4fafe6847818e27813eab4a3494bcc26f90a6fe3fcc71fec
+    sha256:
+      raw: 10253a32092809529ed73646000ac303550dfcdb5be9843263104d3c87679912
+      normalized: e33781f3a60601ab9f92f2a56af492587811a3abce348a45fb6f6ffa804b782
+    normalization: pandas.read_sas(format=xport), pandas 2.3.3
+
+  - id: dawed-2023-glp1-response
+    name: GLP-1 receptor agonist HbA1c pharmacogenomic meta-analysis
+    role: response_gwas_evidence
+    status: candidate_source
+    access: publication_and_supplement_required
+    source_url: https://doi.org/10.1016/S2213-8587(22)00340-0
+    notes: >-
+      Published evidence from DIRECT, PRIBA, PROMASTER, GoDARTS, HARMONY,
+      and AWARD. Summary-statistic landing is pending verification of the
+      publisher supplement or author deposit; no coefficients are activated.
+
+  - id: glp1-response-2026
+    name: 2026 GLP-1 response GWAS
+    role: response_gwas_evidence
+    status: candidate_source
+    access: summary_statistics_release_must_be_verified
+    notes: >-
+      Candidate source for body-weight and tolerability response. The reported
+      cohort size is approximately 27885. Do not treat secondary reporting as
+      a landed summary-statistics file.
+
+  - id: uk-biobank-rap
+    name: UK Biobank Research Analysis Platform
+    role: external_validation
+    status: access_required
+    access: controlled
+    notes: >-
+      Requires approved application/workspace. Relevant N is the GLP-1-exposed
+      subset with measured outcomes, not the full biobank count.
+
+  - id: all-of-us
+    name: NIH All of Us Research Program
+    role: external_validation
+    status: access_required
+    access: controlled
+    notes: >-
+      Requires controlled workspace access. Use for ancestry-transfer testing
+      and external validation, not as an assumed local training extract.
+
+  - id: fmb-clinic-cohort
+    name: FMB observational clinic cohort
+    role: paired_genotype_serial_readout
+    status: prospective_generation_required
+    access: prospective
+    notes: >-
+      Required for genotype plus serial peptide-readout data for sparse
+      classes such as BPC-157, TB-500, and GHK-Cu. No validated public matrix
+      was identified for these classes.
