@@ -122,6 +122,38 @@ class OpenAICompatTests(unittest.TestCase):
         )
         self.assertEqual(prompt, "system: Be brief.\nuser: Ping")
 
+    def test_messages_to_prompt_includes_attachments(self):
+        prompt = providers.messages_to_prompt(
+            [
+                {
+                    "role": "user",
+                    "content": "Read this",
+                    "attachments": [
+                        {"name": "paper.pdf", "path": "uploads/abc-paper.pdf"}
+                    ],
+                }
+            ]
+        )
+        self.assertIn("paper.pdf", prompt)
+        self.assertIn("uploads/abc-paper.pdf", prompt)
+        self.assertIn("outputs/", prompt)
+
+    def test_messages_attachment_metadata_is_bounded(self):
+        prompt = providers.messages_to_prompt(
+            [
+                {
+                    "role": "user",
+                    "content": "Read these",
+                    "attachments": [
+                        {"name": "x" * 1000, "path": f"uploads/{i}.txt"}
+                        for i in range(20)
+                    ],
+                }
+            ]
+        )
+        self.assertLess(len(prompt), 10000)
+        self.assertIn("omitted", prompt)
+
     def test_turn_prompt_one_shot(self):
         self.assertEqual(providers.turn_prompt({"message": " Ping "}), "Ping")
 

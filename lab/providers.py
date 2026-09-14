@@ -161,6 +161,10 @@ def openai_models() -> dict[str, Any]:
     return {"object": "list", "data": data}
 
 
+MAX_ATTACHMENT_COUNT = 16
+MAX_ATTACHMENT_METADATA = 8192
+
+
 def messages_to_prompt(messages: Any) -> str:
     if not isinstance(messages, list):
         return ""
@@ -179,6 +183,30 @@ def messages_to_prompt(messages: Any) -> str:
                     bits.append(block)
             content = " ".join(bits)
         text = str(content or "").strip()
+        attachments = item.get("attachments")
+        if isinstance(attachments, list):
+            refs = []
+            rendered_size = 0
+            for attachment in attachments[:MAX_ATTACHMENT_COUNT]:
+                if not isinstance(attachment, dict):
+                    continue
+                name = str(attachment.get("name") or "file").replace("\n", " ")[:160]
+                path = str(attachment.get("path") or "").replace("\n", " ")[:240]
+                if path.startswith(("uploads/", "outputs/")) and ".." not in path:
+                    line = f"- {name}: {path}"
+                    if rendered_size + len(line) > MAX_ATTACHMENT_METADATA:
+                        break
+                    refs.append(line)
+                    rendered_size += len(line)
+            omitted = max(0, len(attachments) - len(refs))
+            if refs:
+                suffix = f"\n- ({omitted} attachment(s) omitted)" if omitted else ""
+                text += (
+                    "\n\nAttached files are available in the lab workspace:\n"
+                    + "\n".join(refs)
+                    + suffix
+                    + "\nWrite downloadable artifacts under outputs/; return the relative path."
+                )
         if text:
             parts.append(f"{role}: {text}")
     return "\n".join(parts)
