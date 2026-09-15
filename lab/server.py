@@ -20,6 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
 import file_io
+import graphviz
 import paper_decomp_api
 from providers import (
     messages_to_prompt,
@@ -191,6 +192,7 @@ class Handler(BaseHTTPRequestHandler):
         body: bytes,
         *,
         disposition: str | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         self.send_response(code)
         self.send_header("content-type", content_type)
@@ -199,6 +201,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("x-content-type-options", "nosniff")
         if disposition:
             self.send_header("content-disposition", disposition)
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -249,6 +253,32 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         relative = query.get("path", [""])[0]
         if self.command == "GET":
+            if query.get("render", [""])[0].lower() == "svg":
+                if not relative:
+                    self._json(400, {"ok": False, "error": "file_required"})
+                    return
+                try:
+                    svg = graphviz.render_workspace_file(workspace, relative)
+                except graphviz.GraphvizError as exc:
+                    status = 413 if exc.code in {"graph_too_large", "graph_output_too_large"} else 422
+                    self._json(status, {"ok": False, "error": exc.code})
+                    return
+                except file_io.FileIoError:
+                    self._json(404, {"ok": False, "error": "file_not_found"})
+                    return
+                except OSError:
+                    self._json(500, {"ok": False, "error": "graph_render_failed"})
+                    return
+                self._raw(
+                    200,
+                    "image/svg+xml; charset=utf-8",
+                    svg,
+                    disposition="inline; filename*=UTF-8''knowledge-graph.svg",
+                    extra_headers={
+                        "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+                    },
+                )
+                return
             if not relative:
                 try:
                     files = file_io.list_workspace_files(workspace)

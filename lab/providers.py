@@ -206,6 +206,7 @@ def messages_to_prompt(messages: Any) -> str:
                     + "\n".join(refs)
                     + suffix
                     + "\nWrite downloadable artifacts under outputs/; return the relative path."
+                    + " Knowledge graphs can be saved as logic .jsonl under outputs for viewing."
                 )
         if text:
             parts.append(f"{role}: {text}")

@@ -40,6 +40,8 @@ type Turn = {
 };
 
 const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
+const MAX_GRAPH_BYTES = 8 * 1024 * 1024;
+const GRAPH_FILE_RE = /\.(?:json|jsonl|ndjson)$/i;
 
 const humanBytes = (size: number) => {
   if (size < 1024) return `${size} B`;
@@ -47,9 +49,34 @@ const humanBytes = (size: number) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+async function boundedBlob(response: Response, maxBytes: number): Promise<Blob> {
+  if (!response.body) throw new Error("empty_download");
+  const reader = response.body.getReader();
+  const chunks: BlobPart[] = [];
+  let total = 0;
+  for (;;) {
+    const next = await reader.read();
+    if (next.done) break;
+    total += next.value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error("file_too_large");
+    }
+    chunks.push(next.value as unknown as BlobPart);
+  }
+  return new Blob(chunks);
+}
+
+const isGraphFile = (file: Attachment) => {
+  const name = file.name.toLowerCase();
+  return GRAPH_FILE_RE.test(name);
+};
+
 export function LabConsole() {
   const [health, setHealth] = useState<Health | null>(null);
   const [token, setToken] = useState("");
+  const [tokenLocked, setTokenLocked] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
   const [provider, setProvider] = useState("neuralwatt");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -60,6 +87,11 @@ export function LabConsole() {
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [graphPath, setGraphPath] = useState("");
+  const [graphUrl, setGraphUrl] = useState("");
+  const [graphBusy, setGraphBusy] = useState(false);
+  const [graphError, setGraphError] = useState("");
+  const graphRequestRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -98,6 +130,19 @@ export function LabConsole() {
     bottomRef.current?.scrollIntoView({ block: "nearest" });
   }, [thread, busy]);
 
+  useEffect(() => {
+    return () => {
+      graphRequestRef.current?.abort();
+      graphRequestRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (graphUrl) URL.revokeObjectURL(graphUrl);
+    };
+  }, [graphUrl]);
+
   const providers = health?.providers || [];
   const current = useMemo(
     () => providers.find((p) => p.id === provider),
@@ -107,6 +152,7 @@ export function LabConsole() {
     .map((t) => (t.engine_version ? `${t.id} v${t.engine_version}` : t.id))
     .join(" · ");
   const authorization = token.trim() ? `Bearer ${token.trim()}` : "";
+  const sessionReady = tokenLocked && Boolean(authorization);
 
   function onProviderChange(id: string) {
     setProvider(id);
@@ -114,9 +160,55 @@ export function LabConsole() {
     setModel(spec?.default_model || spec?.models[0] || "");
   }
 
-  async function refreshFiles() {
+  async function lockToken() {
     if (!authorization) {
-      setFileError("Enter the shared token before listing files.");
+      setFileError("Enter the shared token before locking the session.");
+      return;
+    }
+    setAuthBusy(true);
+    setFileError("");
+    try {
+      const response = await fetch("/api/lab/files", {
+        headers: { authorization },
+        cache: "no-store",
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        files?: Attachment[];
+        error?: string;
+        ok?: boolean;
+      };
+      if (!response.ok || body.ok !== true || !Array.isArray(body.files)) {
+        throw new Error(body.error || `HTTP ${response.status}`);
+      }
+      setFiles(body.files || []);
+      setTokenLocked(true);
+    } catch (error) {
+      setTokenLocked(false);
+      setFileError(error instanceof Error ? error.message : "token_verification_failed");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function disconnectSession() {
+    graphRequestRef.current?.abort();
+    graphRequestRef.current = null;
+    setGraphBusy(false);
+    setToken("");
+    setTokenLocked(false);
+    setApiKey("");
+    setFiles([]);
+    setAttachments([]);
+    setThread([]);
+    setGraphPath("");
+    setGraphUrl("");
+    setGraphError("");
+    setFileError("");
+  }
+
+  async function refreshFiles() {
+    if (!sessionReady) {
+      setFileError("Lock the shared token before listing files.");
       return;
     }
     setFileError("");
@@ -137,8 +229,8 @@ export function LabConsole() {
     const selected = Array.from(event.target.files || []);
     event.currentTarget.value = "";
     if (selected.length === 0) return;
-    if (!authorization) {
-      setFileError("Enter the shared token before uploading files.");
+    if (!sessionReady) {
+      setFileError("Lock the shared token before uploading files.");
       return;
     }
     setFileBusy(true);
@@ -169,8 +261,8 @@ export function LabConsole() {
   }
 
   async function downloadFile(file: Attachment) {
-    if (!authorization) {
-      setFileError("Enter the shared token before downloading files.");
+    if (!sessionReady) {
+      setFileError("Lock the shared token before downloading files.");
       return;
     }
     setFileError("");
@@ -188,7 +280,7 @@ export function LabConsole() {
       if (rawSize !== null && (!Number.isSafeInteger(declaredSize) || declaredSize > MAX_DOWNLOAD_BYTES)) {
         throw new Error("file_too_large");
       }
-      const blob = await response.blob();
+      const blob = await boundedBlob(response, MAX_DOWNLOAD_BYTES);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -202,10 +294,52 @@ export function LabConsole() {
     }
   }
 
+  async function viewGraph(file: Attachment) {
+    if (!sessionReady) {
+      setFileError("Lock the shared token before viewing graphs.");
+      return;
+    }
+    setGraphBusy(true);
+    setGraphError("");
+    setGraphPath(file.path);
+    setGraphUrl("");
+    graphRequestRef.current?.abort();
+    const controller = new AbortController();
+    graphRequestRef.current = controller;
+    try {
+      const params = new URLSearchParams({ path: file.path, render: "svg" });
+      const response = await fetch(`/api/lab/files?${params.toString()}`, {
+        headers: { authorization },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || `HTTP ${response.status}`);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.toLowerCase().startsWith("image/svg+xml")) {
+        throw new Error("graph_render_invalid_content_type");
+      }
+      const blob = await boundedBlob(response, MAX_GRAPH_BYTES);
+      if (graphRequestRef.current !== controller) return;
+      setGraphUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setGraphError(error instanceof Error ? error.message : "graph_render_failed");
+      }
+    } finally {
+      if (graphRequestRef.current === controller) {
+        graphRequestRef.current = null;
+        setGraphBusy(false);
+      }
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const text = message.trim();
-    if (!text || busy || fileBusy) return;
+    if (!text || busy || fileBusy || !sessionReady) return;
     const userTurn: Turn = {
       role: "user",
       content: text,
@@ -289,7 +423,7 @@ export function LabConsole() {
       <p className="mt-1 text-xs text-[#6b5d4d]">
         Follow-ups stay in this thread. Uploads are available to the lab in
         <code className="mx-1 font-mono">uploads/</code>; ask it to save downloadable
-        artifacts in <code className="mx-1 font-mono">outputs/</code>.
+        artifacts in <code className="mx-1 font-mono">outputs/</code>. Logic <code className="mx-1 font-mono">.jsonl</code> knowledge-graph artifacts can be viewed here.
       </p>
       {thread.length > 0 ? (
         <div className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto rounded-lg border border-[#edecea] bg-[#f4efe6] p-3">
@@ -320,17 +454,44 @@ export function LabConsole() {
         </div>
       ) : null}
       <form onSubmit={onSubmit} className="mt-4 grid gap-3">
-        <label className="grid gap-1 text-sm">
-          Shared token
-          <input
-            type="password"
-            autoComplete="off"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="min-h-11 rounded-lg border border-[#d4c4a8] px-3"
-            required
-          />
-        </label>
+        <div className="grid gap-2">
+          <label className="grid gap-1 text-sm">
+            Shared token
+            <input
+              type="password"
+              autoComplete="off"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              disabled={tokenLocked || authBusy}
+              className="min-h-11 rounded-lg border border-[#d4c4a8] px-3 disabled:bg-[#f4efe6]"
+              required
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            {tokenLocked ? (
+              <>
+                <span className="text-xs font-semibold text-[#1a6b4a]">Session authenticated · token locked</span>
+                <button
+                  type="button"
+                  onClick={disconnectSession}
+                  disabled={busy || fileBusy || authBusy}
+                  className="min-h-10 rounded-full border border-[#8a3b2a] px-4 text-xs font-semibold text-[#8a3b2a] disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={lockToken}
+                disabled={authBusy || !authorization}
+                className="min-h-10 rounded-full bg-[#1a6b4a] px-4 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {authBusy ? "Confirming…" : "Lock token / Confirm session"}
+              </button>
+            )}
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1 text-sm">
             Provider
@@ -380,7 +541,7 @@ export function LabConsole() {
             type="file"
             multiple
             onChange={onFileChange}
-            disabled={fileBusy || !authorization}
+            disabled={fileBusy || !sessionReady}
             className="min-h-11 rounded-lg border border-[#d4c4a8] px-3 py-2 text-sm"
           />
         </label>
@@ -414,7 +575,7 @@ export function LabConsole() {
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
-            disabled={busy || fileBusy || !live || !authorization || (current ? !current.key_configured && !apiKey.trim() : false)}
+            disabled={busy || fileBusy || !live || !sessionReady || (current ? !current.key_configured && !apiKey.trim() : false)}
             className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
           >
             {busy ? "Running…" : thread.length ? "Send follow-up" : "Send"}
@@ -430,7 +591,7 @@ export function LabConsole() {
           <button
             type="button"
             onClick={refreshFiles}
-            disabled={fileBusy || !authorization}
+            disabled={fileBusy || !sessionReady}
             className="min-h-11 rounded-full border border-[#d4c4a8] px-6 text-sm font-semibold text-[#1a1612] disabled:opacity-50"
           >
             Refresh files
@@ -448,15 +609,56 @@ export function LabConsole() {
                 <span className="min-w-0 truncate" title={file.path}>
                   {file.path} <span className="text-xs text-[#6b5d4d]">({humanBytes(file.size)})</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => downloadFile(file)}
-                  className="shrink-0 rounded-full border border-[#d4c4a8] px-3 py-1 text-xs font-semibold"
-                >
-                  Download
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  {isGraphFile(file) ? (
+                    <button
+                      type="button"
+                      onClick={() => viewGraph(file)}
+                      disabled={graphBusy}
+                      className="rounded-full border border-[#1a6b4a] px-3 py-1 text-xs font-semibold text-[#1a6b4a] disabled:opacity-50"
+                    >
+                      {graphBusy && graphPath === file.path ? "Rendering…" : "View graph"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(file)}
+                    className="rounded-full border border-[#d4c4a8] px-3 py-1 text-xs font-semibold"
+                  >
+                    Download
+                  </button>
+                </div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+      {graphBusy ? (
+        <p className="mt-4 text-sm text-[#6b5d4d]" aria-live="polite">
+          Rendering knowledge graph…
+        </p>
+      ) : null}
+      {graphError ? <p className="mt-4 text-sm text-[#8a3b2a]">{graphError}</p> : null}
+      {graphUrl ? (
+        <div className="mt-6 rounded-lg border border-[#edecea] bg-[#f4efe6] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#1a6b4a]">
+              Knowledge graph · {graphPath}
+            </p>
+            <button
+              type="button"
+              onClick={() => { setGraphUrl(""); setGraphPath(""); }}
+              className="rounded-full border border-[#d4c4a8] px-3 py-1 text-xs font-semibold"
+            >
+              Close graph
+            </button>
+          </div>
+          <div className="mt-3 max-h-[42rem] overflow-auto rounded bg-white p-3">
+            <img
+              src={graphUrl}
+              alt={`Knowledge graph for ${graphPath}`}
+              className="mx-auto h-auto max-w-full"
+            />
           </div>
         </div>
       ) : null}

@@ -137,6 +137,7 @@ class OpenAICompatTests(unittest.TestCase):
         self.assertIn("paper.pdf", prompt)
         self.assertIn("uploads/abc-paper.pdf", prompt)
         self.assertIn("outputs/", prompt)
+        self.assertIn("Knowledge graphs", prompt)
 
     def test_messages_attachment_metadata_is_bounded(self):
         prompt = providers.messages_to_prompt(
