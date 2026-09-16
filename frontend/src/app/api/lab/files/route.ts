@@ -80,41 +80,6 @@ function forwardedHeaders(upstream: Response) {
   return headers;
 }
 
-function boundedStream(
-  body: ReadableStream<Uint8Array>,
-  expectedLength?: number,
-): ReadableStream<Uint8Array> {
-  const reader = body.getReader();
-  let total = 0;
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const next = await reader.read();
-        if (next.done) {
-          if (expectedLength !== undefined && total !== expectedLength) {
-            controller.error(new Error("content_length_mismatch"));
-            return;
-          }
-          controller.close();
-          return;
-        }
-        total += next.value.byteLength;
-        if (total > MAX_REQUEST_BYTES) {
-          await reader.cancel();
-          controller.error(new Error("request_too_large"));
-          return;
-        }
-        controller.enqueue(next.value);
-      } catch (error) {
-        controller.error(error);
-      }
-    },
-    async cancel(reason) {
-      await reader.cancel(reason);
-    },
-  });
-}
-
 async function stageBody(body: ReadableStream<Uint8Array>) {
   const dir = await mkdtemp(join(tmpdir(), "di-upload-"));
   const path = join(dir, "body");
@@ -222,8 +187,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "body_required" }, { status: 400 });
   }
   try {
-    const body = boundedStream(req.body, contentLength);
-    return await proxyUpload(req, body, contentLength);
+    const staged = await stageBody(req.body);
+    if (staged.contentLength !== contentLength) {
+      await staged.cleanup();
+      return NextResponse.json({ ok: false, error: "content_length_mismatch" }, { status: 400 });
+    }
+    return await proxyUpload(req, staged.body, staged.contentLength, staged.cleanup);
   } catch (error) {
     if (error instanceof Error && error.message === "request_too_large") {
       return NextResponse.json({ ok: false, error: "request_too_large" }, { status: 413 });
