@@ -28,6 +28,8 @@ class HealthTests(unittest.TestCase):
         self.assertIn("bioskills_count", h)
         self.assertGreaterEqual(h["bioskills_count"], 0)
         self.assertEqual(h["turn_timeout_seconds"], 600)
+        self.assertEqual(h["upload_limits"]["request_bytes"], 110 * 1024 * 1024)
+        self.assertEqual(h["upload_limits"]["file_bytes"], 100 * 1024 * 1024)
         ids = [p["id"] for p in h["providers"]]
         self.assertEqual(
             ids,

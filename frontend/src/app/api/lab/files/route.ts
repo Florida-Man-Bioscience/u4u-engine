@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 const UPSTREAM =
   process.env.LAB_UPSTREAM ?? "http://di-lab.theswamp.svc:8080";
-const MAX_REQUEST_BYTES = 25 * 1024 * 1024;
+const MAX_REQUEST_BYTES = 110 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 
 function authHeaders(req: Request): HeadersInit {

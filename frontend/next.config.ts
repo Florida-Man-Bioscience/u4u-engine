@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    proxyClientMaxBodySize: "110mb",
+  },
   async redirects() {
     return [
       // Common App Store / human guesses for the privacy policy

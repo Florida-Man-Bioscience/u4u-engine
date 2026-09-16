@@ -62,6 +62,10 @@ def health() -> dict:
         "bioskills_count": _skill_count("/opt/bioskills"),
         "science_skills_count": _skill_count("/opt/lab-science-skills"),
         "turn_timeout_seconds": TURN_TIMEOUT,
+        "upload_limits": {
+            "request_bytes": file_io.DEFAULT_MAX_REQUEST_BYTES,
+            "file_bytes": file_io.DEFAULT_MAX_FILE_BYTES,
+        },
         "tools": [paper_decomp_api.engine_info()],
     }
     body.update(public_catalog())
