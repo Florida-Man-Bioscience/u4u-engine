@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HERMES_WORKSPACE=/data/workspace \
     HERMES_PROFILE=lab \
     PYTHONPATH=/opt/litreview/src \
-    PORT=8080
+    PORT=8080 \
+    LAB_TURN_TIMEOUT=600
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git graphviz \

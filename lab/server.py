@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
@@ -34,7 +35,7 @@ from providers import (
 PORT = int(os.environ.get("PORT", "8080"))
 PROFILE = os.environ.get("HERMES_PROFILE", "lab")
 TOKEN = os.environ.get("LAB_SHARED_TOKEN", "")
-TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "120"))
+TURN_TIMEOUT = int(os.environ.get("LAB_TURN_TIMEOUT", "600"))
 MAX_JSON_BYTES = 512 * 1024
 PRELOAD_SKILLS = tuple(
     s.strip()
@@ -60,6 +61,7 @@ def health() -> dict:
         "workspace": os.environ.get("HERMES_WORKSPACE", "/data/workspace"),
         "bioskills_count": _skill_count("/opt/bioskills"),
         "science_skills_count": _skill_count("/opt/lab-science-skills"),
+        "turn_timeout_seconds": TURN_TIMEOUT,
         "tools": [paper_decomp_api.engine_info()],
     }
     body.update(public_catalog())
@@ -86,7 +88,11 @@ def hermes_cmd(message: str, resolved: dict[str, str]) -> list[str]:
     return cmd
 
 
-def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
+def run_hermes(
+    message: str,
+    resolved: dict[str, str],
+    request_id: str = "",
+) -> dict[str, object]:
     cmd = hermes_cmd(message, resolved)
     env = {
         **os.environ,
@@ -94,6 +100,7 @@ def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
         "HERMES_YOLO_MODE": "1",
     }
     guest = resolved.get("guest_key") or ""
+    started = time.monotonic()
     if guest:
         env[resolved["key_env"]] = guest
     try:
@@ -108,7 +115,25 @@ def run_hermes(message: str, resolved: dict[str, str]) -> dict[str, object]:
     except FileNotFoundError:
         return {"error": "hermes_missing"}
     except subprocess.TimeoutExpired:
-        return {"error": "timeout"}
+        elapsed = round(time.monotonic() - started, 3)
+        print(
+            json.dumps(
+                {
+                    "event": "hermes_timeout",
+                    "request_id": request_id,
+                    "elapsed_seconds": elapsed,
+                    "timeout_seconds": TURN_TIMEOUT,
+                }
+            ),
+            file=sys.stderr,
+            flush=True,
+        )
+        return {
+            "error": "timeout",
+            "request_id": request_id,
+            "elapsed_seconds": elapsed,
+            "timeout_seconds": TURN_TIMEOUT,
+        }
 
     def _redact(s: str) -> str:
         if guest and s:
@@ -409,12 +434,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json(code, err)
             return
         assert resolved is not None
-        result = run_hermes(message, resolved)
+        request_id = self.headers.get("X-Request-ID", "").strip() or uuid.uuid4().hex
+        result = run_hermes(message, resolved, request_id)
         if result.get("error") == "hermes_missing":
             self._json(503, {"ok": False, "error": "hermes_missing"})
             return
         if result.get("error") == "timeout":
-            self._json(504, {"ok": False, "error": "timeout"})
+            self._json(
+                504,
+                {
+                    "ok": False,
+                    "error": "timeout",
+                    "request_id": result.get("request_id"),
+                    "elapsed_seconds": result.get("elapsed_seconds"),
+                    "timeout_seconds": result.get("timeout_seconds", TURN_TIMEOUT),
+                },
+            )
             return
         self._json(
             200,
@@ -447,10 +482,18 @@ class Handler(BaseHTTPRequestHandler):
         if not prompt:
             self._json(400, {"error": {"message": "empty_message", "type": "invalid_request_error"}})
             return
-        result = run_hermes(prompt, resolved)
+        request_id = self.headers.get("X-Request-ID", "").strip() or uuid.uuid4().hex
+        result = run_hermes(prompt, resolved, request_id)
         if result.get("error"):
             code = 504 if result["error"] == "timeout" else 503
-            self._json(code, {"error": {"message": result["error"], "type": "server_error"}})
+            detail = {"message": result["error"], "type": "server_error"}
+            if result["error"] == "timeout":
+                detail.update(
+                    request_id=result.get("request_id"),
+                    elapsed_seconds=result.get("elapsed_seconds"),
+                    timeout_seconds=result.get("timeout_seconds", TURN_TIMEOUT),
+                )
+            self._json(code, {"error": detail})
             return
         text = str(result.get("text") or "")
         if result.get("returncode") != 0:

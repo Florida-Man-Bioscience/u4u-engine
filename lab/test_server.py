@@ -1,7 +1,9 @@
 import json
 import os
+import subprocess
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ["LAB_SHARED_TOKEN"] = "test-token"
 os.environ.pop("NEURALWATT_API_KEY", None)
@@ -25,6 +27,7 @@ class HealthTests(unittest.TestCase):
         self.assertTrue(h["token_configured"])
         self.assertIn("bioskills_count", h)
         self.assertGreaterEqual(h["bioskills_count"], 0)
+        self.assertEqual(h["turn_timeout_seconds"], 600)
         ids = [p["id"] for p in h["providers"]]
         self.assertEqual(
             ids,
@@ -195,6 +198,23 @@ class OpenAICompatTests(unittest.TestCase):
 class TurnAuthTests(unittest.TestCase):
     def test_missing_bearer(self):
         self.assertEqual(server.TOKEN, "test-token")
+
+
+class HermesTimeoutTests(unittest.TestCase):
+    @patch("server.subprocess.run", side_effect=subprocess.TimeoutExpired(["hermes"], 600))
+    def test_timeout_is_observable_and_bounded(self, _run):
+        result = server.run_hermes(
+            "formalize this paper",
+            {
+                "hermes_provider": "custom:openai",
+                "model": "gpt-4o",
+            },
+            "req-timeout-test",
+        )
+        self.assertEqual(result["error"], "timeout")
+        self.assertEqual(result["request_id"], "req-timeout-test")
+        self.assertEqual(result["timeout_seconds"], 600)
+        self.assertIn("elapsed_seconds", result)
 
 
 class HermesCmdTests(unittest.TestCase):

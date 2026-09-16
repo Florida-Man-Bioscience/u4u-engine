@@ -80,6 +80,7 @@ export function LabConsole() {
   const [provider, setProvider] = useState("neuralwatt");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [apiKeyLocked, setApiKeyLocked] = useState(false);
   const [message, setMessage] = useState("");
   const [thread, setThread] = useState<Turn[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -156,6 +157,8 @@ export function LabConsole() {
 
   function onProviderChange(id: string) {
     setProvider(id);
+    setApiKey("");
+    setApiKeyLocked(false);
     const spec = providers.find((p) => p.id === id);
     setModel(spec?.default_model || spec?.models[0] || "");
   }
@@ -197,6 +200,7 @@ export function LabConsole() {
     setToken("");
     setTokenLocked(false);
     setApiKey("");
+    setApiKeyLocked(false);
     setFiles([]);
     setAttachments([]);
     setThread([]);
@@ -362,7 +366,7 @@ export function LabConsole() {
           messages: nextThread,
           provider,
           model,
-          ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
+          ...(apiKeyLocked && apiKey.trim() ? { api_key: apiKey.trim() } : {}),
         }),
       });
       const raw = await r.text();
@@ -524,17 +528,37 @@ export function LabConsole() {
             </select>
           </label>
         </div>
-        <label className="grid gap-1 text-sm">
-          Provider API key (optional)
-          <input
-            type="password"
-            autoComplete="off"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Uses yours for this turn only. Leave blank to use the jail key."
-            className="min-h-11 rounded-lg border border-[#d4c4a8] px-3"
-          />
-        </label>
+        <div className="grid gap-2">
+          <label className="grid gap-1 text-sm">
+            Provider API key (optional)
+            <input
+              type="password"
+              autoComplete="off"
+              value={apiKey}
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                setApiKeyLocked(false);
+              }}
+              disabled={apiKeyLocked || busy || fileBusy}
+              placeholder="Enter a provider key, then lock it for this session."
+              className="min-h-11 rounded-lg border border-[#d4c4a8] px-3 disabled:bg-[#f4efe6]"
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            {apiKeyLocked ? (
+              <span className="text-xs font-semibold text-[#1a6b4a]">BYOK key locked for this session</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setApiKeyLocked(Boolean(apiKey.trim()))}
+                disabled={!apiKey.trim() || busy || fileBusy}
+                className="min-h-10 rounded-full border border-[#1a6b4a] px-4 text-xs font-semibold text-[#1a6b4a] disabled:opacity-50"
+              >
+                Lock BYOK key
+              </button>
+            )}
+          </div>
+        </div>
         <label className="grid gap-1 text-sm">
           Attach files
           <input
@@ -565,6 +589,12 @@ export function LabConsole() {
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
             rows={4}
             className="rounded-lg border border-[#d4c4a8] px-3 py-2"
             placeholder="Ask the lab to read an attachment or save a result under outputs/."
@@ -575,7 +605,7 @@ export function LabConsole() {
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
-            disabled={busy || fileBusy || !live || !sessionReady || (current ? !current.key_configured && !apiKey.trim() : false)}
+            disabled={busy || fileBusy || !live || !sessionReady || (current ? !current.key_configured && !apiKeyLocked : false)}
             className="min-h-11 rounded-full bg-[#1a6b4a] px-6 text-sm font-semibold text-white disabled:opacity-50"
           >
             {busy ? "Running…" : thread.length ? "Send follow-up" : "Send"}
