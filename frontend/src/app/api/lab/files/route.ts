@@ -1,3 +1,7 @@
+import { createReadStream } from "node:fs";
+import { mkdtemp, open, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -76,42 +80,99 @@ function forwardedHeaders(upstream: Response) {
   return headers;
 }
 
-async function boundedBody(body: ReadableStream<Uint8Array>): Promise<Blob> {
+function boundedStream(
+  body: ReadableStream<Uint8Array>,
+  expectedLength?: number,
+): ReadableStream<Uint8Array> {
   const reader = body.getReader();
-  const chunks: BlobPart[] = [];
   let total = 0;
-  for (;;) {
-    const next = await reader.read();
-    if (next.done) break;
-    total += next.value.byteLength;
-    if (total > MAX_REQUEST_BYTES) {
-      await reader.cancel();
-      throw new Error("request_too_large");
-    }
-    chunks.push(next.value as unknown as BlobPart);
-  }
-  return new Blob(chunks);
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const next = await reader.read();
+        if (next.done) {
+          if (expectedLength !== undefined && total !== expectedLength) {
+            controller.error(new Error("content_length_mismatch"));
+            return;
+          }
+          controller.close();
+          return;
+        }
+        total += next.value.byteLength;
+        if (total > MAX_REQUEST_BYTES) {
+          await reader.cancel();
+          controller.error(new Error("request_too_large"));
+          return;
+        }
+        controller.enqueue(next.value);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+    },
+  });
 }
 
-async function proxyUpload(req: Request, body: BodyInit, contentLength: number) {
-  const upstream = await fetch(`${UPSTREAM}/api/v1/files`, {
-    method: "POST",
-    headers: {
-      ...authHeaders(req),
-      "content-type": req.headers.get("content-type") || "",
-      "content-length": String(contentLength),
-    },
-    body,
-    duplex: "half",
-  } as RequestInit & { duplex: "half" });
-  const raw = await boundedText(upstream);
-  let payload: unknown;
+async function stageBody(body: ReadableStream<Uint8Array>) {
+  const dir = await mkdtemp(join(tmpdir(), "di-upload-"));
+  const path = join(dir, "body");
+  const handle = await open(path, "w");
+  let total = 0;
   try {
-    payload = JSON.parse(raw);
-  } catch {
-    payload = { ok: false, error: "upstream_not_json", detail: raw.slice(0, 240) };
+    const reader = body.getReader();
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      total += next.value.byteLength;
+      if (total > MAX_REQUEST_BYTES) {
+        await reader.cancel();
+        throw new Error("request_too_large");
+      }
+      await handle.write(next.value);
+    }
+    await handle.close();
+    return {
+      body: createReadStream(path) as unknown as BodyInit,
+      contentLength: total,
+      cleanup: () => rm(dir, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    await handle.close().catch(() => undefined);
+    await rm(dir, { recursive: true, force: true });
+    throw error;
   }
-  return NextResponse.json(payload, { status: upstream.status });
+}
+
+async function proxyUpload(
+  req: Request,
+  body: BodyInit,
+  contentLength: number,
+  cleanup?: () => Promise<void>,
+) {
+  try {
+    const upstream = await fetch(`${UPSTREAM}/api/v1/files`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(req),
+        "content-type": req.headers.get("content-type") || "",
+        "content-length": String(contentLength),
+      },
+      body,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const raw = await boundedText(upstream);
+    let payload: unknown;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = { ok: false, error: "upstream_not_json", detail: raw.slice(0, 240) };
+    }
+    return NextResponse.json(payload, { status: upstream.status });
+  } finally {
+    await cleanup?.();
+  }
 }
 
 export async function GET(req: Request) {
@@ -138,8 +199,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "body_required" }, { status: 400 });
     }
     try {
-      const body = await boundedBody(req.body);
-      return await proxyUpload(req, body, body.size);
+      const staged = await stageBody(req.body);
+      return await proxyUpload(req, staged.body, staged.contentLength, staged.cleanup);
     } catch (error) {
       if (error instanceof Error && error.message === "request_too_large") {
         return NextResponse.json({ ok: false, error: "request_too_large" }, { status: 413 });
@@ -161,14 +222,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "body_required" }, { status: 400 });
   }
   try {
-    const body = await boundedBody(req.body);
-    if (body.size !== contentLength) {
-      return NextResponse.json({ ok: false, error: "content_length_mismatch" }, { status: 400 });
-    }
-    return await proxyUpload(req, body, body.size);
+    const body = boundedStream(req.body, contentLength);
+    return await proxyUpload(req, body, contentLength);
   } catch (error) {
     if (error instanceof Error && error.message === "request_too_large") {
       return NextResponse.json({ ok: false, error: "request_too_large" }, { status: 413 });
+    }
+    if (error instanceof Error && error.message === "content_length_mismatch") {
+      return NextResponse.json({ ok: false, error: "content_length_mismatch" }, { status: 400 });
     }
     return errorResponse(error);
   }
