@@ -247,10 +247,13 @@ export function LabConsole() {
         headers: { authorization },
         body: form,
       });
-      const body = (await response.json()) as {
-        files?: Attachment[];
-        error?: string;
-      };
+      const raw = await response.text();
+      let body: { files?: Attachment[]; error?: string };
+      try {
+        body = JSON.parse(raw) as { files?: Attachment[]; error?: string };
+      } catch {
+        throw new Error(raw.slice(0, 240) || `HTTP ${response.status}`);
+      }
       if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
       setAttachments((currentAttachments) => [
         ...currentAttachments,
