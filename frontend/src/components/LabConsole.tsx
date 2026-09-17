@@ -39,7 +39,7 @@ type Turn = {
   attachments?: Attachment[];
 };
 
-const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
+const MAX_DOWNLOAD_BYTES = 1024 * 1024 * 1024;
 const MAX_GRAPH_BYTES = 8 * 1024 * 1024;
 const GRAPH_FILE_RE = /\.(?:json|jsonl|ndjson)$/i;
 

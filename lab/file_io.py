@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-DEFAULT_MAX_REQUEST_BYTES = 110 * 1024 * 1024
-DEFAULT_MAX_FILE_BYTES = 100 * 1024 * 1024
+DEFAULT_MAX_FILE_BYTES = 1024 * 1024 * 1024
+DEFAULT_MAX_REQUEST_BYTES = DEFAULT_MAX_FILE_BYTES + 32 * 1024 * 1024
 DEFAULT_MAX_UPLOAD_FILES = 32
-DEFAULT_MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+DEFAULT_MAX_DOWNLOAD_BYTES = DEFAULT_MAX_FILE_BYTES
 DEFAULT_MAX_LIST_FILES = 500
 DEFAULT_MAX_LIST_DEPTH = 8
 _ALLOWED_ROOTS = {"uploads", "outputs"}
@@ -64,6 +64,259 @@ def record_named_file(
 def record_file(path: Path, workspace: Path, *, name: str | None = None, content_type: str | None = None) -> dict[str, Any]:
     relative = path.relative_to(workspace).as_posix()
     return record_named_file(relative, path.stat().st_size, name=name, content_type=content_type)
+
+
+_HEADER_LIMIT = 64 * 1024
+_STREAM_CHUNK = 64 * 1024
+_FILENAME_RE = re.compile(r'filename\*?=(?:(?:UTF-8|utf-8)\'\')?"?([^";\r\n]+)"?', re.IGNORECASE)
+
+
+class _LimitedReader:
+    def __init__(self, source: Any, remaining: int) -> None:
+        self._source = source
+        self.remaining = remaining
+
+    def read(self, size: int = -1) -> bytes:
+        if self.remaining <= 0:
+            return b""
+        if size < 0 or size > self.remaining:
+            size = self.remaining
+        data = self._source.read(size)
+        if not data:
+            return b""
+        self.remaining -= len(data)
+        return data
+
+
+def _multipart_boundary(content_type: str) -> bytes:
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise FileIoError("multipart_required")
+    boundary = ""
+    for part in content_type.split(";"):
+        piece = part.strip()
+        if piece.lower().startswith("boundary="):
+            boundary = piece.split("=", 1)[1].strip().strip('"')
+            break
+    if not boundary:
+        raise FileIoError("bad_multipart")
+    try:
+        return boundary.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise FileIoError("bad_multipart") from exc
+
+
+def _part_filename(headers: bytes) -> tuple[str | None, str]:
+    text = headers.decode("utf-8", "replace")
+    filename = None
+    content_type = "application/octet-stream"
+    for raw_line in text.splitlines():
+        if ":" not in raw_line:
+            continue
+        name, value = raw_line.split(":", 1)
+        key = name.strip().lower()
+        value = value.strip()
+        if key == "content-disposition":
+            match = _FILENAME_RE.search(value)
+            if match:
+                filename = match.group(1)
+        elif key == "content-type":
+            content_type = value.split(";", 1)[0].strip() or content_type
+    return filename, content_type
+
+
+def _read_until(reader: _LimitedReader, buf: bytes, marker: bytes, *, limit: int) -> tuple[bytes, bytes]:
+    while True:
+        index = buf.find(marker)
+        if index != -1:
+            return buf[:index], buf[index + len(marker) :]
+        if len(buf) > limit:
+            raise FileIoError("bad_multipart")
+        chunk = reader.read(_STREAM_CHUNK)
+        if not chunk:
+            raise FileIoError("bad_multipart")
+        buf += chunk
+
+
+def _need(reader: _LimitedReader, buf: bytes, n: int) -> bytes:
+    while len(buf) < n:
+        chunk = reader.read(n - len(buf))
+        if not chunk:
+            break
+        buf += chunk
+    return buf
+
+
+def _skip_boundary_line(reader: _LimitedReader, buf: bytes) -> tuple[bool, bytes]:
+    """Return (is_terminator, remainder after CRLF or --)."""
+    buf = _need(reader, buf, 2)
+    if buf.startswith(b"--"):
+        return True, buf[2:]
+    if buf.startswith(b"\r\n"):
+        return False, buf[2:]
+    if buf.startswith(b"\n"):
+        return False, buf[1:]
+    raise FileIoError("bad_multipart")
+
+
+def _write_part_body(
+    reader: _LimitedReader,
+    buf: bytes,
+    dest,
+    marker: bytes,
+    max_file_bytes: int,
+) -> tuple[int, bytes]:
+    written = 0
+    keep = len(marker) - 1
+    while True:
+        index = buf.find(marker)
+        if index != -1:
+            payload = buf[:index]
+            written += len(payload)
+            if written > max_file_bytes:
+                raise FileIoError("file_too_large")
+            dest.write(payload)
+            return written, buf[index + len(marker) :]
+        if len(buf) > keep:
+            payload = buf[:-keep]
+            written += len(payload)
+            if written > max_file_bytes:
+                raise FileIoError("file_too_large")
+            dest.write(payload)
+            buf = buf[-keep:]
+        chunk = reader.read(_STREAM_CHUNK)
+        if not chunk:
+            raise FileIoError("bad_multipart")
+        buf += chunk
+
+
+def save_uploads_from_stream(
+    source: Any,
+    length: int,
+    content_type: str,
+    workspace: Path,
+    *,
+    max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES,
+    max_file_bytes: int = DEFAULT_MAX_FILE_BYTES,
+    max_files: int = DEFAULT_MAX_UPLOAD_FILES,
+) -> list[dict[str, Any]]:
+    if length < 0 or length > max_request_bytes:
+        raise FileIoError("request_too_large")
+    boundary = _multipart_boundary(content_type)
+    dash = b"--" + boundary
+    reader = _LimitedReader(source, length)
+    workspace = workspace.resolve()
+    workspace.mkdir(parents=True, exist_ok=True)
+    staging = workspace / f".upload-stage-{uuid.uuid4().hex}"
+    staging.mkdir()
+    staged: list[tuple[Path, str, str, int]] = []
+    try:
+        buf = b""
+        header, buf = _read_until(reader, buf, dash, limit=_HEADER_LIMIT)
+        del header
+        done, buf = _skip_boundary_line(reader, buf)
+        if done:
+            raise FileIoError("file_required")
+        while True:
+            headers, buf = _read_until(reader, buf, b"\r\n\r\n", limit=_HEADER_LIMIT)
+            filename, part_type = _part_filename(headers)
+            crlf_marker = b"\r\n" + dash
+            if filename:
+                if len(staged) >= max_files:
+                    raise FileIoError("too_many_files")
+                safe_name = _safe_name(filename)
+                temp_path = staging / f"{uuid.uuid4().hex}-{safe_name}"
+                with temp_path.open("wb") as handle:
+                    size, buf = _write_part_body(
+                        reader, buf, handle, crlf_marker, max_file_bytes
+                    )
+                staged.append((temp_path, safe_name, part_type, size))
+            else:
+                with open(os.devnull, "wb") as handle:
+                    _, buf = _write_part_body(reader, buf, handle, crlf_marker, max_file_bytes)
+            done, buf = _skip_boundary_line(reader, buf)
+            if done:
+                break
+        if not staged:
+            raise FileIoError("file_required")
+        return _commit_staged_uploads(workspace, staged)
+    except Exception:
+        try:
+            while reader.read(_STREAM_CHUNK):
+                pass
+        except Exception:
+            pass
+        for path, *_rest in staged:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        raise
+    finally:
+        try:
+            for leftover in staging.iterdir():
+                leftover.unlink()
+            staging.rmdir()
+        except OSError:
+            pass
+
+
+def _commit_staged_uploads(
+    workspace: Path, staged: list[tuple[Path, str, str, int]]
+) -> list[dict[str, Any]]:
+    upload_dir = workspace / "uploads"
+    if upload_dir.exists() and (upload_dir.is_symlink() or not upload_dir.is_dir()):
+        raise FileIoError("invalid_workspace")
+    try:
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        upload_fd = os.open(
+            upload_dir,
+            os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError as exc:
+        raise FileIoError("invalid_workspace") from exc
+    records: list[dict[str, Any]] = []
+    created_names: list[str] = []
+    try:
+        for temp_path, safe_name, part_content_type, size in staged:
+            storage_name = f"{uuid.uuid4().hex}-{safe_name}"
+            temporary_name = f".upload-{uuid.uuid4().hex}"
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(temporary_name, flags, 0o600, dir_fd=upload_fd)
+            try:
+                with os.fdopen(fd, "wb") as handle, temp_path.open("rb") as src:
+                    while chunk := src.read(_STREAM_CHUNK):
+                        handle.write(chunk)
+                os.replace(
+                    temporary_name,
+                    storage_name,
+                    src_dir_fd=upload_fd,
+                    dst_dir_fd=upload_fd,
+                )
+            except Exception:
+                try:
+                    os.unlink(temporary_name, dir_fd=upload_fd)
+                except FileNotFoundError:
+                    pass
+                raise
+            created_names.append(storage_name)
+            records.append(
+                record_named_file(
+                    f"uploads/{storage_name}",
+                    size,
+                    name=safe_name,
+                    content_type=part_content_type,
+                )
+            )
+    except OSError as exc:
+        for name in created_names:
+            try:
+                os.unlink(name, dir_fd=upload_fd)
+            except FileNotFoundError:
+                pass
+        raise FileIoError("storage_error") from exc
+    finally:
+        os.close(upload_fd)
+    return records
 
 
 def save_uploads(

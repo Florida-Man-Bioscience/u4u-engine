@@ -331,12 +331,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(200, fd, record, disposition)
             return
 
-        body = self._read_limited_body(file_io.DEFAULT_MAX_REQUEST_BYTES)
-        if body is None:
+        raw_length = self.headers.get("content-length")
+        if not raw_length:
+            self._json(411, {"ok": False, "error": "content_length_required"})
             return
         try:
-            records = file_io.save_uploads(
-                body,
+            length = int(raw_length)
+        except ValueError:
+            self._json(400, {"ok": False, "error": "bad_content_length"})
+            return
+        try:
+            records = file_io.save_uploads_from_stream(
+                self.rfile,
+                length,
                 self.headers.get("content-type", ""),
                 workspace,
                 max_request_bytes=file_io.DEFAULT_MAX_REQUEST_BYTES,
